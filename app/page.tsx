@@ -2949,46 +2949,6 @@ function DownloadIcon() {
   );
 }
 
-function flattenNodes(nodes: ArchNode[]): ArchNode[] {
-  return nodes.flatMap((node) => [node, ...(node.children ? flattenNodes(node.children) : [])]);
-}
-
-function findNodeById(nodes: ArchNode[], id: string): ArchNode | null {
-  for (const node of nodes) {
-    if (node.id === id) {
-      return node;
-    }
-
-    const children = node.children ?? node.lazyChildren?.();
-    if (!children) {
-      continue;
-    }
-
-    const match = findNodeById(children, id);
-    if (match) {
-      return match;
-    }
-  }
-
-  return null;
-}
-
-function collectDefaultExpandedIds(nodes: ArchNode[]): Set<string> {
-  const expandedIds = new Set<string>();
-
-  const visit = (node: ArchNode) => {
-    if (node.defaultExpanded) {
-      expandedIds.add(node.id);
-    }
-
-    const children = node.children ?? node.lazyChildren?.();
-    children?.forEach(visit);
-  };
-
-  nodes.forEach(visit);
-  return expandedIds;
-}
-
 function ArchitectureTree({
   nodes,
   selectedId,
@@ -3413,23 +3373,13 @@ export default function Home() {
 
   const paneOrder: PaneKey[] = ["architecture", "code", "paper"];
   const visiblePanes = paneOrder.filter((pane) => visibleColumns[pane]);
-  const expanded = expandedByModel[model.id] ?? collectDefaultExpandedIds(model.nodes);
-  const selected = selectedByModel[model.id] ?? findNodeById(model.nodes, model.selectedId);
+  const expanded = expandedByModel[model.id] ?? new Set<string>();
+  const selected = selectedByModel[model.id] ?? null;
 
   const updateModel = (nextModelId: string) => {
-    const nextModel = models.find((entry) => entry.id === nextModelId);
-    const nextExpanded = nextModel ? collectDefaultExpandedIds(nextModel.nodes) : new Set<string>();
-    const nextSelected = nextModel ? findNodeById(nextModel.nodes, nextModel.selectedId) : null;
-
     setModelId(nextModelId);
-    setExpandedByModel((current) => ({
-      ...current,
-      [nextModelId]: nextExpanded,
-    }));
-    setSelectedByModel((current) => ({
-      ...current,
-      [nextModelId]: nextSelected,
-    }));
+    setExpandedByModel({});
+    setSelectedByModel({});
     setQuery("");
   };
 
