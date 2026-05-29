@@ -32,6 +32,8 @@
 html,
 body {
   height: 100%;
+  scrollbar-color: #9ca8b6 #e3e8ee;
+  scrollbar-gutter: stable;
 }
 
 body {
@@ -39,6 +41,29 @@ body {
   background: var(--bg);
   color: var(--ink);
   font-family: var(--font-sans);
+}
+
+::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+
+::-webkit-scrollbar-track {
+  background: #e3e8ee;
+}
+
+::-webkit-scrollbar-thumb {
+  border: 3px solid #e3e8ee;
+  border-radius: 999px;
+  background: #9ca8b6;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #8391a1;
+}
+
+::-webkit-scrollbar-corner {
+  background: #e3e8ee;
 }
 
 button,
@@ -251,6 +276,7 @@ select {
   overflow: auto;
   padding: 14px;
   scrollbar-color: #9ca8b6 #e3e8ee;
+  scrollbar-gutter: stable both-edges;
 }
 
 .tree {
@@ -600,6 +626,7 @@ select {
   overflow: auto;
   padding: 14px;
   scrollbar-color: #9ca8b6 #e3e8ee;
+  scrollbar-gutter: stable both-edges;
 }
 
 .paper-card {
@@ -722,6 +749,27 @@ select {
   opacity: 1;
 }
 
+.colab-link {
+  display: inline-flex;
+  min-height: 32px;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid #4c6076;
+  border-radius: 7px;
+  background: #223044;
+  color: #eef4fb;
+  padding: 0 10px;
+  font-size: 12px;
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.colab-link:hover {
+  border-color: #6d829b;
+  background: #2a3a51;
+}
+
 .language-pill,
 .language-select {
   display: inline-flex;
@@ -749,6 +797,24 @@ select {
   font-size: 12px;
   line-height: 1.55;
   scrollbar-color: #526074 #17202a;
+  scrollbar-gutter: stable both-edges;
+}
+
+.editor::-webkit-scrollbar-track {
+  background: #17202a;
+}
+
+.editor::-webkit-scrollbar-thumb {
+  border-color: #17202a;
+  background: #526074;
+}
+
+.editor::-webkit-scrollbar-thumb:hover {
+  background: #65748a;
+}
+
+.editor::-webkit-scrollbar-corner {
+  background: #17202a;
 }
 
 .code-line {

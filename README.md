@@ -22,15 +22,20 @@ Open [http://localhost:3000](http://localhost:3000).
 ## Commands
 
 ```bash
-pnpm dev        # start the local Next.js dev server
-pnpm build      # build the production app
-pnpm start      # serve the production build after pnpm build
-pnpm typecheck  # run TypeScript checks
+pnpm generate:model-artifacts  # generate UI Python sources and Colab notebooks
+pnpm dev                       # generate artifacts and start the local Next.js dev server
+pnpm build                     # generate artifacts and build the production app
+pnpm start                     # serve the production build after pnpm build
+pnpm typecheck                 # generate artifacts and run TypeScript checks
 ```
 
 ## Notes
 
 - The app is client-side and uses static model data embedded in `app/page.tsx`.
+- Canonical model source files live in `app/model-notebooks` as Jupytext-style `py:percent` notebooks.
+- `pnpm generate:model-artifacts` writes cleaned UI Python files to `app/generated/model-code` and Colab notebooks to `public/notebooks`.
+- The code pane imports the generated Python files; edit the canonical notebook sources instead of editing generated files directly.
+- Colab buttons use `NEXT_PUBLIC_GITHUB_REPOSITORY` and `NEXT_PUBLIC_GITHUB_BRANCH` when set. They default to `tsilva/modelarchviz` and `main`.
 - Current examples range from MLPs and recurrent models through classic CNNs, Inception, ResNet, U-Net, BERT, GPT-2, and ViT.
 - Paper links point to external sources from the embedded model metadata.
 - No database, server-side storage, telemetry, or user-data persistence is configured.

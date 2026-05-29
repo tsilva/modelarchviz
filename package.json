@@ -3,10 +3,11 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
+    "generate:model-artifacts": "node scripts/generate-model-artifacts.mjs",
+    "dev": "pnpm generate:model-artifacts && next dev",
+    "build": "pnpm generate:model-artifacts && next build",
     "start": "next start",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "pnpm generate:model-artifacts && tsc --noEmit"
   },
   "dependencies": {
     "next": "14.2.35",

@@ -1,0 +1,123 @@
+# ---
+# jupyter:
+#   jupytext:
+#     formats: ipynb,py:percent
+#     text_representation:
+#       extension: .py
+#       format_name: percent
+#       format_version: '1.3'
+#   kernelspec:
+#     display_name: Python 3
+#     language: python
+#     name: python3
+# ---
+# %%
+import torch
+import torch.nn as nn
+
+
+class LSTMCell(nn.Module):
+    def __init__(
+        self,
+        input_size=32,  # Number of features at each time step.
+        hidden_size=64  # Width of hidden and cell states.
+    ):
+        super().__init__()
+
+        # Register paired input and recurrent projections for each LSTM gate.
+        self.x_i = nn.Linear(input_size, hidden_size)
+        self.h_i = nn.Linear(hidden_size, hidden_size, bias=False)
+        self.x_f = nn.Linear(input_size, hidden_size)
+        self.h_f = nn.Linear(hidden_size, hidden_size, bias=False)
+        self.x_g = nn.Linear(input_size, hidden_size)
+        self.h_g = nn.Linear(hidden_size, hidden_size, bias=False)
+        self.x_o = nn.Linear(input_size, hidden_size)
+        self.h_o = nn.Linear(hidden_size, hidden_size, bias=False)
+
+    def forward(self, x, state):
+        # Unpack recurrent state: tuple -> two (batch, hidden_size) tensors.
+        h, c = state
+
+        # Compute input gate: (batch, input_size) + (batch, hidden_size) -> (batch, hidden_size).
+        x_i = self.x_i(x)
+        h_i = self.h_i(h)
+        i_pre = x_i + h_i
+        i = torch.sigmoid(i_pre)
+
+        # Compute forget gate: (batch, input_size) + (batch, hidden_size) -> (batch, hidden_size).
+        x_f = self.x_f(x)
+        h_f = self.h_f(h)
+        f_pre = x_f + h_f
+        f = torch.sigmoid(f_pre)
+
+        # Compute candidate memory: (batch, input_size) + (batch, hidden_size) -> (batch, hidden_size).
+        x_g = self.x_g(x)
+        h_g = self.h_g(h)
+        g_pre = x_g + h_g
+        g = torch.tanh(g_pre)
+
+        # Compute output gate: (batch, input_size) + (batch, hidden_size) -> (batch, hidden_size).
+        x_o = self.x_o(x)
+        h_o = self.h_o(h)
+        o_pre = x_o + h_o
+        o = torch.sigmoid(o_pre)
+
+        # Blend previous memory with candidate memory: (batch, hidden_size).
+        forget_c = f * c
+        write_c = i * g
+        c_next = forget_c + write_c
+
+        # Read hidden state from updated memory: (batch, hidden_size).
+        c_readout = torch.tanh(c_next)
+        h_next = o * c_readout
+        next_state = (h_next, c_next)
+        return next_state
+
+
+class LSTMSequence(nn.Module):
+    def __init__(
+        self,
+        input_size=32,  # Number of features at each time step.
+        hidden_size=64,  # Width of hidden and cell states.
+        output_size=10  # Number of output classes.
+    ):
+        super().__init__()
+
+        # Register the shared recurrent cell and final readout projection.
+        self.hidden_size = hidden_size
+        self.cell = LSTMCell(input_size, hidden_size)
+        self.readout = nn.Linear(hidden_size, output_size)
+
+    def forward(self, x):
+        # Build initial recurrent state: (batch, hidden_size).
+        batch_size = x.size(0)
+        hidden_shape = (batch_size, self.hidden_size)
+        h = torch.zeros(hidden_shape, device=x.device)
+        c = torch.zeros(hidden_shape, device=x.device)
+
+        # Run the shared LSTM cell over time: (batch, steps, input_size) -> list of (batch, hidden_size).
+        states = []
+        step_count = x.size(1)
+        for t in range(step_count):
+            current_input = x[:, t]
+            previous_state = (h, c)
+            next_state = self.cell(current_input, previous_state)
+            h = next_state[0]
+            c = next_state[1]
+            states.append(h)
+
+        # Project the final hidden state and pack the full state trace.
+        logits = self.readout(h)
+        state_trace = torch.stack(states, dim=1)
+        outputs = (logits, state_trace)
+        return outputs
+
+
+# Create and run a sample sequence: (2, 8, 32) -> logits and states.
+model = LSTMSequence(input_size=32, hidden_size=64, output_size=10)
+sequence = torch.randn(2, 8, 32)
+outputs = model(sequence)
+logits = outputs[0]
+states = outputs[1]
+
+# logits: (2, 10), states: (2, 8, 64)

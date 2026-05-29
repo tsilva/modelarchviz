@@ -1,32 +1,32 @@
 "use client";
 
 import { Fragment, useEffect, useRef, useState } from "react";
-import mlpPythonSource from "./model-code/mlp.py";
-import mlpJaxPythonSource from "./model-code/mlp_jax.py";
-import rnnPythonSource from "./model-code/elman_rnn.py";
-import rnnJaxPythonSource from "./model-code/elman_rnn_jax.py";
-import gruPythonSource from "./model-code/gru.py";
-import gruJaxPythonSource from "./model-code/gru_jax.py";
-import lstmPythonSource from "./model-code/lstm.py";
-import lstmJaxPythonSource from "./model-code/lstm_jax.py";
-import lenet5PythonSource from "./model-code/lenet5.py";
-import lenet5JaxPythonSource from "./model-code/lenet5_jax.py";
-import alexnetPythonSource from "./model-code/alexnet.py";
-import alexnetJaxPythonSource from "./model-code/alexnet_jax.py";
-import googlenetPythonSource from "./model-code/googlenet.py";
-import googlenetJaxPythonSource from "./model-code/googlenet_jax.py";
-import unetPythonSource from "./model-code/unet.py";
-import unetJaxPythonSource from "./model-code/unet_jax.py";
-import transformerPythonSource from "./model-code/transformer.py";
-import transformerJaxPythonSource from "./model-code/transformer_jax.py";
-import bertPythonSource from "./model-code/bert_base.py";
-import bertJaxPythonSource from "./model-code/bert_base_jax.py";
-import gpt2PythonSource from "./model-code/gpt2_attention.py";
-import gpt2JaxPythonSource from "./model-code/gpt2_attention_jax.py";
-import vitPythonSource from "./model-code/vit_b16.py";
-import vitJaxPythonSource from "./model-code/vit_b16_jax.py";
-import resnet18PythonSource from "./model-code/resnet18.py";
-import resnet18JaxPythonSource from "./model-code/resnet18_jax.py";
+import mlpPythonSource from "./generated/model-code/mlp.py";
+import mlpJaxPythonSource from "./generated/model-code/mlp_jax.py";
+import rnnPythonSource from "./generated/model-code/elman_rnn.py";
+import rnnJaxPythonSource from "./generated/model-code/elman_rnn_jax.py";
+import gruPythonSource from "./generated/model-code/gru.py";
+import gruJaxPythonSource from "./generated/model-code/gru_jax.py";
+import lstmPythonSource from "./generated/model-code/lstm.py";
+import lstmJaxPythonSource from "./generated/model-code/lstm_jax.py";
+import lenet5PythonSource from "./generated/model-code/lenet5.py";
+import lenet5JaxPythonSource from "./generated/model-code/lenet5_jax.py";
+import alexnetPythonSource from "./generated/model-code/alexnet.py";
+import alexnetJaxPythonSource from "./generated/model-code/alexnet_jax.py";
+import googlenetPythonSource from "./generated/model-code/googlenet.py";
+import googlenetJaxPythonSource from "./generated/model-code/googlenet_jax.py";
+import unetPythonSource from "./generated/model-code/unet.py";
+import unetJaxPythonSource from "./generated/model-code/unet_jax.py";
+import transformerPythonSource from "./generated/model-code/transformer.py";
+import transformerJaxPythonSource from "./generated/model-code/transformer_jax.py";
+import bertPythonSource from "./generated/model-code/bert_base.py";
+import bertJaxPythonSource from "./generated/model-code/bert_base_jax.py";
+import gpt2PythonSource from "./generated/model-code/gpt2_attention.py";
+import gpt2JaxPythonSource from "./generated/model-code/gpt2_attention_jax.py";
+import vitPythonSource from "./generated/model-code/vit_b16.py";
+import vitJaxPythonSource from "./generated/model-code/vit_b16_jax.py";
+import resnet18PythonSource from "./generated/model-code/resnet18.py";
+import resnet18JaxPythonSource from "./generated/model-code/resnet18_jax.py";
 
 type NodeKind =
   | "input"
@@ -91,9 +91,22 @@ const languageLabels: Record<CodeLanguage, string> = {
   jax: "JAX",
 };
 
+const githubRepository = (process.env.NEXT_PUBLIC_GITHUB_REPOSITORY ?? "tsilva/modelarchviz")
+  .replace(/^https?:\/\/github\.com\//, "")
+  .replace(/\/$/, "");
+const githubBranch = process.env.NEXT_PUBLIC_GITHUB_BRANCH ?? "main";
+
 function codeLines(source: string) {
   const trimmed = source.trimEnd();
   return trimmed.split("\n");
+}
+
+function notebookFileName(fileName: string) {
+  return fileName.replace(/\.py$/, ".ipynb");
+}
+
+function colabUrl(notebookName: string) {
+  return `https://colab.research.google.com/github/${githubRepository}/blob/${githubBranch}/public/notebooks/${notebookName}`;
 }
 
 function makeTransformerEncoderBlock(index: number, defaultExpanded = false): ArchNode {
@@ -2949,6 +2962,21 @@ function DownloadIcon() {
   );
 }
 
+function ColabIcon() {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 16 16" className="icon">
+      <path
+        d="M5.1 5.1a3.4 3.4 0 0 1 5.8 0M5.1 10.9a3.4 3.4 0 0 0 5.8 0M5.5 8a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0ZM13.5 8a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Z"
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.5"
+      />
+    </svg>
+  );
+}
+
 function ArchitectureTree({
   nodes,
   selectedId,
@@ -3159,9 +3187,9 @@ function SyntaxLine({ line }: { line: string }) {
 function CodeEditor({ model, selected }: { model: ModelSpec; selected: ArchNode | null }) {
   const [language, setLanguage] = useState<CodeLanguage>("pytorch");
   const codeFiles = {
-    pytorch: [{ id: "main", fileName: model.fileName, code: model.code }],
-    jax: [{ id: "main", fileName: model.jaxFileName, code: model.jaxCode }],
-  } satisfies Record<CodeLanguage, Array<{ id: string; fileName: string; code: string[] }>>;
+    pytorch: [{ id: "main", fileName: model.fileName, notebookName: notebookFileName(model.fileName), code: model.code }],
+    jax: [{ id: "main", fileName: model.jaxFileName, notebookName: notebookFileName(model.jaxFileName), code: model.jaxCode }],
+  } satisfies Record<CodeLanguage, Array<{ id: string; fileName: string; notebookName: string; code: string[] }>>;
   const filesForLanguage = codeFiles[language];
   const currentFile = filesForLanguage[0];
   const selectedLines = new Set(selected?.codeLines ?? []);
@@ -3177,6 +3205,17 @@ function CodeEditor({ model, selected }: { model: ModelSpec; selected: ArchNode 
               </option>
             ))}
           </select>
+          <a
+            className="colab-link"
+            href={colabUrl(currentFile.notebookName)}
+            target="_blank"
+            rel="noreferrer"
+            aria-label={`Open ${currentFile.fileName} in Google Colab`}
+            title={`Open ${currentFile.fileName} in Google Colab`}
+          >
+            <ColabIcon />
+            <span>Colab</span>
+          </a>
         </div>
         <div className="tab-group language-tab-group">
           <select

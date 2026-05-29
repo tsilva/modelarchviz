@@ -10,7 +10,9 @@ Do not create new branches by default. Work on the current branch unless the use
 
 ## Model File Code Style
 
-Use the `$format-model-code` skill when creating, editing, reviewing, or normalizing model implementation files, including files under `app/model-code/*.py`.
+Use the `$format-model-code` skill when creating, editing, reviewing, or normalizing model implementation files, including canonical notebook-source files under `app/model-notebooks/*.py` and generated UI sources under `app/generated/model-code/*.py`.
+
+Edit `app/model-notebooks/*.py` as the source of truth. Do not hand-edit `app/generated/model-code/*.py` or `public/notebooks/*.ipynb`; regenerate them with `pnpm generate:model-artifacts`.
 
 For model implementation files such as `mlp.py`, avoid performing multiple operations in a single line. Split indexing, function calls, arithmetic, assignments, and returns into separate named steps where practical.
 
