@@ -31,7 +31,7 @@ pnpm typecheck  # run TypeScript checks
 ## Notes
 
 - The app is client-side and uses static model data embedded in `app/page.tsx`.
-- Current examples cover LeNet-5, GPT-2 small, and ResNet-18.
+- Current examples range from MLPs and recurrent models through classic CNNs, Inception, ResNet, U-Net, BERT, GPT-2, and ViT.
 - Paper links point to external sources from the embedded model metadata.
 - No database, server-side storage, telemetry, or user-data persistence is configured.
 - `NEXT_PUBLIC_SITE_URL` is optional and only sets the absolute base URL for social metadata. It falls back to `http://localhost:3000`.
