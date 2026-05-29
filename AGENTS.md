@@ -10,6 +10,8 @@ Do not create new branches by default. Work on the current branch unless the use
 
 ## Model File Code Style
 
+Use the `$format-model-code` skill when creating, editing, reviewing, or normalizing model implementation files, including files under `app/model-code/*.py`.
+
 For model implementation files such as `mlp.py`, avoid performing multiple operations in a single line. Split indexing, function calls, arithmetic, assignments, and returns into separate named steps where practical.
 
 Add an empty line before each standalone line comment.
