@@ -1,0 +1,4 @@
+interface:
+  display_name: "Audit Model Architecture"
+  short_description: "Audit ModelArchViz UI code highlights"
+  default_prompt: "Use $audit-model-architecture to audit a model's architecture nodes and code highlights."
