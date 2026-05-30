@@ -29,6 +29,7 @@ export async function GET(request: Request, { params }: { params: { modelId: str
 
   const range = request.headers.get("range");
   const response = await fetch(url, {
+    cache: "no-store",
     headers: {
       ...(range ? { Range: range } : {}),
       "User-Agent": "ModelArchViz/0.1 paper viewer",

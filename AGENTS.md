@@ -36,6 +36,12 @@ Do not add comments above import statements.
 
 Do not add comments above base initializer calls such as `super().__init__()`.
 
+## Model Route SEO
+
+When adding, renaming, or removing a model in `app/model-arch-viz-app.tsx`, update `app/model-routes.ts` in the same change so `/models/[modelId]` routes and `app/sitemap.ts` stay aligned.
+
+Each model route entry must include the canonical model id, label, published date, route title, and route description. Do not add model-specific URLs directly to `app/sitemap.ts`; keep sitemap coverage derived from `modelRouteSummaries`.
+
 ## Skill Retrospective
 
 Whenever a skill is used for a task:
