@@ -12,6 +12,9 @@ const paperPdfUrls: Record<string, string> = {
   gpt2: "https://cdn.openai.com/better-language-models/language_models_are_unsupervised_multitask_learners.pdf",
   vit: "https://arxiv.org/pdf/2010.11929",
   resnet18: "https://arxiv.org/pdf/1512.03385",
+  widenet: "https://arxiv.org/pdf/1605.07146",
+  densenet: "https://arxiv.org/pdf/1608.06993",
+  efficientnet: "https://arxiv.org/pdf/1905.11946",
 };
 
 export const dynamic = "force-dynamic";
