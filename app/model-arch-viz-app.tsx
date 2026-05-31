@@ -3946,13 +3946,36 @@ function SyntaxLine({ line }: { line: string }) {
 
 function CodeEditor({ model, selected }: { model: ModelSpec; selected: ArchNode | null }) {
   const [language, setLanguage] = useState<CodeLanguage>("pytorch");
+  const editorRef = useRef<HTMLDivElement>(null);
   const codeFiles = {
     pytorch: [{ id: "main", fileName: model.fileName, notebookName: notebookFileName(model.fileName), code: model.code }],
     jax: [{ id: "main", fileName: model.jaxFileName, notebookName: notebookFileName(model.jaxFileName), code: model.jaxCode }],
   } satisfies Record<CodeLanguage, Array<{ id: string; fileName: string; notebookName: string; code: string[] }>>;
   const filesForLanguage = codeFiles[language];
   const currentFile = filesForLanguage[0];
-  const selectedLines = new Set(selected?.codeLines ?? []);
+  const selectedLineNumbers = selected?.codeLines ?? [];
+  const selectedLines = new Set(selectedLineNumbers);
+  const firstSelectedLine =
+    selectedLineNumbers.find((lineNumber) => lineNumber >= 1 && lineNumber <= currentFile.code.length) ?? null;
+
+  useEffect(() => {
+    const editor = editorRef.current;
+    if (!editor || firstSelectedLine === null) {
+      return;
+    }
+
+    const selectedLine = editor.querySelector<HTMLElement>(`[data-line-number="${firstSelectedLine}"]`);
+    if (!selectedLine) {
+      return;
+    }
+
+    const centerOffset = Math.max(24, Math.floor((editor.clientHeight - selectedLine.offsetHeight) / 2));
+    const centeredTop = selectedLine.offsetTop - centerOffset;
+    editor.scrollTo({
+      top: Math.max(0, centeredTop),
+      behavior: "smooth",
+    });
+  }, [firstSelectedLine, language, model.id, selected?.id]);
 
   return (
     <section className="code-pane">
@@ -3992,12 +4015,16 @@ function CodeEditor({ model, selected }: { model: ModelSpec; selected: ArchNode 
           </select>
         </div>
       </div>
-      <div className="editor">
+      <div className="editor" ref={editorRef}>
         {currentFile.code.map((line, index) => {
           const lineNumber = index + 1;
           const highlighted = selectedLines.has(lineNumber);
           return (
-            <div className={`code-line ${highlighted ? "highlighted" : ""}`} key={`${lineNumber}-${line}`}>
+            <div
+              className={`code-line ${highlighted ? "highlighted" : ""}`}
+              data-line-number={lineNumber}
+              key={`${lineNumber}-${line}`}
+            >
               <span className="line-number">{lineNumber}</span>
               <code>
                 <SyntaxLine line={line} />

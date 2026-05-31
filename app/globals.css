@@ -78,6 +78,7 @@ button {
 
 .app-shell {
   display: flex;
+  height: 100vh;
   min-height: 100vh;
   flex-direction: column;
   overflow: hidden;
@@ -206,6 +207,7 @@ select {
   display: grid;
   min-height: 0;
   flex: 1;
+  overflow: hidden;
 }
 
 .workspace[data-pane-count="1"] {
@@ -227,6 +229,7 @@ select {
   min-width: 0;
   min-height: 0;
   flex-direction: column;
+  overflow: hidden;
 }
 
 .architecture-pane {
@@ -277,6 +280,31 @@ select {
   padding: 14px;
   scrollbar-color: #9ca8b6 #e3e8ee;
   scrollbar-gutter: stable both-edges;
+  scrollbar-width: thin;
+}
+
+.tree-scroll::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+
+.tree-scroll::-webkit-scrollbar-track {
+  border-left: 1px solid #d7dde5;
+  background: #e3e8ee;
+}
+
+.tree-scroll::-webkit-scrollbar-thumb {
+  border: 3px solid #e3e8ee;
+  border-radius: 999px;
+  background: #9ca8b6;
+}
+
+.tree-scroll::-webkit-scrollbar-thumb:hover {
+  background: #8391a1;
+}
+
+.tree-scroll::-webkit-scrollbar-corner {
+  background: #e3e8ee;
 }
 
 .tree {
@@ -798,6 +826,7 @@ select {
   line-height: 1.55;
   scrollbar-color: #526074 #17202a;
   scrollbar-gutter: stable both-edges;
+  scrollbar-width: thin;
 }
 
 .editor::-webkit-scrollbar-track {
@@ -915,6 +944,7 @@ select {
   .workspace[data-pane-count="3"] {
     display: flex;
     flex-direction: column;
+    overflow: auto;
   }
 
   .divider {
