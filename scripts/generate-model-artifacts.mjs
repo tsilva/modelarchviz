@@ -39,13 +39,16 @@ function parseNotebookSource(source) {
   }
 
   for (const line of lines) {
-    const codeCell = line.match(/^# %%\s*$/);
-    const markdownCell = line.match(/^# %% \[markdown\]\s*$/);
+    const cellMarker = line.match(/^# %%(?:\s+\[([^\]]+)\])?\s*$/);
 
-    if (codeCell || markdownCell) {
+    if (cellMarker) {
+      const marker = cellMarker[1]?.trim() ?? "";
+      const markdownCell = marker === "markdown";
+      const tags = marker && !markdownCell ? marker.split(",").map((tag) => tag.trim()).filter(Boolean) : [];
       pushCell();
       currentCell = {
         cell_type: markdownCell ? "markdown" : "code",
+        tags,
         lines: [],
       };
       continue;
@@ -64,6 +67,14 @@ function parseNotebookSource(source) {
   pushCell();
 
   return cells.filter((cell) => cell.lines.length > 0);
+}
+
+function cellMetadata(cell) {
+  if (!cell.tags || cell.tags.length === 0) {
+    return {};
+  }
+
+  return { tags: cell.tags };
 }
 
 function markdownSource(lines) {
@@ -97,7 +108,7 @@ function notebookFromCells(fileName, cells) {
       if (cell.cell_type === "markdown") {
         return {
           cell_type: "markdown",
-          metadata: {},
+          metadata: cellMetadata(cell),
           source: sourceLines(markdownSource(cell.lines)),
         };
       }
@@ -105,7 +116,7 @@ function notebookFromCells(fileName, cells) {
       return {
         cell_type: "code",
         execution_count: null,
-        metadata: {},
+        metadata: cellMetadata(cell),
         outputs: [],
         source: sourceLines(cell.lines),
       };
@@ -142,7 +153,7 @@ function notebookFromCells(fileName, cells) {
 }
 
 function cleanedPythonFromCells(cells) {
-  const codeCells = cells.filter((cell) => cell.cell_type === "code");
+  const codeCells = cells.filter((cell) => cell.cell_type === "code" && !cell.tags?.includes("notebook-only"));
   const blocks = codeCells.map((cell) => cell.lines.join("\n"));
   return `${blocks.join("\n\n").trimEnd()}\n`;
 }

@@ -34,6 +34,7 @@ pnpm typecheck                 # generate artifacts and run TypeScript checks
 - The app is client-side and uses static model data embedded in `app/page.tsx`.
 - Canonical model source files live in `app/model-notebooks` as Jupytext-style `py:percent` notebooks.
 - `pnpm generate:model-artifacts` writes cleaned UI Python files to `app/generated/model-code` and Colab notebooks to `public/notebooks`.
+- `# %% [notebook-only]` cells are included in generated notebooks for examples and smoke tests, but excluded from generated site preview code.
 - The code pane imports the generated Python files; edit the canonical notebook sources instead of editing generated files directly.
 - Colab buttons use `NEXT_PUBLIC_GITHUB_REPOSITORY` and `NEXT_PUBLIC_GITHUB_BRANCH` when set. They default to `tsilva/modelarchviz` and `main`.
 - Current examples range from MLPs and recurrent models through classic CNNs, Inception, ResNet, U-Net, BERT, GPT-2, and ViT.

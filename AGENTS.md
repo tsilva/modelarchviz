@@ -14,6 +14,12 @@ Use the `$model-code-author` skill when creating, editing, reviewing, or normali
 
 Edit `app/model-notebooks/*.py` as the source of truth. Do not hand-edit `app/generated/model-code/*.py` or `public/notebooks/*.ipynb`; regenerate them with `pnpm generate:model-artifacts`.
 
+Structure canonical notebook sources for both site previews and notebook consumption. Use `# %%` cells for imports and implementation blocks, especially one top-level class or function per cell where practical.
+
+Use `# %% [notebook-only]` for example construction, smoke-test, shape-inspection, or tiny training cells that should appear in generated notebooks but be excluded from generated site preview code.
+
+For major model components, prefer a class or function implementation cell followed by a small `# %% [notebook-only]` cell that constructs the component and verifies a representative output shape.
+
 For model implementation files such as `mlp.py`, avoid performing multiple operations in a single line. Split indexing, function calls, arithmetic, assignments, and returns into separate named steps where practical.
 
 Add an empty line before each standalone line comment.

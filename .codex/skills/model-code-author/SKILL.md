@@ -12,10 +12,12 @@ Use this skill to author model implementation code for architecture visualizatio
 1. Identify model files or snippets: PyTorch, JAX/Flax, or similar neural-network code.
 2. Read surrounding metadata that may depend on line numbers, such as `codeLines`, docs, snapshots, or tests.
 3. Edit `app/model-notebooks/*.py` as the source of truth. Do not hand-edit generated model-code or notebook artifacts.
-4. Rewrite compound expressions into named steps where practical.
-5. Add concise block-level comments for logical tensor operations.
-6. Validate syntax/build checks and update any line mappings affected by inserted or moved lines.
-7. Regenerate generated artifacts when canonical notebook sources change.
+4. Structure notebook sources with `# %%` cells for imports and implementation blocks, especially one top-level class or function per cell where practical.
+5. Add `# %% [notebook-only]` cells for example construction, smoke tests, shape inspection, or tiny training snippets that belong in generated notebooks but should be excluded from generated site preview code.
+6. Rewrite compound expressions into named steps where practical.
+7. Add concise block-level comments for logical tensor operations.
+8. Validate syntax/build checks and update any line mappings affected by inserted or moved lines.
+9. Regenerate generated artifacts when canonical notebook sources change.
 
 ## Formatting Rules
 
@@ -38,6 +40,8 @@ Use this skill to author model implementation code for architecture visualizatio
 - Do not add comments above `super().__init__()`.
 - Represent tensor shapes in comments with parentheses, for example `(batch, steps, features)`, not square brackets.
 - When parameter comments are useful, use multiline method signatures and put parameter explanations inline on parameter lines.
+- For notebook consumption, prefer a class or function implementation cell followed by a small `# %% [notebook-only]` cell that constructs the component and verifies a representative output shape.
+- Keep generated site previews implementation-focused by placing examples, smoke tests, and tiny training loops in `# %% [notebook-only]` cells instead of ordinary code cells.
 
 ## Comment Pattern
 

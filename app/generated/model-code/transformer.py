@@ -1,7 +1,6 @@
 import torch
 import torch.nn as nn
 
-
 class PositionalEncoding(nn.Module):
     def __init__(
         self,
@@ -30,7 +29,6 @@ class PositionalEncoding(nn.Module):
         position_encoding = self.pe[:seq_len]  # (max_len, d_model) -> (steps, d_model)
         encoded = x + position_encoding  # (batch, steps, d_model), (steps, d_model) -> (batch, steps, d_model)
         return encoded  # (batch, steps, d_model)
-
 
 class MultiHeadAttention(nn.Module):
     def __init__(
@@ -83,7 +81,6 @@ class MultiHeadAttention(nn.Module):
         out = self.out_proj(merged)  # (batch, query_steps, d_model)
         return out  # (batch, query_steps, d_model)
 
-
 class EncoderLayer(nn.Module):
     def __init__(
         self,
@@ -114,7 +111,6 @@ class EncoderLayer(nn.Module):
         ffn_residual = x + ffn  # (batch, steps, d_model), (batch, steps, d_model) -> (batch, steps, d_model)
         out = self.norm2(ffn_residual)  # (batch, steps, d_model)
         return out  # (batch, steps, d_model)
-
 
 class DecoderLayer(nn.Module):
     def __init__(
@@ -154,7 +150,6 @@ class DecoderLayer(nn.Module):
         out = self.norm3(ffn_residual)  # (batch, target_steps, d_model)
         return out  # (batch, target_steps, d_model)
 
-
 class Transformer(nn.Module):
     def __init__(
         self,
@@ -189,40 +184,3 @@ class Transformer(nn.Module):
         # Project decoder states to vocabulary logits.
         logits = self.generator(x)  # (batch, target_steps, d_model) -> (batch, target_steps, vocab_size)
         return logits  # (batch, target_steps, vocab_size)
-
-
-# Create and run a sample translation batch.
-model = Transformer(vocab_size=37000)
-src_ids = torch.randint(0, 37000, (2, 16))  # -> (2, 16)
-tgt_ids = torch.randint(0, 37000, (2, 16))  # -> (2, 16)
-
-# Build a causal target mask: (16, 16).
-mask_values = torch.ones(16, 16)  # -> (16, 16)
-mask_values = mask_values * float('-inf')  # (16, 16)
-tgt_mask = torch.triu(mask_values, diagonal=1)  # (16, 16)
-logits = model(src_ids, tgt_ids, tgt_mask)  # (2, 16), (2, 16), (16, 16) -> (2, 16, 37000)
-
-# Train on a tiny copy-style token batch.
-model = Transformer(vocab_size=20, d_model=16, nhead=4, num_layers=1)
-src_ids = torch.tensor([[1, 2, 3, 4], [4, 3, 2, 1]])  # -> (2, 4)
-tgt_ids = torch.tensor([[0, 1, 2, 3], [0, 4, 3, 2]])  # -> (2, 4)
-train_targets = torch.tensor([[1, 2, 3, 4], [4, 3, 2, 1]])  # -> (2, 4)
-mask_values = torch.ones(4, 4)  # -> (4, 4)
-mask_values = mask_values * float('-inf')  # (4, 4)
-tgt_mask = torch.triu(mask_values, diagonal=1)  # (4, 4)
-criterion = nn.CrossEntropyLoss()
-optimizer = torch.optim.SGD(model.parameters(), lr=0.1)
-
-# Fit the model for a few steps on the tiny dataset.
-for step in range(3):
-    optimizer.zero_grad()
-    logits = model(src_ids, tgt_ids, tgt_mask)  # (2, 4), (2, 4), (4, 4) -> (2, 4, 20)
-    vocab_size = logits.size(-1)  # (2, 4, 20) -> scalar
-    flat_logits = logits.reshape(-1, vocab_size)  # (2, 4, 20) -> (8, 20)
-    flat_targets = train_targets.reshape(-1)  # (2, 4) -> (8)
-    loss = criterion(flat_logits, flat_targets)  # (8, 20), (8) -> scalar
-    loss.backward()
-    optimizer.step()
-
-# Keep the final scalar loss for inspection.
-final_loss = loss.item()  # scalar
