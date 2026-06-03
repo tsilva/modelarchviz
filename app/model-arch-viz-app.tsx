@@ -784,7 +784,7 @@ const models: ModelSpec[] = [
         type: "ClassScores",
         kind: "head",
         badges: ["10->10"],
-        codeLines: [30, 31, 34, 37, 39],
+        codeLines: [30, 31, 34, 37],
       },
     ],
     code: codeLines(mlpPythonSource),

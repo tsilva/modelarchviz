@@ -50,7 +50,6 @@ model = MLP(input_dim=784, hidden_dim=128, output_dim=10)
 inputs = torch.randn(2, 784)
 logits = model(inputs)
 
-
 # Train on a tiny synthetic classification batch.
 model = MLP(input_dim=4, hidden_dim=8, output_dim=2)
 train_inputs = torch.tensor(
