@@ -123,7 +123,6 @@ mask = torch.tril(mask_values)
 mask = mask.view(1, 1, 16, 16)
 logits = model(test_input, mask)
 
-# logits: (2, 16, 50257)
 
 # Train on a tiny next-token prediction batch.
 model = GPT2Small(vocab_size=20)
@@ -135,6 +134,7 @@ mask = mask.view(1, 1, 4, 4)
 criterion = nn.CrossEntropyLoss()
 optimizer = torch.optim.SGD(model.parameters(), lr=0.01)
 
+# Fit the model for a few steps on the tiny dataset.
 for step in range(3):
     optimizer.zero_grad()
     logits = model(input_ids, mask)
@@ -144,4 +144,5 @@ for step in range(3):
     loss.backward()
     optimizer.step()
 
+# Keep the final scalar loss for inspection.
 final_loss = loss.item()

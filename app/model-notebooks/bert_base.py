@@ -121,7 +121,6 @@ outputs = model(input_ids, token_type_ids, attention_mask)
 mlm_logits = outputs[0]
 pooled = outputs[1]
 
-# mlm_logits: (2, 16, 30522), pooled: (2, 768)
 
 # Train on a tiny masked-token prediction batch.
 model = BERTBase(vocab_size=20, hidden_size=12, num_layers=1)
@@ -132,6 +131,7 @@ train_targets = torch.tensor([[2, 3, 4, 5], [3, 2, 1, 0]])
 criterion = nn.CrossEntropyLoss()
 optimizer = torch.optim.SGD(model.parameters(), lr=0.1)
 
+# Fit the model for a few steps on the tiny dataset.
 for step in range(3):
     optimizer.zero_grad()
     outputs = model(input_ids, token_type_ids, attention_mask)
@@ -142,4 +142,5 @@ for step in range(3):
     loss.backward()
     optimizer.step()
 
+# Keep the final scalar loss for inspection.
 final_loss = loss.item()

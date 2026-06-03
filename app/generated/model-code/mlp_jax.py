@@ -32,7 +32,6 @@ inputs = jnp.ones((2, 784))
 params = model.init(jax.random.PRNGKey(0), inputs)
 logits = model.apply(params, inputs)
 
-# logits: (2, 10)
 
 # Train on a tiny synthetic classification batch.
 model = MLP(hidden_dim=8, output_dim=2)
@@ -59,7 +58,9 @@ def train_step(params, inputs, targets, learning_rate=0.1):
     return params, loss
 
 
+# Fit the model for a few steps on the tiny dataset.
 for step in range(3):
     params, loss = train_step(params, train_inputs, train_targets)
 
+# Keep the final scalar loss for inspection.
 final_loss = loss

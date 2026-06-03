@@ -122,7 +122,6 @@ tgt_mask = jnp.tril(mask_values)
 params = model.init(jax.random.PRNGKey(0), src_ids, tgt_ids, tgt_mask)
 logits = model.apply(params, src_ids, tgt_ids, tgt_mask)
 
-# logits: (2, 16, 37000)
 
 # Train on a tiny copy-style token batch.
 model = Transformer(vocab_size=20, d_model=16, nhead=4, num_layers=1)
@@ -147,7 +146,9 @@ def train_step(params, src_ids, tgt_ids, targets, mask, learning_rate=0.1):
     return params, loss
 
 
+# Fit the model for a few steps on the tiny dataset.
 for step in range(3):
     params, loss = train_step(params, src_ids, tgt_ids, train_targets, tgt_mask)
 
+# Keep the final scalar loss for inspection.
 final_loss = loss

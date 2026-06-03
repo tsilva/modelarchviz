@@ -34,7 +34,6 @@ test_input = jnp.ones((2, 32, 32, 1))
 params = model.init(jax.random.PRNGKey(0), test_input)
 logits = model.apply(params, test_input)
 
-# logits: (2, 10)
 
 # Train on a tiny synthetic image batch.
 model = LeNet5()
@@ -58,7 +57,9 @@ def train_step(params, inputs, targets, learning_rate=0.1):
     return params, loss
 
 
+# Fit the model for a few steps on the tiny dataset.
 for step in range(3):
     params, loss = train_step(params, train_images, train_targets)
 
+# Keep the final scalar loss for inspection.
 final_loss = loss

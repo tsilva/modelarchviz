@@ -164,7 +164,6 @@ model = WideNet(depth=28, widen_factor=10, dropout_rate=0.0, num_classes=10)
 test_input = torch.randn(2, 3, 32, 32)
 logits = model(test_input)
 
-# logits: (2, 10)
 
 # Train on a tiny synthetic CIFAR-size batch.
 model = WideNet(depth=10, widen_factor=1, dropout_rate=0.0, num_classes=2)
@@ -175,6 +174,7 @@ train_targets = torch.tensor([0, 1])
 criterion = nn.CrossEntropyLoss()
 optimizer = torch.optim.SGD(model.parameters(), lr=0.01)
 
+# Fit the model for a few steps on the tiny dataset.
 for step in range(3):
     optimizer.zero_grad()
     logits = model(train_images)
@@ -182,4 +182,5 @@ for step in range(3):
     loss.backward()
     optimizer.step()
 
+# Keep the final scalar loss for inspection.
 final_loss = loss.item()

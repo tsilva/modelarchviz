@@ -101,7 +101,6 @@ outputs = model(sequence)
 logits = outputs[0]
 states = outputs[1]
 
-# logits: (2, 10), states: (2, 8, 64)
 
 # Train on two synthetic sequences with opposite labels.
 model = GRUSequence(input_size=3, hidden_size=8, output_size=2)
@@ -115,6 +114,7 @@ train_targets = torch.tensor([0, 1])
 criterion = nn.CrossEntropyLoss()
 optimizer = torch.optim.SGD(model.parameters(), lr=0.1)
 
+# Fit the model for a few steps on the tiny dataset.
 for step in range(3):
     optimizer.zero_grad()
     outputs = model(train_sequences)
@@ -123,4 +123,5 @@ for step in range(3):
     loss.backward()
     optimizer.step()
 
+# Keep the final scalar loss for inspection.
 final_loss = loss.item()

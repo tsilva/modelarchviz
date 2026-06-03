@@ -55,7 +55,6 @@ model = LeNet5()
 test_input = torch.randn(2, 1, 32, 32)
 logits = model(test_input)
 
-# logits: (2, 10)
 
 # Train on a tiny synthetic image batch.
 model = LeNet5()
@@ -66,6 +65,7 @@ train_targets = torch.tensor([0, 1])
 criterion = nn.CrossEntropyLoss()
 optimizer = torch.optim.SGD(model.parameters(), lr=0.1)
 
+# Fit the model for a few steps on the tiny dataset.
 for step in range(3):
     optimizer.zero_grad()
     logits = model(train_images)
@@ -73,4 +73,5 @@ for step in range(3):
     loss.backward()
     optimizer.step()
 
+# Keep the final scalar loss for inspection.
 final_loss = loss.item()

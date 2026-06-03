@@ -120,7 +120,6 @@ mask = mask.reshape(1, 1, 16, 16)
 params = model.init(jax.random.PRNGKey(0), test_input, mask)
 logits = model.apply(params, test_input, mask)
 
-# logits: (2, 16, 50257)
 
 # Train on a tiny next-token prediction batch.
 model = GPT2Small(vocab_size=20, n_layer=1)
@@ -145,7 +144,9 @@ def train_step(params, inputs, mask, targets, learning_rate=0.01):
     return params, loss
 
 
+# Fit the model for a few steps on the tiny dataset.
 for step in range(3):
     params, loss = train_step(params, input_ids, mask, train_targets)
 
+# Keep the final scalar loss for inspection.
 final_loss = loss

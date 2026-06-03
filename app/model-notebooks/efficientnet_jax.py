@@ -154,7 +154,6 @@ test_input = jnp.ones((2, 224, 224, 3))
 params = model.init(jax.random.PRNGKey(0), test_input, train=False)
 logits = model.apply(params, test_input, train=False)
 
-# logits: (2, 1000)
 
 # Train on a tiny synthetic image batch.
 model = EfficientNet(num_classes=2)
@@ -181,7 +180,9 @@ def train_step(params, batch_stats, inputs, targets, learning_rate=0.01):
     return params, loss
 
 
+# Fit the model for a few steps on the tiny dataset.
 for step in range(3):
     params, loss = train_step(params, batch_stats, train_images, train_targets)
 
+# Keep the final scalar loss for inspection.
 final_loss = loss

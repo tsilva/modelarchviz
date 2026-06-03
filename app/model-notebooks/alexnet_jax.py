@@ -81,7 +81,6 @@ test_input = jnp.ones((2, 227, 227, 3))
 params = model.init(jax.random.PRNGKey(0), test_input, train=False)
 logits = model.apply(params, test_input, train=False)
 
-# logits: (2, 1000)
 
 # Train on a tiny synthetic image batch.
 model = AlexNet(num_classes=2)
@@ -105,7 +104,9 @@ def train_step(params, inputs, targets, learning_rate=0.01):
     return params, loss
 
 
+# Fit the model for a few steps on the tiny dataset.
 for step in range(3):
     params, loss = train_step(params, train_images, train_targets)
 
+# Keep the final scalar loss for inspection.
 final_loss = loss

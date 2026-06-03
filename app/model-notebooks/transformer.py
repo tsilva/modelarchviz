@@ -164,7 +164,6 @@ mask_values = mask_values * float('-inf')
 tgt_mask = torch.triu(mask_values, diagonal=1)
 logits = model(src_ids, tgt_ids, tgt_mask)
 
-# logits: (2, 16, 37000)
 
 # Train on a tiny copy-style token batch.
 model = Transformer(vocab_size=20, d_model=16, nhead=4, num_layers=1)
@@ -177,6 +176,7 @@ tgt_mask = torch.triu(mask_values, diagonal=1)
 criterion = nn.CrossEntropyLoss()
 optimizer = torch.optim.SGD(model.parameters(), lr=0.1)
 
+# Fit the model for a few steps on the tiny dataset.
 for step in range(3):
     optimizer.zero_grad()
     logits = model(src_ids, tgt_ids, tgt_mask)
@@ -186,4 +186,5 @@ for step in range(3):
     loss.backward()
     optimizer.step()
 
+# Keep the final scalar loss for inspection.
 final_loss = loss.item()

@@ -100,7 +100,6 @@ outputs = model.apply(params, sequence)
 logits = outputs[0]
 states = outputs[1]
 
-# logits: (2, 10), states: (2, 8, 64)
 
 # Train on two synthetic sequences with opposite labels.
 model = LSTMSequence(hidden_size=8, output_size=2)
@@ -128,7 +127,9 @@ def train_step(params, inputs, targets, learning_rate=0.1):
     return params, loss
 
 
+# Fit the model for a few steps on the tiny dataset.
 for step in range(3):
     params, loss = train_step(params, train_sequences, train_targets)
 
+# Keep the final scalar loss for inspection.
 final_loss = loss

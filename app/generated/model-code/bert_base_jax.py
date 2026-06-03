@@ -80,7 +80,6 @@ outputs = model.apply(params, input_ids, token_type_ids, attention_mask)
 mlm_logits = outputs[0]
 pooled = outputs[1]
 
-# mlm_logits: (2, 16, 30522), pooled: (2, 768)
 
 # Train on a tiny masked-token prediction batch.
 model = BERTBase(vocab_size=20, hidden_size=12, num_layers=1)
@@ -105,7 +104,9 @@ def train_step(params, input_ids, token_type_ids, attention_mask, targets, learn
     return params, loss
 
 
+# Fit the model for a few steps on the tiny dataset.
 for step in range(3):
     params, loss = train_step(params, input_ids, token_type_ids, attention_mask, train_targets)
 
+# Keep the final scalar loss for inspection.
 final_loss = loss
