@@ -528,9 +528,20 @@ select {
   text-align: left;
 }
 
-.head-tile span {
+.head-tile-main {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.head-label {
+  overflow: hidden;
   font-size: 12px;
   font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .head-tile small {
@@ -558,27 +569,40 @@ select {
   scrollbar-width: none;
 }
 
+.paper-viewer:fullscreen {
+  display: flex;
+  flex-direction: column;
+  background: #dfe5eb;
+}
+
 .paper-viewer::-webkit-scrollbar {
   display: none;
 }
 
-.pdf-controls {
-  position: absolute;
+.pdf-controls-dock {
+  position: sticky;
   bottom: 18px;
-  left: 50%;
   z-index: 3;
+  display: flex;
+  justify-content: center;
+  margin-top: -70px;
+  padding: 0 14px 18px;
+  pointer-events: none;
+}
+
+.pdf-controls {
   display: flex;
   min-height: 46px;
   align-items: center;
   justify-content: center;
   gap: 10px;
-  transform: translateX(-50%);
   border: 1px solid rgba(148, 163, 184, 0.45);
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.92);
   box-shadow: 0 14px 34px rgba(15, 23, 42, 0.2);
   padding: 6px 8px;
   backdrop-filter: blur(10px);
+  pointer-events: auto;
 }
 
 .pdf-control-button {
@@ -618,7 +642,7 @@ select {
   align-items: flex-start;
   justify-content: center;
   overflow: visible;
-  padding: 26px 14px 86px;
+  padding: 26px 14px 106px;
 }
 
 .pdf-canvas {

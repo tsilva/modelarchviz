@@ -713,7 +713,7 @@ const models: ModelSpec[] = [
         label: "input",
         type: "FlatVector",
         kind: "input",
-        badges: ["784 features"],
+        badges: ["784->784"],
         codeLines: [9, 34, 36, 37],
       },
       {
@@ -738,6 +738,7 @@ const models: ModelSpec[] = [
             label: "sigmoid",
             type: "Activation",
             kind: "activation",
+            badges: ["128->128"],
             codeLines: [21, 23],
           },
         ],
@@ -764,6 +765,7 @@ const models: ModelSpec[] = [
             label: "sigmoid",
             type: "Activation",
             kind: "activation",
+            badges: ["128->128"],
             codeLines: [25, 27],
           },
         ],
@@ -781,7 +783,7 @@ const models: ModelSpec[] = [
         label: "logits",
         type: "ClassScores",
         kind: "head",
-        badges: ["10 classes"],
+        badges: ["10->10"],
         codeLines: [30, 31, 34, 37, 39],
       },
     ],
@@ -3722,6 +3724,32 @@ function DownloadIcon() {
   );
 }
 
+function FullscreenIcon({ active }: { active: boolean }) {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 16 16" className="icon">
+      {active ? (
+        <path
+          d="M6.5 2.5v4h-4M9.5 2.5v4h4M6.5 13.5v-4h-4M9.5 13.5v-4h4"
+          fill="none"
+          stroke="currentColor"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth="1.6"
+        />
+      ) : (
+        <path
+          d="M6.5 2.5h-4v4M9.5 2.5h4v4M6.5 13.5h-4v-4M9.5 13.5h4v-4"
+          fill="none"
+          stroke="currentColor"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth="1.6"
+        />
+      )}
+    </svg>
+  );
+}
+
 function ColabIcon() {
   return (
     <svg aria-hidden="true" viewBox="0 0 16 16" className="icon">
@@ -3812,7 +3840,14 @@ function TreeNode({
         data-kind={node.kind}
         onClick={() => onSelect(node)}
       >
-        <span>{node.label}</span>
+        <span className="head-tile-main">
+          <strong className="head-label">{node.label}</strong>
+          {node.badges?.map((badge) => (
+            <span className="badge" key={badge}>
+              {badge}
+            </span>
+          ))}
+        </span>
         {isSelected ? <small>id: {node.id}</small> : null}
       </button>
     );
@@ -3944,6 +3979,10 @@ function SyntaxLine({ line }: { line: string }) {
   );
 }
 
+function isCommentOnlyCodeLine(line: string) {
+  return line.trimStart().startsWith("#");
+}
+
 function CodeEditor({ model, selected }: { model: ModelSpec; selected: ArchNode | null }) {
   const [language, setLanguage] = useState<CodeLanguage>("pytorch");
   const editorRef = useRef<HTMLDivElement>(null);
@@ -3954,9 +3993,14 @@ function CodeEditor({ model, selected }: { model: ModelSpec; selected: ArchNode 
   const filesForLanguage = codeFiles[language];
   const currentFile = filesForLanguage[0];
   const selectedLineNumbers = selected?.codeLines ?? [];
-  const selectedLines = new Set(selectedLineNumbers);
+  const selectedLines = new Set(
+    selectedLineNumbers.filter((lineNumber) => {
+      const line = currentFile.code[lineNumber - 1];
+      return line !== undefined && !isCommentOnlyCodeLine(line);
+    }),
+  );
   const firstSelectedLine =
-    selectedLineNumbers.find((lineNumber) => lineNumber >= 1 && lineNumber <= currentFile.code.length) ?? null;
+    selectedLineNumbers.find((lineNumber) => selectedLines.has(lineNumber)) ?? null;
 
   useEffect(() => {
     const editor = editorRef.current;
@@ -4052,6 +4096,7 @@ function PdfViewer({ model }: { model: ModelSpec }) {
   const [pageCount, setPageCount] = useState(0);
   const [viewerWidth, setViewerWidth] = useState(0);
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   useEffect(() => {
     setPageNumber(1);
@@ -4069,6 +4114,17 @@ function PdfViewer({ model }: { model: ModelSpec }) {
     observer.observe(viewerRef.current);
 
     return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    const updateFullscreenState = () => {
+      setIsFullscreen(document.fullscreenElement === viewerRef.current);
+    };
+
+    updateFullscreenState();
+    document.addEventListener("fullscreenchange", updateFullscreenState);
+
+    return () => document.removeEventListener("fullscreenchange", updateFullscreenState);
   }, []);
 
   useEffect(() => {
@@ -4137,42 +4193,28 @@ function PdfViewer({ model }: { model: ModelSpec }) {
     };
   }, [model.paper.pdfUrl, pageNumber, viewerWidth]);
 
+  const toggleFullscreen = async () => {
+    const viewer = viewerRef.current;
+    if (!viewer || typeof document === "undefined") {
+      return;
+    }
+
+    try {
+      if (document.fullscreenElement === viewer) {
+        await document.exitFullscreen();
+        return;
+      }
+
+      await viewer.requestFullscreen();
+    } catch {
+      // Fullscreen can be denied by embedded browsers or document permissions.
+    }
+  };
+
+  const fullscreenSupported = typeof document !== "undefined" && document.fullscreenEnabled;
+
   return (
     <div className="paper-viewer" ref={viewerRef}>
-      <div className="pdf-controls">
-        <button
-          className="pdf-control-button"
-          type="button"
-          aria-label="Previous paper page"
-          title="Previous page"
-          disabled={pageNumber <= 1}
-          onClick={() => setPageNumber((current) => Math.max(1, current - 1))}
-        >
-          <ArrowIcon direction="left" />
-        </button>
-        <span className="pdf-page-count">
-          {pageCount > 0 ? `${pageNumber} / ${pageCount}` : "Loading"}
-        </span>
-        <button
-          className="pdf-control-button"
-          type="button"
-          aria-label="Next paper page"
-          title="Next page"
-          disabled={pageCount === 0 || pageNumber >= pageCount}
-          onClick={() => setPageNumber((current) => Math.min(pageCount, current + 1))}
-        >
-          <ArrowIcon direction="right" />
-        </button>
-        <a
-          className="pdf-control-button"
-          href={model.paper.pdfUrl}
-          download={`${model.id}.pdf`}
-          aria-label={`Download PDF for ${model.label}`}
-          title={`Download PDF for ${model.label}`}
-        >
-          <DownloadIcon />
-        </a>
-      </div>
       <div className="pdf-canvas-wrap">
         {status !== "ready" ? (
           <div className={`pdf-status ${status === "error" ? "error" : ""}`}>
@@ -4180,6 +4222,52 @@ function PdfViewer({ model }: { model: ModelSpec }) {
           </div>
         ) : null}
         <canvas ref={canvasRef} className="pdf-canvas" aria-label={`${model.paper.title} page ${pageNumber}`} />
+      </div>
+      <div className="pdf-controls-dock">
+        <div className="pdf-controls">
+          <button
+            className="pdf-control-button"
+            type="button"
+            aria-label="Previous paper page"
+            title="Previous page"
+            disabled={pageNumber <= 1}
+            onClick={() => setPageNumber((current) => Math.max(1, current - 1))}
+          >
+            <ArrowIcon direction="left" />
+          </button>
+          <span className="pdf-page-count">
+            {pageCount > 0 ? `${pageNumber} / ${pageCount}` : "Loading"}
+          </span>
+          <button
+            className="pdf-control-button"
+            type="button"
+            aria-label="Next paper page"
+            title="Next page"
+            disabled={pageCount === 0 || pageNumber >= pageCount}
+            onClick={() => setPageNumber((current) => Math.min(pageCount, current + 1))}
+          >
+            <ArrowIcon direction="right" />
+          </button>
+          <button
+            className="pdf-control-button"
+            type="button"
+            aria-label={isFullscreen ? "Exit fullscreen paper viewer" : "Enter fullscreen paper viewer"}
+            title={isFullscreen ? "Exit fullscreen" : "Fullscreen"}
+            disabled={!fullscreenSupported}
+            onClick={toggleFullscreen}
+          >
+            <FullscreenIcon active={isFullscreen} />
+          </button>
+          <a
+            className="pdf-control-button"
+            href={model.paper.pdfUrl}
+            download={`${model.id}.pdf`}
+            aria-label={`Download PDF for ${model.label}`}
+            title={`Download PDF for ${model.label}`}
+          >
+            <DownloadIcon />
+          </a>
+        </div>
       </div>
     </div>
   );
