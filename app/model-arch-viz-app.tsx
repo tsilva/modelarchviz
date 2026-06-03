@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useRef, useState, type Dispatch, type SetStateAction } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import mlpPythonSource from "./generated/model-code/mlp.py";
 import mlpJaxPythonSource from "./generated/model-code/mlp_jax.py";
@@ -90,8 +90,12 @@ type ModelSpec = {
   jaxCode: string[];
 };
 
-type PaneKey = "architecture" | "paper" | "code";
+type PaneKey = "architecture" | "paper" | "code" | "chat";
 type CodeLanguage = "pytorch" | "jax";
+type ChatMessage = {
+  role: "user" | "assistant";
+  content: string;
+};
 
 const languageLabels: Record<CodeLanguage, string> = {
   pytorch: "PyTorch",
@@ -3723,6 +3727,21 @@ function PaneIcon({ pane }: { pane: PaneKey }) {
     );
   }
 
+  if (pane === "chat") {
+    return (
+      <svg aria-hidden="true" viewBox="0 0 16 16" className="icon">
+        <path
+          d="M3 4.5a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v3.8a2 2 0 0 1-2 2H8l-3.2 2.4v-2.4H5a2 2 0 0 1-2-2Z"
+          fill="none"
+          stroke="currentColor"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth="1.5"
+        />
+      </svg>
+    );
+  }
+
   return (
     <svg aria-hidden="true" viewBox="0 0 16 16" className="icon">
       <path d="M6 4L3 8l3 4M10 4l3 4-3 4" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.7" />
@@ -3792,6 +3811,66 @@ function ColabIcon() {
       />
     </svg>
   );
+}
+
+function SendIcon() {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 16 16" className="icon">
+      <path
+        d="M2.5 8h10M8.5 3.5 13 8l-4.5 4.5"
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.8"
+      />
+    </svg>
+  );
+}
+
+function findNodeById(nodes: ArchNode[], id: string): ArchNode | null {
+  for (const node of nodes) {
+    if (node.id === id) {
+      return node;
+    }
+
+    const children = node.children ?? node.lazyChildren?.();
+    if (!children) {
+      continue;
+    }
+
+    const match = findNodeById(children, id);
+    if (match) {
+      return match;
+    }
+  }
+
+  return null;
+}
+
+function getCodeForLanguage(model: ModelSpec, language: CodeLanguage) {
+  if (language === "jax") {
+    return {
+      fileName: model.jaxFileName,
+      code: model.jaxCode,
+    };
+  }
+
+  return {
+    fileName: model.fileName,
+    code: model.code,
+  };
+}
+
+function selectedCodeContext(model: ModelSpec, selected: ArchNode | null, language: CodeLanguage) {
+  const currentFile = getCodeForLanguage(model, language);
+
+  return (selected?.codeLines ?? [])
+    .filter((lineNumber) => currentFile.code[lineNumber - 1] !== undefined)
+    .map((lineNumber) => ({
+      lineNumber,
+      text: currentFile.code[lineNumber - 1],
+    }));
 }
 
 function ArchitectureTree({
@@ -4012,8 +4091,17 @@ function isCommentOnlyCodeLine(line: string) {
   return line.trimStart().startsWith("#");
 }
 
-function CodeEditor({ model, selected }: { model: ModelSpec; selected: ArchNode | null }) {
-  const [language, setLanguage] = useState<CodeLanguage>("pytorch");
+function CodeEditor({
+  model,
+  selected,
+  language,
+  setLanguage,
+}: {
+  model: ModelSpec;
+  selected: ArchNode | null;
+  language: CodeLanguage;
+  setLanguage: (language: CodeLanguage) => void;
+}) {
   const editorRef = useRef<HTMLDivElement>(null);
   const codeFiles = {
     pytorch: [{ id: "main", fileName: model.fileName, notebookName: notebookFileName(model.fileName), code: model.code }],
@@ -4106,6 +4194,166 @@ function CodeEditor({ model, selected }: { model: ModelSpec; selected: ArchNode 
           );
         })}
       </div>
+    </section>
+  );
+}
+
+function ChatPanel({
+  model,
+  selected,
+  language,
+  query,
+  messages,
+  setMessages,
+}: {
+  model: ModelSpec;
+  selected: ArchNode | null;
+  language: CodeLanguage;
+  query: string;
+  messages: ChatMessage[];
+  setMessages: Dispatch<SetStateAction<ChatMessage[]>>;
+}) {
+  const [draft, setDraft] = useState("");
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const currentFile = getCodeForLanguage(model, language);
+  const selectedLines = selectedCodeContext(model, selected, language);
+
+  useEffect(() => {
+    const scroller = scrollRef.current;
+    if (!scroller) {
+      return;
+    }
+
+    scroller.scrollTo({
+      top: scroller.scrollHeight,
+      behavior: "smooth",
+    });
+  }, [messages, pending]);
+
+  const sendMessage = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const content = draft.trim();
+    if (!content || pending) {
+      return;
+    }
+
+    const nextMessages: ChatMessage[] = [...messages, { role: "user", content }];
+    setMessages(nextMessages);
+    setDraft("");
+    setPending(true);
+    setError(null);
+
+    try {
+      const response = await fetch("/api/chat", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          messages: nextMessages,
+          context: {
+            model: {
+              id: model.id,
+              label: model.label,
+              breadcrumb: model.breadcrumb,
+              stats: model.stats,
+            },
+            paper: {
+              title: model.paper.title,
+              authors: model.paper.authors,
+              year: model.paper.year,
+              venue: model.paper.venue,
+              focus: model.paper.focus,
+            },
+            selection: selected
+              ? {
+                  id: selected.id,
+                  label: selected.label,
+                  type: selected.type,
+                  kind: selected.kind,
+                  summary: selected.summary ?? null,
+                  badges: selected.badges ?? [],
+                  codeLines: selected.codeLines,
+                }
+              : null,
+            source: {
+              language,
+              fileName: currentFile.fileName,
+              code: currentFile.code,
+              selectedLines,
+            },
+            searchQuery: query,
+          },
+        }),
+      });
+      const payload = (await response.json()) as { message?: string; error?: string };
+
+      if (!response.ok || !payload.message) {
+        throw new Error(payload.error ?? "Chat request failed");
+      }
+
+      setMessages((current) => [...current, { role: "assistant", content: payload.message ?? "" }]);
+    } catch (caught) {
+      const message = caught instanceof Error ? caught.message : "Chat request failed";
+      setError(message);
+      setDraft(content);
+      setMessages(messages);
+    } finally {
+      setPending(false);
+    }
+  };
+
+  return (
+    <section className="chat-pane">
+      <div className="pane-toolbar chat-toolbar">
+        <div>
+          <h1>Chat</h1>
+          <p>{selected ? `${selected.label} · ${currentFile.fileName}` : currentFile.fileName}</p>
+        </div>
+      </div>
+      <div className="chat-body" ref={scrollRef}>
+        {messages.length === 0 ? (
+          <div className="chat-empty">
+            <strong>Ask about the current selection.</strong>
+            <span>{selected ? `${selected.type} · ${selected.id}` : model.label}</span>
+          </div>
+        ) : null}
+        {messages.map((message, index) => (
+          <div className={`chat-message ${message.role}`} key={`${message.role}-${index}`}>
+            <span>{message.role === "user" ? "You" : "Assistant"}</span>
+            <p>{message.content}</p>
+          </div>
+        ))}
+        {pending ? (
+          <div className="chat-message assistant">
+            <span>Assistant</span>
+            <p>Thinking...</p>
+          </div>
+        ) : null}
+      </div>
+      <form className="chat-composer" onSubmit={sendMessage}>
+        {error ? <div className="chat-error">{error}</div> : null}
+        <div className="chat-input-row">
+          <textarea
+            value={draft}
+            onChange={(event) => setDraft(event.currentTarget.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter" && !event.shiftKey) {
+                event.preventDefault();
+                event.currentTarget.form?.requestSubmit();
+              }
+            }}
+            placeholder="Ask about this selection"
+            aria-label="Chat message"
+            rows={3}
+          />
+          <button type="submit" aria-label="Send chat message" title="Send" disabled={pending || draft.trim().length === 0}>
+            <SendIcon />
+          </button>
+        </div>
+      </form>
     </section>
   );
 }
@@ -4318,13 +4566,16 @@ export default function ModelArchVizApp({ initialModelId }: ModelArchVizAppProps
     architecture: true,
     paper: false,
     code: true,
+    chat: true,
   });
   const [query, setQuery] = useState("");
+  const [codeLanguage, setCodeLanguage] = useState<CodeLanguage>("pytorch");
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
 
-  const paneOrder: PaneKey[] = ["architecture", "code", "paper"];
+  const paneOrder: PaneKey[] = ["architecture", "code", "paper", "chat"];
   const visiblePanes = paneOrder.filter((pane) => visibleColumns[pane]);
   const expanded = expandedByModel[model.id] ?? new Set<string>();
-  const selected = selectedByModel[model.id] ?? null;
+  const selected = selectedByModel[model.id] ?? findNodeById(model.nodes, model.selectedId);
 
   useEffect(() => {
     setModelId(initialModel.id);
@@ -4404,7 +4655,20 @@ export default function ModelArchVizApp({ initialModelId }: ModelArchVizAppProps
       return <PaperPane model={model} />;
     }
 
-    return <CodeEditor model={model} selected={selected} />;
+    if (pane === "chat") {
+      return (
+        <ChatPanel
+          model={model}
+          selected={selected}
+          language={codeLanguage}
+          query={query}
+          messages={chatMessages}
+          setMessages={setChatMessages}
+        />
+      );
+    }
+
+    return <CodeEditor model={model} selected={selected} language={codeLanguage} setLanguage={setCodeLanguage} />;
   };
 
   return (
