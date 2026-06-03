@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useEffect, useRef, useState, type Dispatch, type SetStateAction } from "react";
+import { Fragment, useEffect, useRef, useState, type Dispatch, type ReactNode, type SetStateAction } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import mlpPythonSource from "./generated/model-code/mlp.py";
 import mlpJaxPythonSource from "./generated/model-code/mlp_jax.py";
@@ -96,6 +96,7 @@ type ChatMessage = {
   role: "user" | "assistant";
   content: string;
 };
+type MarkdownInlineDelimiter = "`" | "**" | "*";
 type PaperSelection = {
   modelId: string;
   pageNumber: number;
@@ -4357,13 +4358,17 @@ function ChatPanel({
         {messages.map((message, index) => (
           <div className={`chat-message ${message.role}`} key={`${message.role}-${index}`}>
             <span>{message.role === "user" ? "You" : "Assistant"}</span>
-            <p>{message.content}</p>
+            {message.role === "assistant" ? (
+              <MarkdownMessage content={message.content} />
+            ) : (
+              <p className="chat-message-content">{message.content}</p>
+            )}
           </div>
         ))}
         {pending ? (
           <div className="chat-message assistant">
             <span>Assistant</span>
-            <p>Thinking...</p>
+            <p className="chat-message-content">Thinking...</p>
           </div>
         ) : null}
       </div>
@@ -4390,6 +4395,223 @@ function ChatPanel({
       </form>
     </section>
   );
+}
+
+function MarkdownMessage({ content }: { content: string }) {
+  const lines = content.split(/\r?\n/);
+  const blocks: ReactNode[] = [];
+  let index = 0;
+
+  while (index < lines.length) {
+    const line = lines[index];
+    const trimmed = line.trim();
+
+    if (!trimmed) {
+      index += 1;
+      continue;
+    }
+
+    const fence = trimmed.match(/^```([A-Za-z0-9_-]+)?\s*$/);
+    if (fence) {
+      const codeLinesBlock: string[] = [];
+      index += 1;
+
+      while (index < lines.length && !lines[index].trim().startsWith("```")) {
+        codeLinesBlock.push(lines[index]);
+        index += 1;
+      }
+
+      if (index < lines.length) {
+        index += 1;
+      }
+
+      blocks.push(
+        <pre className="chat-markdown-code" key={`code-${index}`}>
+          <code>{codeLinesBlock.join("\n")}</code>
+        </pre>,
+      );
+      continue;
+    }
+
+    const heading = trimmed.match(/^(#{1,3})\s+(.+)$/);
+    if (heading) {
+      const level = heading[1].length;
+      const text = heading[2];
+      const HeadingTag = level === 1 ? "h2" : level === 2 ? "h3" : "h4";
+      blocks.push(<HeadingTag key={`heading-${index}`}>{renderMarkdownInline(text)}</HeadingTag>);
+      index += 1;
+      continue;
+    }
+
+    const unorderedItem = trimmed.match(/^[-*]\s+(.+)$/);
+    if (unorderedItem) {
+      const items: string[] = [];
+
+      while (index < lines.length) {
+        const match = lines[index].trim().match(/^[-*]\s+(.+)$/);
+        if (!match) {
+          break;
+        }
+
+        items.push(match[1]);
+        index += 1;
+      }
+
+      blocks.push(
+        <ul key={`ul-${index}`}>
+          {items.map((item, itemIndex) => (
+            <li key={`ul-${index}-${itemIndex}`}>{renderMarkdownInline(item)}</li>
+          ))}
+        </ul>,
+      );
+      continue;
+    }
+
+    const orderedItem = trimmed.match(/^\d+\.\s+(.+)$/);
+    if (orderedItem) {
+      const items: string[] = [];
+
+      while (index < lines.length) {
+        const match = lines[index].trim().match(/^\d+\.\s+(.+)$/);
+        if (!match) {
+          break;
+        }
+
+        items.push(match[1]);
+        index += 1;
+      }
+
+      blocks.push(
+        <ol key={`ol-${index}`}>
+          {items.map((item, itemIndex) => (
+            <li key={`ol-${index}-${itemIndex}`}>{renderMarkdownInline(item)}</li>
+          ))}
+        </ol>,
+      );
+      continue;
+    }
+
+    const paragraphLines: string[] = [];
+    while (index < lines.length) {
+      const current = lines[index].trim();
+      if (
+        !current ||
+        current.startsWith("```") ||
+        current.match(/^(#{1,3})\s+.+$/) ||
+        current.match(/^[-*]\s+.+$/) ||
+        current.match(/^\d+\.\s+.+$/)
+      ) {
+        break;
+      }
+
+      paragraphLines.push(current);
+      index += 1;
+    }
+
+    blocks.push(<p key={`p-${index}`}>{renderMarkdownInline(paragraphLines.join(" "))}</p>);
+  }
+
+  return <div className="chat-message-content chat-markdown">{blocks}</div>;
+}
+
+function renderMarkdownInline(text: string): ReactNode[] {
+  return renderMarkdownInlineRange(text, 0);
+}
+
+function renderMarkdownInlineRange(text: string, depth: number): ReactNode[] {
+  if (depth > 8) {
+    return [text];
+  }
+
+  const nodes: ReactNode[] = [];
+  let index = 0;
+
+  while (index < text.length) {
+    const link = nextMarkdownLink(text, index);
+    const delimiter = nextMarkdownDelimiter(text, index);
+
+    if (link && (!delimiter || link.start <= delimiter.start)) {
+      if (link.start > index) {
+        nodes.push(text.slice(index, link.start));
+      }
+
+      const href = safeMarkdownHref(link.href);
+      nodes.push(
+        <a href={href} key={`link-${link.start}`} rel="noreferrer" target="_blank">
+          {renderMarkdownInlineRange(link.text, depth + 1)}
+        </a>,
+      );
+      index = link.end;
+      continue;
+    }
+
+    if (!delimiter) {
+      nodes.push(text.slice(index));
+      break;
+    }
+
+    if (delimiter.start > index) {
+      nodes.push(text.slice(index, delimiter.start));
+    }
+
+    const inner = text.slice(delimiter.start + delimiter.marker.length, delimiter.end);
+    if (delimiter.marker === "`") {
+      nodes.push(<code key={`code-${delimiter.start}`}>{inner}</code>);
+    } else if (delimiter.marker === "**") {
+      nodes.push(<strong key={`strong-${delimiter.start}`}>{renderMarkdownInlineRange(inner, depth + 1)}</strong>);
+    } else {
+      nodes.push(<em key={`em-${delimiter.start}`}>{renderMarkdownInlineRange(inner, depth + 1)}</em>);
+    }
+
+    index = delimiter.end + delimiter.marker.length;
+  }
+
+  return nodes;
+}
+
+function nextMarkdownLink(text: string, fromIndex: number) {
+  const linkPattern = /\[([^\]]+)\]\(([^)\s]+)\)/g;
+  linkPattern.lastIndex = fromIndex;
+  const match = linkPattern.exec(text);
+
+  if (!match) {
+    return null;
+  }
+
+  return {
+    start: match.index,
+    end: match.index + match[0].length,
+    text: match[1],
+    href: match[2],
+  };
+}
+
+function nextMarkdownDelimiter(text: string, fromIndex: number) {
+  const candidates: { marker: MarkdownInlineDelimiter; start: number; end: number }[] = [];
+
+  for (const marker of ["`", "**", "*"] as MarkdownInlineDelimiter[]) {
+    const start = text.indexOf(marker, fromIndex);
+    if (start === -1) {
+      continue;
+    }
+
+    const end = text.indexOf(marker, start + marker.length);
+    if (end === -1 || end === start + marker.length) {
+      continue;
+    }
+
+    candidates.push({ marker, start, end });
+  }
+
+  return candidates.sort((left, right) => left.start - right.start || right.marker.length - left.marker.length)[0];
+}
+
+function safeMarkdownHref(href: string) {
+  if (href.startsWith("http://") || href.startsWith("https://") || href.startsWith("mailto:")) {
+    return href;
+  }
+
+  return "#";
 }
 
 function PaperPane({

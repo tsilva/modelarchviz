@@ -1048,7 +1048,7 @@ select {
   letter-spacing: 0;
 }
 
-.chat-message p {
+.chat-message-content {
   margin: 0;
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -1061,6 +1061,69 @@ select {
   white-space: pre-wrap;
 }
 
+.chat-markdown {
+  display: grid;
+  gap: 8px;
+  white-space: normal;
+}
+
+.chat-markdown p,
+.chat-markdown h2,
+.chat-markdown h3,
+.chat-markdown h4,
+.chat-markdown ul,
+.chat-markdown ol,
+.chat-markdown pre {
+  margin: 0;
+}
+
+.chat-markdown h2,
+.chat-markdown h3,
+.chat-markdown h4 {
+  color: var(--ink);
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.chat-markdown ul,
+.chat-markdown ol {
+  display: grid;
+  gap: 4px;
+  padding-left: 18px;
+}
+
+.chat-markdown li {
+  padding-left: 2px;
+}
+
+.chat-markdown a {
+  color: #255f9f;
+  font-weight: 650;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.chat-markdown code {
+  border: 1px solid #d8e1e5;
+  border-radius: 5px;
+  background: #f4f7f8;
+  padding: 1px 4px;
+  font-family: var(--font-mono, monospace);
+  font-size: 12px;
+}
+
+.chat-markdown-code {
+  overflow-x: auto;
+}
+
+.chat-markdown-code code {
+  display: block;
+  min-width: 100%;
+  padding: 8px;
+  line-height: 1.45;
+  white-space: pre;
+}
+
 .chat-message.user {
   align-self: flex-end;
 }
@@ -1069,7 +1132,7 @@ select {
   text-align: right;
 }
 
-.chat-message.user p {
+.chat-message.user .chat-message-content {
   border-color: #bfd4d9;
   background: #effbfe;
 }
