@@ -164,7 +164,6 @@ mask_values = mask_values * float('-inf')
 tgt_mask = torch.triu(mask_values, diagonal=1)
 logits = model(src_ids, tgt_ids, tgt_mask)
 
-
 # Train on a tiny copy-style token batch.
 model = Transformer(vocab_size=20, d_model=16, nhead=4, num_layers=1)
 src_ids = torch.tensor([[1, 2, 3, 4], [4, 3, 2, 1]])
@@ -180,7 +179,8 @@ optimizer = torch.optim.SGD(model.parameters(), lr=0.1)
 for step in range(3):
     optimizer.zero_grad()
     logits = model(src_ids, tgt_ids, tgt_mask)
-    flat_logits = logits.reshape(-1, logits.size(-1))
+    vocab_size = logits.size(-1)
+    flat_logits = logits.reshape(-1, vocab_size)
     flat_targets = train_targets.reshape(-1)
     loss = criterion(flat_logits, flat_targets)
     loss.backward()

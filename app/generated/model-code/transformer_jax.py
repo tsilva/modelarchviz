@@ -108,7 +108,6 @@ tgt_mask = jnp.tril(mask_values)
 params = model.init(jax.random.PRNGKey(0), src_ids, tgt_ids, tgt_mask)
 logits = model.apply(params, src_ids, tgt_ids, tgt_mask)
 
-
 # Train on a tiny copy-style token batch.
 model = Transformer(vocab_size=20, d_model=16, nhead=4, num_layers=1)
 src_ids = jnp.array([[1, 2, 3, 4], [4, 3, 2, 1]], dtype=jnp.int32)
