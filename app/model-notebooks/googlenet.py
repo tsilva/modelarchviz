@@ -55,14 +55,14 @@ class InceptionBlock(nn.Module):
 
     def forward(self, x):
         # Evaluate parallel branches while preserving spatial size.
-        branch1 = self.branch1(x)
-        branch3 = self.branch3(x)
-        branch5 = self.branch5(x)
-        branch_pool = self.branch_pool(x)
+        branch1 = self.branch1(x)  # (batch, in_channels, height, width) -> (batch, branch1_channels, height, width)
+        branch3 = self.branch3(x)  # (batch, in_channels, height, width) -> (batch, branch3_channels, height, width)
+        branch5 = self.branch5(x)  # (batch, in_channels, height, width) -> (batch, branch5_channels, height, width)
+        branch_pool = self.branch_pool(x)  # (batch, in_channels, height, width) -> (batch, pool_channels, height, width)
 
         # Concatenate branch channels: list of (batch, channels, height, width) -> one feature map.
         branches = [branch1, branch3, branch5, branch_pool]
-        x = torch.cat(branches, dim=1)
+        x = torch.cat(branches, dim=1)  # list of (batch, channels, height, width) -> (batch, output_channels, height, width)
         return x
 
 
@@ -99,53 +99,53 @@ class GoogLeNet(nn.Module):
 
     def forward(self, x):
         # Downsample the input into stem features: (batch, 3, 224, 224) -> (batch, 192, 28, 28).
-        x = self.stem(x)
+        x = self.stem(x)  # (batch, 3, 224, 224) -> (batch, 192, 28, 28)
 
         # Run Inception stage 3 and downsample spatial size.
-        x = self.inception3a(x)
-        x = self.inception3b(x)
-        x = F.max_pool2d(x, kernel_size=3, stride=2, padding=1)
+        x = self.inception3a(x)  # (batch, 192, 28, 28) -> (batch, 256, 28, 28)
+        x = self.inception3b(x)  # (batch, 256, 28, 28) -> (batch, 480, 28, 28)
+        x = F.max_pool2d(x, kernel_size=3, stride=2, padding=1)  # (batch, 480, 28, 28) -> (batch, 480, 14, 14)
 
         # Run Inception stage 4 and downsample spatial size.
-        x = self.inception4a(x)
-        x = self.inception4b(x)
-        x = self.inception4c(x)
-        x = self.inception4d(x)
-        x = self.inception4e(x)
-        x = F.max_pool2d(x, kernel_size=3, stride=2, padding=1)
+        x = self.inception4a(x)  # (batch, 480, 14, 14) -> (batch, 512, 14, 14)
+        x = self.inception4b(x)  # (batch, 512, 14, 14)
+        x = self.inception4c(x)  # (batch, 512, 14, 14)
+        x = self.inception4d(x)  # (batch, 512, 14, 14) -> (batch, 528, 14, 14)
+        x = self.inception4e(x)  # (batch, 528, 14, 14) -> (batch, 832, 14, 14)
+        x = F.max_pool2d(x, kernel_size=3, stride=2, padding=1)  # (batch, 832, 14, 14) -> (batch, 832, 7, 7)
 
         # Run Inception stage 5 and pool to a classifier vector.
-        x = self.inception5a(x)
-        x = self.inception5b(x)
-        x = self.avgpool(x)
-        x = torch.flatten(x, start_dim=1)
+        x = self.inception5a(x)  # (batch, 832, 7, 7)
+        x = self.inception5b(x)  # (batch, 832, 7, 7) -> (batch, 1024, 7, 7)
+        x = self.avgpool(x)  # (batch, 1024, 7, 7) -> (batch, 1024, 1, 1)
+        x = torch.flatten(x, start_dim=1)  # (batch, 1024, 1, 1) -> (batch, 1024)
 
         # Apply dropout and classify pooled features: (batch, 1024) -> (batch, num_classes).
-        x = self.dropout(x)
-        logits = self.fc(x)
+        x = self.dropout(x)  # (batch, 1024)
+        logits = self.fc(x)  # (batch, 1024) -> (batch, num_classes)
         return logits
 
 
 # Create and run a sample image batch: (2, 3, 224, 224) -> (2, 1000).
 model = GoogLeNet(num_classes=1000)
-test_input = torch.randn(2, 3, 224, 224)
-logits = model(test_input)
+test_input = torch.randn(2, 3, 224, 224)  # -> (2, 3, 224, 224)
+logits = model(test_input)  # (2, 3, 224, 224) -> (2, 1000)
 
 
 # Train on a tiny synthetic image batch.
 model = GoogLeNet(num_classes=2)
-train_images = torch.zeros(2, 3, 224, 224)
+train_images = torch.zeros(2, 3, 224, 224)  # -> (2, 3, 224, 224)
 train_images[0, :, 32:96, 32:96] = 1.0
 train_images[1, :, 128:192, 128:192] = 1.0
-train_targets = torch.tensor([0, 1])
+train_targets = torch.tensor([0, 1])  # -> (2)
 criterion = nn.CrossEntropyLoss()
 optimizer = torch.optim.SGD(model.parameters(), lr=0.01)
 
 # Fit the model for a few steps on the tiny dataset.
 for step in range(3):
     optimizer.zero_grad()
-    logits = model(train_images)
-    loss = criterion(logits, train_targets)
+    logits = model(train_images)  # (2, 3, 224, 224) -> (2, 2)
+    loss = criterion(logits, train_targets)  # (2, 2), (2) -> scalar
     loss.backward()
     optimizer.step()
 

@@ -52,18 +52,18 @@ class DenseLayer(nn.Module):
 
     def forward(self, x):
         # Compress existing features, then produce new growth features.
-        out = self.norm1(x)
-        out = self.relu1(out)
-        out = self.conv1(out)
-        out = self.norm2(out)
-        out = self.relu2(out)
-        out = self.conv2(out)
+        out = self.norm1(x)  # (batch, channels, height, width)
+        out = self.relu1(out)  # (batch, channels, height, width)
+        out = self.conv1(out)  # (batch, channels, height, width) -> (batch, bottleneck_channels, height, width)
+        out = self.norm2(out)  # (batch, bottleneck_channels, height, width)
+        out = self.relu2(out)  # (batch, bottleneck_channels, height, width)
+        out = self.conv2(out)  # (batch, bottleneck_channels, height, width) -> (batch, growth_rate, height, width)
         if self.dropout_rate > 0:
-            out = F.dropout(out, p=self.dropout_rate, training=self.training)
+            out = F.dropout(out, p=self.dropout_rate, training=self.training)  # (batch, growth_rate, height, width)
 
         # Concatenate old and new features: (batch, channels, height, width) grows by growth_rate.
         features = [x, out]
-        out = torch.cat(features, dim=1)
+        out = torch.cat(features, dim=1)  # (batch, channels, height, width) -> (batch, channels + growth_rate, height, width)
         return out
 
 
@@ -95,7 +95,7 @@ class DenseBlock(nn.Module):
         # Feed every layer the full accumulated feature stack.
         out = x
         for layer in self.layers:
-            out = layer(out)
+            out = layer(out)  # (batch, channels, height, width) -> (batch, channels + growth_rate, height, width)
         return out
 
 
@@ -120,10 +120,10 @@ class Transition(nn.Module):
 
     def forward(self, x):
         # Compress channels and halve spatial resolution.
-        out = self.norm(x)
-        out = self.relu(out)
-        out = self.conv(out)
-        out = F.avg_pool2d(out, kernel_size=2, stride=2)
+        out = self.norm(x)  # (batch, in_channels, height, width)
+        out = self.relu(out)  # (batch, in_channels, height, width)
+        out = self.conv(out)  # (batch, in_channels, height, width) -> (batch, out_channels, height, width)
+        out = F.avg_pool2d(out, kernel_size=2, stride=2)  # (batch, out_channels, height, width) -> (batch, out_channels, height/2, width/2)
         return out
 
 
@@ -178,24 +178,24 @@ class DenseNet(nn.Module):
 
     def forward(self, x):
         # Convert image input into stem features: (batch, 3, 224, 224) -> (batch, 64, 56, 56).
-        x = self.stem(x)
+        x = self.stem(x)  # (batch, 3, 224, 224) -> (batch, 64, 56, 56)
 
         # Grow and compress feature maps through dense blocks and transitions.
-        x = self.features(x)
+        x = self.features(x)  # (batch, 64, 56, 56) -> (batch, num_features, 7, 7)
 
         # Normalize, pool, and classify final dense features.
-        x = self.norm(x)
-        x = F.relu(x, inplace=True)
-        x = F.adaptive_avg_pool2d(x, output_size=(1, 1))
-        x = torch.flatten(x, 1)
-        logits = self.classifier(x)
+        x = self.norm(x)  # (batch, num_features, 7, 7)
+        x = F.relu(x, inplace=True)  # (batch, num_features, 7, 7)
+        x = F.adaptive_avg_pool2d(x, output_size=(1, 1))  # (batch, num_features, 7, 7) -> (batch, num_features, 1, 1)
+        x = torch.flatten(x, 1)  # (batch, num_features, 1, 1) -> (batch, num_features)
+        logits = self.classifier(x)  # (batch, num_features) -> (batch, num_classes)
         return logits
 
 
 # Create and run a sample ImageNet-size batch: (2, 3, 224, 224) -> (2, 1000).
 model = DenseNet(num_classes=1000)
-test_input = torch.randn(2, 3, 224, 224)
-logits = model(test_input)
+test_input = torch.randn(2, 3, 224, 224)  # -> (2, 3, 224, 224)
+logits = model(test_input)  # (2, 3, 224, 224) -> (2, 1000)
 
 
 # Train on a tiny synthetic image batch.
@@ -205,20 +205,20 @@ model = DenseNet(
     num_init_features=8,
     num_classes=2,
 )
-train_images = torch.zeros(2, 3, 224, 224)
+train_images = torch.zeros(2, 3, 224, 224)  # -> (2, 3, 224, 224)
 train_images[0, :, 32:96, 32:96] = 1.0
 train_images[1, :, 128:192, 128:192] = 1.0
-train_targets = torch.tensor([0, 1])
+train_targets = torch.tensor([0, 1])  # -> (2)
 criterion = nn.CrossEntropyLoss()
 optimizer = torch.optim.SGD(model.parameters(), lr=0.01)
 
 # Fit the model for a few steps on the tiny dataset.
 for step in range(3):
     optimizer.zero_grad()
-    logits = model(train_images)
-    loss = criterion(logits, train_targets)
+    logits = model(train_images)  # (2, 3, 224, 224) -> (2, 2)
+    loss = criterion(logits, train_targets)  # (2, 2), (2) -> scalar
     loss.backward()
     optimizer.step()
 
 # Keep the final scalar loss for inspection.
-final_loss = loss.item()
+final_loss = loss.item()  # scalar

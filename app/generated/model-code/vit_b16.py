@@ -19,12 +19,12 @@ class PatchEmbed(nn.Module):
 
     def forward(self, x):
         # Project image patches: (batch, channels, height, width) -> (batch, embed_dim, grid, grid).
-        x = self.proj(x)
+        x = self.proj(x)  # (batch, channels, height, width) -> (batch, embed_dim, grid, grid)
 
         # Flatten patches into a token sequence: (batch, embed_dim, grid, grid) -> (batch, patches, embed_dim).
-        x = x.flatten(2)
-        x = x.transpose(1, 2)
-        return x
+        x = x.flatten(2)  # (batch, embed_dim, grid, grid) -> (batch, embed_dim, patches)
+        x = x.transpose(1, 2)  # (batch, embed_dim, patches) -> (batch, patches, embed_dim)
+        return x  # (batch, patches, embed_dim)
 
 
 class MultiHeadSelfAttention(nn.Module):
@@ -96,15 +96,15 @@ class EncoderBlock(nn.Module):
 
     def forward(self, x):
         # Apply self-attention with a residual connection.
-        attn_input = self.norm1(x)
-        attn_output = self.attn(attn_input)
-        x = x + attn_output
+        attn_input = self.norm1(x)  # (batch, tokens, embed_dim)
+        attn_output = self.attn(attn_input)  # (batch, tokens, embed_dim)
+        x = x + attn_output  # (batch, tokens, embed_dim)
 
         # Apply MLP with a residual connection.
-        mlp_input = self.norm2(x)
-        mlp_output = self.mlp(mlp_input)
-        x = x + mlp_output
-        return x
+        mlp_input = self.norm2(x)  # (batch, tokens, embed_dim)
+        mlp_output = self.mlp(mlp_input)  # (batch, tokens, embed_dim)
+        x = x + mlp_output  # (batch, tokens, embed_dim)
+        return x  # (batch, tokens, embed_dim)
 
 
 class VisionTransformer(nn.Module):
@@ -127,45 +127,45 @@ class VisionTransformer(nn.Module):
 
     def forward(self, x):
         # Convert image patches into tokens and prepend CLS token.
-        x = self.patch_embed(x)
-        batch_size = x.size(0)
-        cls = self.cls_token.expand(batch_size, -1, -1)
-        x = torch.cat([cls, x], dim=1)
+        x = self.patch_embed(x)  # (batch, channels, height, width) -> (batch, patches, embed_dim)
+        batch_size = x.size(0)  # (batch, patches, embed_dim) -> scalar
+        cls = self.cls_token.expand(batch_size, -1, -1)  # (1, 1, embed_dim) -> (batch, 1, embed_dim)
+        x = torch.cat([cls, x], dim=1)  # (batch, 1, embed_dim), (batch, patches, embed_dim) -> (batch, tokens, embed_dim)
 
         # Add learned positions and run the encoder stack.
-        x = x + self.pos_embed
+        x = x + self.pos_embed  # (batch, tokens, embed_dim)
         for block in self.blocks:
-            x = block(x)
+            x = block(x)  # (batch, tokens, embed_dim)
 
         # Normalize CLS output and project to class logits.
-        x = self.norm(x)
-        cls_output = x[:, 0]
-        logits = self.head(cls_output)
-        return logits
+        x = self.norm(x)  # (batch, tokens, embed_dim)
+        cls_output = x[:, 0]  # (batch, tokens, embed_dim) -> (batch, embed_dim)
+        logits = self.head(cls_output)  # (batch, embed_dim) -> (batch, num_classes)
+        return logits  # (batch, num_classes)
 
 
 # Create and run a sample image batch: (2, 3, 224, 224) -> (2, 1000).
 model = VisionTransformer(num_classes=1000)
-test_input = torch.randn(2, 3, 224, 224)
-logits = model(test_input)
+test_input = torch.randn(2, 3, 224, 224)  # -> (2, 3, 224, 224)
+logits = model(test_input)  # (2, 3, 224, 224) -> (2, 1000)
 
 
 # Train on a tiny synthetic image batch.
 model = VisionTransformer(num_classes=2, embed_dim=48, depth=1, num_heads=4)
-train_images = torch.zeros(2, 3, 224, 224)
-train_images[0, :, 32:96, 32:96] = 1.0
-train_images[1, :, 128:192, 128:192] = 1.0
-train_targets = torch.tensor([0, 1])
+train_images = torch.zeros(2, 3, 224, 224)  # -> (2, 3, 224, 224)
+train_images[0, :, 32:96, 32:96] = 1.0  # (2, 3, 224, 224)
+train_images[1, :, 128:192, 128:192] = 1.0  # (2, 3, 224, 224)
+train_targets = torch.tensor([0, 1])  # -> (2)
 criterion = nn.CrossEntropyLoss()
 optimizer = torch.optim.SGD(model.parameters(), lr=0.01)
 
 # Fit the model for a few steps on the tiny dataset.
 for step in range(3):
     optimizer.zero_grad()
-    logits = model(train_images)
-    loss = criterion(logits, train_targets)
+    logits = model(train_images)  # (2, 3, 224, 224) -> (2, 2)
+    loss = criterion(logits, train_targets)  # (2, 2), (2) -> scalar
     loss.backward()
     optimizer.step()
 
 # Keep the final scalar loss for inspection.
-final_loss = loss.item()
+final_loss = loss.item()  # scalar

@@ -34,17 +34,17 @@ class BertEmbeddings(nn.Module):
 
     def forward(self, input_ids, token_type_ids):
         # Combine token, position, and segment embeddings: (batch, steps) -> (batch, steps, hidden_size).
-        positions = torch.arange(input_ids.size(1), device=input_ids.device)
-        x = self.word_embeddings(input_ids)
-        position_embeddings = self.position_embeddings(positions)
-        position_embeddings = position_embeddings[None, :, :]
-        x = x + position_embeddings
-        x = x + self.token_type_embeddings(token_type_ids)
+        positions = torch.arange(input_ids.size(1), device=input_ids.device)  # -> (steps)
+        x = self.word_embeddings(input_ids)  # (batch, steps) -> (batch, steps, hidden_size)
+        position_embeddings = self.position_embeddings(positions)  # (steps) -> (steps, hidden_size)
+        position_embeddings = position_embeddings[None, :, :]  # (steps, hidden_size) -> (1, steps, hidden_size)
+        x = x + position_embeddings  # (batch, steps, hidden_size)
+        x = x + self.token_type_embeddings(token_type_ids)  # (batch, steps, hidden_size)
 
         # Normalize and regularize embeddings while preserving shape.
-        x = self.norm(x)
-        x = self.dropout(x)
-        return x
+        x = self.norm(x)  # (batch, steps, hidden_size)
+        x = self.dropout(x)  # (batch, steps, hidden_size)
+        return x  # (batch, steps, hidden_size)
 
 
 class BertSelfAttention(nn.Module):
@@ -120,17 +120,17 @@ class BertLayer(nn.Module):
 
     def forward(self, x, attention_mask=None):
         # Apply self-attention with residual normalization: (batch, steps, hidden_size).
-        attn = self.self_attn(x, attention_mask)
-        attn = self.dropout(attn)
-        attn_residual = x + attn
-        x = self.attn_norm(attn_residual)
+        attn = self.self_attn(x, attention_mask)  # (batch, steps, hidden_size)
+        attn = self.dropout(attn)  # (batch, steps, hidden_size)
+        attn_residual = x + attn  # (batch, steps, hidden_size)
+        x = self.attn_norm(attn_residual)  # (batch, steps, hidden_size)
 
         # Apply feed-forward block with residual normalization.
-        ffn = self.ffn(x)
-        ffn = self.dropout(ffn)
-        ffn_residual = x + ffn
-        out = self.ffn_norm(ffn_residual)
-        return out
+        ffn = self.ffn(x)  # (batch, steps, hidden_size)
+        ffn = self.dropout(ffn)  # (batch, steps, hidden_size)
+        ffn_residual = x + ffn  # (batch, steps, hidden_size)
+        out = self.ffn_norm(ffn_residual)  # (batch, steps, hidden_size)
+        return out  # (batch, steps, hidden_size)
 
 
 class BERTBase(nn.Module):
@@ -150,48 +150,48 @@ class BERTBase(nn.Module):
 
     def forward(self, input_ids, token_type_ids, attention_mask=None):
         # Embed tokens and run the encoder stack.
-        x = self.embeddings(input_ids, token_type_ids)
+        x = self.embeddings(input_ids, token_type_ids)  # (batch, steps) -> (batch, steps, hidden_size)
         for layer in self.layers:
-            x = layer(x, attention_mask)
+            x = layer(x, attention_mask)  # (batch, steps, hidden_size)
 
         # Pool the CLS token and project sequence states to token logits.
-        cls_token = x[:, 0]
-        pooled_projection = self.pooler(cls_token)
-        pooled = torch.tanh(pooled_projection)
-        mlm_logits = self.mlm(x)
+        cls_token = x[:, 0]  # (batch, steps, hidden_size) -> (batch, hidden_size)
+        pooled_projection = self.pooler(cls_token)  # (batch, hidden_size)
+        pooled = torch.tanh(pooled_projection)  # (batch, hidden_size)
+        mlm_logits = self.mlm(x)  # (batch, steps, hidden_size) -> (batch, steps, vocab_size)
         outputs = (mlm_logits, pooled)
         return outputs
 
 
 # Create and run a sample token batch.
 model = BERTBase(vocab_size=30522)
-input_ids = torch.randint(0, 30522, (2, 16))
-token_type_ids = torch.zeros((2, 16), dtype=torch.long)
-attention_mask = torch.zeros((2, 16), dtype=torch.bool)
-outputs = model(input_ids, token_type_ids, attention_mask)
-mlm_logits = outputs[0]
-pooled = outputs[1]
+input_ids = torch.randint(0, 30522, (2, 16))  # -> (2, 16)
+token_type_ids = torch.zeros((2, 16), dtype=torch.long)  # -> (2, 16)
+attention_mask = torch.zeros((2, 16), dtype=torch.bool)  # -> (2, 16)
+outputs = model(input_ids, token_type_ids, attention_mask)  # (2, 16), (2, 16), (2, 16) -> tuple
+mlm_logits = outputs[0]  # tuple -> (2, 16, 30522)
+pooled = outputs[1]  # tuple -> (2, 768)
 
 
 # Train on a tiny masked-token prediction batch.
 model = BERTBase(vocab_size=20, hidden_size=12, num_layers=1)
-input_ids = torch.tensor([[1, 2, 3, 4], [4, 3, 2, 1]])
-token_type_ids = torch.zeros((2, 4), dtype=torch.long)
-attention_mask = torch.zeros((2, 4), dtype=torch.bool)
-train_targets = torch.tensor([[2, 3, 4, 5], [3, 2, 1, 0]])
+input_ids = torch.tensor([[1, 2, 3, 4], [4, 3, 2, 1]])  # -> (2, 4)
+token_type_ids = torch.zeros((2, 4), dtype=torch.long)  # -> (2, 4)
+attention_mask = torch.zeros((2, 4), dtype=torch.bool)  # -> (2, 4)
+train_targets = torch.tensor([[2, 3, 4, 5], [3, 2, 1, 0]])  # -> (2, 4)
 criterion = nn.CrossEntropyLoss()
 optimizer = torch.optim.SGD(model.parameters(), lr=0.1)
 
 # Fit the model for a few steps on the tiny dataset.
 for step in range(3):
     optimizer.zero_grad()
-    outputs = model(input_ids, token_type_ids, attention_mask)
-    mlm_logits = outputs[0]
-    flat_logits = mlm_logits.reshape(-1, mlm_logits.size(-1))
-    flat_targets = train_targets.reshape(-1)
-    loss = criterion(flat_logits, flat_targets)
+    outputs = model(input_ids, token_type_ids, attention_mask)  # (2, 4), (2, 4), (2, 4) -> tuple
+    mlm_logits = outputs[0]  # tuple -> (2, 4, 20)
+    flat_logits = mlm_logits.reshape(-1, mlm_logits.size(-1))  # (2, 4, 20) -> (8, 20)
+    flat_targets = train_targets.reshape(-1)  # (2, 4) -> (8)
+    loss = criterion(flat_logits, flat_targets)  # (8, 20), (8) -> scalar
     loss.backward()
     optimizer.step()
 
 # Keep the final scalar loss for inspection.
-final_loss = loss.item()
+final_loss = loss.item()  # scalar

@@ -33,22 +33,22 @@ class MLP(nn.Module):
 
     def forward(self, x):
         # First hidden block: (batch, input_dim) -> (batch, hidden_dim).
-        h1_pre = self.hidden1(x)
-        h1 = torch.sigmoid(h1_pre)
+        h1_pre = self.hidden1(x)  # (batch, input_dim) -> (batch, hidden_dim)
+        h1 = torch.sigmoid(h1_pre)  # (batch, hidden_dim)
 
         # Second hidden block keeps the hidden shape: (batch, hidden_dim).
-        h2_pre = self.hidden2(h1)
-        h2 = torch.sigmoid(h2_pre)
+        h2_pre = self.hidden2(h1)  # (batch, hidden_dim)
+        h2 = torch.sigmoid(h2_pre)  # (batch, hidden_dim)
 
         # Output block: (batch, hidden_dim) -> (batch, output_dim).
-        logits = self.output(h2)
+        logits = self.output(h2)  # (batch, hidden_dim) -> (batch, output_dim)
         return logits
 
 
 # Create and run a sample batch: (2, 784) -> (2, 10).
 model = MLP(input_dim=784, hidden_dim=128, output_dim=10)
-inputs = torch.randn(2, 784)
-logits = model(inputs)
+inputs = torch.randn(2, 784)  # -> (2, 784)
+logits = model(inputs)  # (2, 784) -> (2, 10)
 
 # Train on a tiny synthetic classification batch.
 model = MLP(input_dim=4, hidden_dim=8, output_dim=2)
@@ -57,18 +57,18 @@ train_inputs = torch.tensor(
         [1.0, 0.0, 1.0, 0.0],
         [0.0, 1.0, 0.0, 1.0],
     ]
-)
-train_targets = torch.tensor([0, 1])
+)  # -> (2, 4)
+train_targets = torch.tensor([0, 1])  # -> (2)
 criterion = nn.CrossEntropyLoss()
 optimizer = torch.optim.SGD(model.parameters(), lr=0.1)
 
 # Fit the model for a few steps on the tiny dataset.
 for step in range(3):
     optimizer.zero_grad()
-    logits = model(train_inputs)
-    loss = criterion(logits, train_targets)
+    logits = model(train_inputs)  # (2, 4) -> (2, 2)
+    loss = criterion(logits, train_targets)  # (2, 2), (2) -> scalar
     loss.backward()
     optimizer.step()
 
 # Keep the final scalar loss for inspection.
-final_loss = loss.item()
+final_loss = loss.item()  # scalar

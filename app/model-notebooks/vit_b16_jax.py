@@ -25,13 +25,13 @@ class PatchEmbed(nn.Module):
     def __call__(self, x):
         # Project image patches: (batch, height, width, channels) -> (batch, grid, grid, embed_dim).
         projection = nn.Conv(self.embed_dim, (self.patch_size, self.patch_size), strides=(self.patch_size, self.patch_size), name='proj')
-        x = projection(x)
+        x = projection(x)  # (batch, height, width, channels) -> (batch, grid, grid, embed_dim)
 
         # Flatten patches into a token sequence: (batch, grid, grid, embed_dim) -> (batch, patches, embed_dim).
-        batch_size = x.shape[0]
-        sequence_shape = (batch_size, -1, self.embed_dim)
-        x = x.reshape(sequence_shape)
-        return x
+        batch_size = x.shape[0]  # (batch, grid, grid, embed_dim) -> scalar
+        sequence_shape = (batch_size, -1, self.embed_dim)  # -> (batch, patches, embed_dim)
+        x = x.reshape(sequence_shape)  # (batch, grid, grid, embed_dim) -> (batch, patches, embed_dim)
+        return x  # (batch, patches, embed_dim)
 
 
 class MultiHeadSelfAttention(nn.Module):
@@ -81,17 +81,17 @@ class EncoderBlock(nn.Module):
     @nn.compact
     def __call__(self, x):
         # Apply self-attention with a residual connection.
-        y = nn.LayerNorm(name='ln_1')(x)
-        y = MultiHeadSelfAttention(self.embed_dim, self.num_heads)(y)
-        x = x + y
+        y = nn.LayerNorm(name='ln_1')(x)  # (batch, tokens, embed_dim)
+        y = MultiHeadSelfAttention(self.embed_dim, self.num_heads)(y)  # (batch, tokens, embed_dim)
+        x = x + y  # (batch, tokens, embed_dim)
 
         # Apply MLP with a residual connection.
-        y = nn.LayerNorm(name='ln_2')(x)
-        y = nn.Dense(self.mlp_dim, name='mlp_fc1')(y)
-        y = nn.gelu(y)
-        y = nn.Dense(self.embed_dim, name='mlp_fc2')(y)
-        out = x + y
-        return out
+        y = nn.LayerNorm(name='ln_2')(x)  # (batch, tokens, embed_dim)
+        y = nn.Dense(self.mlp_dim, name='mlp_fc1')(y)  # (batch, tokens, embed_dim) -> (batch, tokens, mlp_dim)
+        y = nn.gelu(y)  # (batch, tokens, mlp_dim)
+        y = nn.Dense(self.embed_dim, name='mlp_fc2')(y)  # (batch, tokens, mlp_dim) -> (batch, tokens, embed_dim)
+        out = x + y  # (batch, tokens, embed_dim)
+        return out  # (batch, tokens, embed_dim)
 
 
 class VisionTransformer(nn.Module):
@@ -103,51 +103,51 @@ class VisionTransformer(nn.Module):
     @nn.compact
     def __call__(self, x):
         # Convert image patches into tokens and prepend CLS token.
-        x = PatchEmbed(self.embed_dim)(x)
-        cls = self.param('cls_token', nn.initializers.zeros, (1, 1, self.embed_dim))
-        batch_size = x.shape[0]
-        cls_shape = (batch_size, 1, 1)
-        cls = jnp.tile(cls, cls_shape)
-        x = jnp.concatenate([cls, x], axis=1)
+        x = PatchEmbed(self.embed_dim)(x)  # (batch, height, width, channels) -> (batch, patches, embed_dim)
+        cls = self.param('cls_token', nn.initializers.zeros, (1, 1, self.embed_dim))  # -> (1, 1, embed_dim)
+        batch_size = x.shape[0]  # (batch, patches, embed_dim) -> scalar
+        cls_shape = (batch_size, 1, 1)  # -> (batch, 1, 1)
+        cls = jnp.tile(cls, cls_shape)  # (1, 1, embed_dim) -> (batch, 1, embed_dim)
+        x = jnp.concatenate([cls, x], axis=1)  # (batch, 1, embed_dim), (batch, patches, embed_dim) -> (batch, tokens, embed_dim)
 
         # Add learned positions and run the encoder stack.
         pos_init = nn.initializers.normal(0.02)
-        pos_shape = (1, x.shape[1], self.embed_dim)
-        pos = self.param('pos_embed', pos_init, pos_shape)
-        x = x + pos
+        pos_shape = (1, x.shape[1], self.embed_dim)  # -> (1, tokens, embed_dim)
+        pos = self.param('pos_embed', pos_init, pos_shape)  # -> (1, tokens, embed_dim)
+        x = x + pos  # (batch, tokens, embed_dim)
         for _ in range(self.depth):
-            x = EncoderBlock(self.embed_dim, self.num_heads)(x)
+            x = EncoderBlock(self.embed_dim, self.num_heads)(x)  # (batch, tokens, embed_dim)
 
         # Normalize CLS output and project to class logits.
-        x = nn.LayerNorm(name='encoder_norm')(x)
-        cls_output = x[:, 0]
-        logits = nn.Dense(self.num_classes, name='head')(cls_output)
-        return logits
+        x = nn.LayerNorm(name='encoder_norm')(x)  # (batch, tokens, embed_dim)
+        cls_output = x[:, 0]  # (batch, tokens, embed_dim) -> (batch, embed_dim)
+        logits = nn.Dense(self.num_classes, name='head')(cls_output)  # (batch, embed_dim) -> (batch, num_classes)
+        return logits  # (batch, num_classes)
 
 
 # Create and run a sample image batch: (2, 224, 224, 3) -> (2, 1000).
 model = VisionTransformer(num_classes=1000)
-test_input = jnp.ones((2, 224, 224, 3))
+test_input = jnp.ones((2, 224, 224, 3))  # -> (2, 224, 224, 3)
 params = model.init(jax.random.PRNGKey(0), test_input)
-logits = model.apply(params, test_input)
+logits = model.apply(params, test_input)  # (2, 224, 224, 3) -> (2, 1000)
 
 
 # Train on a tiny synthetic image batch.
 model = VisionTransformer(num_classes=2, embed_dim=48, depth=1, num_heads=4)
-train_images = jnp.zeros((2, 224, 224, 3))
-train_images = train_images.at[0, 32:96, 32:96, :].set(1.0)
-train_images = train_images.at[1, 128:192, 128:192, :].set(1.0)
-train_targets = jnp.array([0, 1])
+train_images = jnp.zeros((2, 224, 224, 3))  # -> (2, 224, 224, 3)
+train_images = train_images.at[0, 32:96, 32:96, :].set(1.0)  # (2, 224, 224, 3)
+train_images = train_images.at[1, 128:192, 128:192, :].set(1.0)  # (2, 224, 224, 3)
+train_targets = jnp.array([0, 1])  # -> (2)
 params = model.init(jax.random.PRNGKey(1), train_images)
 
 
 def train_step(params, inputs, targets, learning_rate=0.01):
     def loss_fn(current_params):
-        logits = model.apply(current_params, inputs)
-        one_hot_targets = jax.nn.one_hot(targets, logits.shape[-1])
-        log_probs = jax.nn.log_softmax(logits, axis=-1)
-        loss = -jnp.mean(jnp.sum(one_hot_targets * log_probs, axis=-1))
-        return loss
+        logits = model.apply(current_params, inputs)  # (2, 224, 224, 3) -> (2, 2)
+        one_hot_targets = jax.nn.one_hot(targets, logits.shape[-1])  # (2) -> (2, 2)
+        log_probs = jax.nn.log_softmax(logits, axis=-1)  # (2, 2)
+        loss = -jnp.mean(jnp.sum(one_hot_targets * log_probs, axis=-1))  # (2, 2), (2, 2) -> scalar
+        return loss  # scalar
 
     loss, grads = jax.value_and_grad(loss_fn)(params)
     params = jax.tree_util.tree_map(lambda p, g: p - learning_rate * g, params, grads)
@@ -159,4 +159,4 @@ for step in range(3):
     params, loss = train_step(params, train_images, train_targets)
 
 # Keep the final scalar loss for inspection.
-final_loss = loss
+final_loss = loss  # scalar

@@ -33,34 +33,34 @@ class ElmanRNN(nn.Module):
 
     def forward(self, x):
         # Build the initial recurrent state: (batch, hidden_size).
-        batch_size = x.size(0)
-        hidden_shape = (batch_size, self.hidden_size)
-        h = torch.zeros(hidden_shape, device=x.device)
+        batch_size = x.size(0)  # (batch, steps, input_size) -> scalar
+        hidden_shape = (batch_size, self.hidden_size)  # -> (batch, hidden_size)
+        h = torch.zeros(hidden_shape, device=x.device)  # -> (batch, hidden_size)
 
         # Run the shared recurrent cell over time: (batch, steps, input_size) -> list of (batch, hidden_size).
         states = []
-        step_count = x.size(1)
+        step_count = x.size(1)  # (batch, steps, input_size) -> scalar
         for t in range(step_count):
-            current_input = x[:, t]
-            input_hidden = self.input_to_hidden(current_input)
-            recurrent_hidden = self.hidden_to_hidden(h)
-            hidden_sum = input_hidden + recurrent_hidden
-            h = torch.tanh(hidden_sum)
+            current_input = x[:, t]  # (batch, steps, input_size) -> (batch, input_size)
+            input_hidden = self.input_to_hidden(current_input)  # (batch, input_size) -> (batch, hidden_size)
+            recurrent_hidden = self.hidden_to_hidden(h)  # (batch, hidden_size)
+            hidden_sum = input_hidden + recurrent_hidden  # (batch, hidden_size)
+            h = torch.tanh(hidden_sum)  # (batch, hidden_size)
             states.append(h)
 
         # Project the final state and pack the full state trace.
-        logits = self.hidden_to_output(h)
-        state_trace = torch.stack(states, dim=1)
+        logits = self.hidden_to_output(h)  # (batch, hidden_size) -> (batch, output_size)
+        state_trace = torch.stack(states, dim=1)  # list of (batch, hidden_size) -> (batch, steps, hidden_size)
         outputs = (logits, state_trace)
         return outputs
 
 
 # Create and run a sample sequence: (2, 8, 32) -> logits and states.
 model = ElmanRNN(input_size=32, hidden_size=64, output_size=10)
-sequence = torch.randn(2, 8, 32)
+sequence = torch.randn(2, 8, 32)  # -> (2, 8, 32)
 outputs = model(sequence)
-logits = outputs[0]
-states = outputs[1]
+logits = outputs[0]  # (2, 10)
+states = outputs[1]  # (2, 8, 64)
 
 
 # Train on two synthetic sequences with opposite labels.
@@ -70,8 +70,8 @@ train_sequences = torch.tensor(
         [[1.0, 0.0, 0.0], [0.5, 0.0, 0.0], [1.0, 0.0, 0.0]],
         [[0.0, 1.0, 0.0], [0.0, 0.5, 0.0], [0.0, 1.0, 0.0]],
     ]
-)
-train_targets = torch.tensor([0, 1])
+)  # -> (2, 3, 3)
+train_targets = torch.tensor([0, 1])  # -> (2)
 criterion = nn.CrossEntropyLoss()
 optimizer = torch.optim.SGD(model.parameters(), lr=0.1)
 
@@ -79,10 +79,10 @@ optimizer = torch.optim.SGD(model.parameters(), lr=0.1)
 for step in range(3):
     optimizer.zero_grad()
     outputs = model(train_sequences)
-    logits = outputs[0]
-    loss = criterion(logits, train_targets)
+    logits = outputs[0]  # (2, 2)
+    loss = criterion(logits, train_targets)  # (2, 2), (2) -> scalar
     loss.backward()
     optimizer.step()
 
 # Keep the final scalar loss for inspection.
-final_loss = loss.item()
+final_loss = loss.item()  # scalar

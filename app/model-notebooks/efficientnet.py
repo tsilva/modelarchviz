@@ -31,14 +31,14 @@ class SqueezeExcite(nn.Module):
 
     def forward(self, x):
         # Squeeze spatial dimensions into one descriptor per channel.
-        scale = F.adaptive_avg_pool2d(x, output_size=1)
+        scale = F.adaptive_avg_pool2d(x, output_size=1)  # (batch, channels, height, width) -> (batch, channels, 1, 1)
 
         # Excite channels and gate the original feature map.
-        scale = self.reduce(scale)
-        scale = F.silu(scale)
-        scale = self.expand(scale)
-        scale = torch.sigmoid(scale)
-        out = x * scale
+        scale = self.reduce(scale)  # (batch, channels, 1, 1) -> (batch, squeeze_channels, 1, 1)
+        scale = F.silu(scale)  # (batch, squeeze_channels, 1, 1)
+        scale = self.expand(scale)  # (batch, squeeze_channels, 1, 1) -> (batch, channels, 1, 1)
+        scale = torch.sigmoid(scale)  # (batch, channels, 1, 1)
+        out = x * scale  # (batch, channels, height, width)
         return out
 
 
@@ -90,21 +90,21 @@ class MBConv(nn.Module):
 
     def forward(self, x):
         # Preserve the identity path when the block keeps shape unchanged.
-        identity = x
+        identity = x  # (batch, in_channels, height, width)
 
         # Expand channels before depthwise spatial filtering.
-        out = x
+        out = x  # (batch, in_channels, height, width)
         if self.expand is not None:
-            out = self.expand(out)
-        out = self.depthwise(out)
+            out = self.expand(out)  # (batch, in_channels, height, width) -> (batch, expanded_channels, height, width)
+        out = self.depthwise(out)  # (batch, expanded_channels, height, width) -> (batch, expanded_channels, out_h, out_w)
 
         # Reweight channels with squeeze-and-excitation, then project back.
-        out = self.se(out)
-        out = self.project(out)
+        out = self.se(out)  # (batch, expanded_channels, out_h, out_w)
+        out = self.project(out)  # (batch, expanded_channels, out_h, out_w) -> (batch, out_channels, out_h, out_w)
 
         # Add the residual shortcut only for same-shape blocks.
         if self.use_residual:
-            out = out + identity
+            out = out + identity  # (batch, out_channels, height, width)
         return out
 
 
@@ -172,41 +172,41 @@ class EfficientNet(nn.Module):
 
     def forward(self, x):
         # Convert image input into stem features: (batch, 3, 224, 224) -> (batch, 32, 112, 112).
-        x = self.stem(x)
+        x = self.stem(x)  # (batch, 3, 224, 224) -> (batch, 32, 112, 112)
 
         # Run compound-scaled MBConv stages with depthwise filters and SE gates.
-        x = self.blocks(x)
+        x = self.blocks(x)  # (batch, 32, 112, 112) -> (batch, 320, 7, 7)
 
         # Expand final channels, pool, and classify.
-        x = self.head(x)
-        x = F.adaptive_avg_pool2d(x, output_size=(1, 1))
-        x = torch.flatten(x, 1)
-        logits = self.classifier(x)
+        x = self.head(x)  # (batch, 320, 7, 7) -> (batch, 1280, 7, 7)
+        x = F.adaptive_avg_pool2d(x, output_size=(1, 1))  # (batch, 1280, 7, 7) -> (batch, 1280, 1, 1)
+        x = torch.flatten(x, 1)  # (batch, 1280, 1, 1) -> (batch, 1280)
+        logits = self.classifier(x)  # (batch, 1280) -> (batch, num_classes)
         return logits
 
 
 # Create and run a sample ImageNet-size batch: (2, 3, 224, 224) -> (2, 1000).
 model = EfficientNet(num_classes=1000)
-test_input = torch.randn(2, 3, 224, 224)
-logits = model(test_input)
+test_input = torch.randn(2, 3, 224, 224)  # -> (2, 3, 224, 224)
+logits = model(test_input)  # (2, 3, 224, 224) -> (2, 1000)
 
 
 # Train on a tiny synthetic image batch.
 model = EfficientNet(num_classes=2)
-train_images = torch.zeros(2, 3, 224, 224)
+train_images = torch.zeros(2, 3, 224, 224)  # -> (2, 3, 224, 224)
 train_images[0, :, 32:96, 32:96] = 1.0
 train_images[1, :, 128:192, 128:192] = 1.0
-train_targets = torch.tensor([0, 1])
+train_targets = torch.tensor([0, 1])  # -> (2)
 criterion = nn.CrossEntropyLoss()
 optimizer = torch.optim.SGD(model.parameters(), lr=0.01)
 
 # Fit the model for a few steps on the tiny dataset.
 for step in range(3):
     optimizer.zero_grad()
-    logits = model(train_images)
-    loss = criterion(logits, train_targets)
+    logits = model(train_images)  # (2, 3, 224, 224) -> (2, 2)
+    loss = criterion(logits, train_targets)  # (2, 2), (2) -> scalar
     loss.backward()
     optimizer.step()
 
 # Keep the final scalar loss for inspection.
-final_loss = loss.item()
+final_loss = loss.item()  # scalar

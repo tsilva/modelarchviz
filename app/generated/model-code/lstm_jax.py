@@ -9,40 +9,40 @@ class LSTMCell(nn.Module):
     @nn.compact
     def __call__(self, x, state):
         # Unpack recurrent state: tuple -> two (batch, hidden_size) tensors.
-        h, c = state
+        h, c = state  # ((batch, hidden_size), (batch, hidden_size))
 
         # Compute input gate: (batch, input_size) + (batch, hidden_size) -> (batch, hidden_size).
-        x_i = nn.Dense(self.hidden_size, name='x_i')(x)
-        h_i = nn.Dense(self.hidden_size, use_bias=False, name='h_i')(h)
-        i_pre = x_i + h_i
-        i = nn.sigmoid(i_pre)
+        x_i = nn.Dense(self.hidden_size, name='x_i')(x)  # (batch, input_size) -> (batch, hidden_size)
+        h_i = nn.Dense(self.hidden_size, use_bias=False, name='h_i')(h)  # (batch, hidden_size)
+        i_pre = x_i + h_i  # (batch, hidden_size)
+        i = nn.sigmoid(i_pre)  # (batch, hidden_size)
 
         # Compute forget gate: (batch, input_size) + (batch, hidden_size) -> (batch, hidden_size).
-        x_f = nn.Dense(self.hidden_size, name='x_f')(x)
-        h_f = nn.Dense(self.hidden_size, use_bias=False, name='h_f')(h)
-        f_pre = x_f + h_f
-        f = nn.sigmoid(f_pre)
+        x_f = nn.Dense(self.hidden_size, name='x_f')(x)  # (batch, input_size) -> (batch, hidden_size)
+        h_f = nn.Dense(self.hidden_size, use_bias=False, name='h_f')(h)  # (batch, hidden_size)
+        f_pre = x_f + h_f  # (batch, hidden_size)
+        f = nn.sigmoid(f_pre)  # (batch, hidden_size)
 
         # Compute candidate memory: (batch, input_size) + (batch, hidden_size) -> (batch, hidden_size).
-        x_g = nn.Dense(self.hidden_size, name='x_g')(x)
-        h_g = nn.Dense(self.hidden_size, use_bias=False, name='h_g')(h)
-        g_pre = x_g + h_g
-        g = jnp.tanh(g_pre)
+        x_g = nn.Dense(self.hidden_size, name='x_g')(x)  # (batch, input_size) -> (batch, hidden_size)
+        h_g = nn.Dense(self.hidden_size, use_bias=False, name='h_g')(h)  # (batch, hidden_size)
+        g_pre = x_g + h_g  # (batch, hidden_size)
+        g = jnp.tanh(g_pre)  # (batch, hidden_size)
 
         # Compute output gate: (batch, input_size) + (batch, hidden_size) -> (batch, hidden_size).
-        x_o = nn.Dense(self.hidden_size, name='x_o')(x)
-        h_o = nn.Dense(self.hidden_size, use_bias=False, name='h_o')(h)
-        o_pre = x_o + h_o
-        o = nn.sigmoid(o_pre)
+        x_o = nn.Dense(self.hidden_size, name='x_o')(x)  # (batch, input_size) -> (batch, hidden_size)
+        h_o = nn.Dense(self.hidden_size, use_bias=False, name='h_o')(h)  # (batch, hidden_size)
+        o_pre = x_o + h_o  # (batch, hidden_size)
+        o = nn.sigmoid(o_pre)  # (batch, hidden_size)
 
         # Blend previous memory with candidate memory: (batch, hidden_size).
-        forget_c = f * c
-        write_c = i * g
-        c_next = forget_c + write_c
+        forget_c = f * c  # (batch, hidden_size)
+        write_c = i * g  # (batch, hidden_size)
+        c_next = forget_c + write_c  # (batch, hidden_size)
 
         # Read hidden state from updated memory: (batch, hidden_size).
-        c_readout = jnp.tanh(c_next)
-        h_next = o * c_readout
+        c_readout = jnp.tanh(c_next)  # (batch, hidden_size)
+        h_next = o * c_readout  # (batch, hidden_size)
         next_state = (h_next, c_next)
         return next_state
 
@@ -54,37 +54,37 @@ class LSTMSequence(nn.Module):
     @nn.compact
     def __call__(self, x):
         # Build initial recurrent state: (batch, hidden_size).
-        batch_size = x.shape[0]
-        hidden_shape = (batch_size, self.hidden_size)
-        h = jnp.zeros(hidden_shape)
-        c = jnp.zeros(hidden_shape)
+        batch_size = x.shape[0]  # (batch, steps, input_size) -> scalar
+        hidden_shape = (batch_size, self.hidden_size)  # -> (batch, hidden_size)
+        h = jnp.zeros(hidden_shape)  # -> (batch, hidden_size)
+        c = jnp.zeros(hidden_shape)  # -> (batch, hidden_size)
 
         # Run the shared LSTM cell over time: (batch, steps, input_size) -> list of (batch, hidden_size).
         states = []
         cell = LSTMCell(self.hidden_size)
-        step_count = x.shape[1]
+        step_count = x.shape[1]  # (batch, steps, input_size) -> scalar
         for t in range(step_count):
-            current_input = x[:, t]
+            current_input = x[:, t]  # (batch, steps, input_size) -> (batch, input_size)
             previous_state = (h, c)
             next_state = cell(current_input, previous_state)
-            h = next_state[0]
-            c = next_state[1]
+            h = next_state[0]  # (batch, hidden_size)
+            c = next_state[1]  # (batch, hidden_size)
             states.append(h)
 
         # Project the final hidden state and pack the full state trace.
-        logits = nn.Dense(self.output_size, name='readout')(h)
-        state_trace = jnp.stack(states, axis=1)
+        logits = nn.Dense(self.output_size, name='readout')(h)  # (batch, hidden_size) -> (batch, output_size)
+        state_trace = jnp.stack(states, axis=1)  # list of (batch, hidden_size) -> (batch, steps, hidden_size)
         outputs = (logits, state_trace)
         return outputs
 
 
 # Create and run a sample sequence: (2, 8, 32) -> logits and states.
 model = LSTMSequence(hidden_size=64, output_size=10)
-sequence = jnp.ones((2, 8, 32))
+sequence = jnp.ones((2, 8, 32))  # -> (2, 8, 32)
 params = model.init(jax.random.PRNGKey(0), sequence)
 outputs = model.apply(params, sequence)
-logits = outputs[0]
-states = outputs[1]
+logits = outputs[0]  # (2, 10)
+states = outputs[1]  # (2, 8, 64)
 
 
 # Train on two synthetic sequences with opposite labels.
@@ -94,18 +94,18 @@ train_sequences = jnp.array(
         [[1.0, 0.0, 0.0], [0.5, 0.0, 0.0], [1.0, 0.0, 0.0]],
         [[0.0, 1.0, 0.0], [0.0, 0.5, 0.0], [0.0, 1.0, 0.0]],
     ]
-)
-train_targets = jnp.array([0, 1])
+)  # -> (2, 3, 3)
+train_targets = jnp.array([0, 1])  # -> (2)
 params = model.init(jax.random.PRNGKey(1), train_sequences)
 
 
 def train_step(params, inputs, targets, learning_rate=0.1):
     def loss_fn(current_params):
         outputs = model.apply(current_params, inputs)
-        logits = outputs[0]
-        one_hot_targets = jax.nn.one_hot(targets, logits.shape[-1])
-        log_probs = jax.nn.log_softmax(logits, axis=-1)
-        loss = -jnp.mean(jnp.sum(one_hot_targets * log_probs, axis=-1))
+        logits = outputs[0]  # (batch, output_size)
+        one_hot_targets = jax.nn.one_hot(targets, logits.shape[-1])  # (batch) -> (batch, output_size)
+        log_probs = jax.nn.log_softmax(logits, axis=-1)  # (batch, output_size)
+        loss = -jnp.mean(jnp.sum(one_hot_targets * log_probs, axis=-1))  # (batch, output_size) -> scalar
         return loss
 
     loss, grads = jax.value_and_grad(loss_fn)(params)
@@ -118,4 +118,4 @@ for step in range(3):
     params, loss = train_step(params, train_sequences, train_targets)
 
 # Keep the final scalar loss for inspection.
-final_loss = loss
+final_loss = loss  # scalar

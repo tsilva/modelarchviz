@@ -60,22 +60,22 @@ class WideBasicBlock(nn.Module):
 
     def forward(self, x):
         # Preserve the shortcut path, projecting it when width or spatial size changes.
-        shortcut = x
+        shortcut = x  # (batch, in_channels, height, width)
         if self.shortcut is not None:
-            shortcut = self.shortcut(x)
+            shortcut = self.shortcut(x)  # (batch, in_channels, height, width) -> (batch, out_channels, out_h, out_w)
 
         # Run the widened pre-activation residual branch.
-        out = self.bn1(x)
-        out = self.relu(out)
-        out = self.conv1(out)
-        out = self.bn2(out)
-        out = self.relu(out)
+        out = self.bn1(x)  # (batch, in_channels, height, width)
+        out = self.relu(out)  # (batch, in_channels, height, width)
+        out = self.conv1(out)  # (batch, in_channels, height, width) -> (batch, out_channels, out_h, out_w)
+        out = self.bn2(out)  # (batch, out_channels, out_h, out_w)
+        out = self.relu(out)  # (batch, out_channels, out_h, out_w)
         if self.dropout_rate > 0:
-            out = F.dropout(out, p=self.dropout_rate, training=self.training)
-        out = self.conv2(out)
+            out = F.dropout(out, p=self.dropout_rate, training=self.training)  # (batch, out_channels, out_h, out_w)
+        out = self.conv2(out)  # (batch, out_channels, out_h, out_w)
 
         # Merge shortcut and residual features.
-        out = out + shortcut
+        out = out + shortcut  # (batch, out_channels, out_h, out_w)
         return out
 
 
@@ -157,44 +157,44 @@ class WideNet(nn.Module):
 
     def forward(self, x):
         # Convert image input into low-level features: (batch, 3, 32, 32) -> (batch, 16, 32, 32).
-        x = self.conv1(x)
+        x = self.conv1(x)  # (batch, 3, 32, 32) -> (batch, 16, 32, 32)
 
         # Run widened residual stages: 160, 320, then 640 channels for WRN-28-10.
-        x = self.layer1(x)
-        x = self.layer2(x)
-        x = self.layer3(x)
+        x = self.layer1(x)  # (batch, 16, 32, 32) -> (batch, 160, 32, 32)
+        x = self.layer2(x)  # (batch, 160, 32, 32) -> (batch, 320, 16, 16)
+        x = self.layer3(x)  # (batch, 320, 16, 16) -> (batch, 640, 8, 8)
 
         # Pool final feature maps and classify: (batch, 640, 8, 8) -> (batch, 10).
-        x = self.bn(x)
-        x = self.relu(x)
-        x = F.avg_pool2d(x, kernel_size=8)
-        x = torch.flatten(x, 1)
-        logits = self.fc(x)
+        x = self.bn(x)  # (batch, 640, 8, 8)
+        x = self.relu(x)  # (batch, 640, 8, 8)
+        x = F.avg_pool2d(x, kernel_size=8)  # (batch, 640, 8, 8) -> (batch, 640, 1, 1)
+        x = torch.flatten(x, 1)  # (batch, 640, 1, 1) -> (batch, 640)
+        logits = self.fc(x)  # (batch, 640) -> (batch, num_classes)
         return logits
 
 
 # Create and run a sample CIFAR-size image batch: (2, 3, 32, 32) -> (2, 10).
 model = WideNet(depth=28, widen_factor=10, dropout_rate=0.0, num_classes=10)
-test_input = torch.randn(2, 3, 32, 32)
-logits = model(test_input)
+test_input = torch.randn(2, 3, 32, 32)  # -> (2, 3, 32, 32)
+logits = model(test_input)  # (2, 3, 32, 32) -> (2, 10)
 
 
 # Train on a tiny synthetic CIFAR-size batch.
 model = WideNet(depth=10, widen_factor=1, dropout_rate=0.0, num_classes=2)
-train_images = torch.zeros(2, 3, 32, 32)
+train_images = torch.zeros(2, 3, 32, 32)  # -> (2, 3, 32, 32)
 train_images[0, :, 4:16, 4:16] = 1.0
 train_images[1, :, 16:28, 16:28] = 1.0
-train_targets = torch.tensor([0, 1])
+train_targets = torch.tensor([0, 1])  # -> (2)
 criterion = nn.CrossEntropyLoss()
 optimizer = torch.optim.SGD(model.parameters(), lr=0.01)
 
 # Fit the model for a few steps on the tiny dataset.
 for step in range(3):
     optimizer.zero_grad()
-    logits = model(train_images)
-    loss = criterion(logits, train_targets)
+    logits = model(train_images)  # (2, 3, 32, 32) -> (2, 2)
+    loss = criterion(logits, train_targets)  # (2, 2), (2) -> scalar
     loss.backward()
     optimizer.step()
 
 # Keep the final scalar loss for inspection.
-final_loss = loss.item()
+final_loss = loss.item()  # scalar

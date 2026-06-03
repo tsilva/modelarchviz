@@ -31,20 +31,20 @@ class BasicBlock(nn.Module):
 
     def forward(self, x):
         # Preserve the residual path, projecting it when shape changes.
-        identity = x
+        identity = x  # (batch, in_channels, height, width)
 
         # Apply the two-convolution residual branch.
-        out = self.conv1(x)
-        out = self.bn1(out)
-        out = self.relu(out)
-        out = self.conv2(out)
-        out = self.bn2(out)
+        out = self.conv1(x)  # (batch, in_channels, height, width) -> (batch, out_channels, out_height, out_width)
+        out = self.bn1(out)  # (batch, out_channels, out_height, out_width)
+        out = self.relu(out)  # (batch, out_channels, out_height, out_width)
+        out = self.conv2(out)  # (batch, out_channels, out_height, out_width)
+        out = self.bn2(out)  # (batch, out_channels, out_height, out_width)
         if self.downsample is not None:
-            identity = self.downsample(x)
+            identity = self.downsample(x)  # (batch, in_channels, height, width) -> (batch, out_channels, out_height, out_width)
 
         # Add residual and apply final activation.
-        out = out + identity
-        out = self.relu(out)
+        out = out + identity  # (batch, out_channels, out_height, out_width)
+        out = self.relu(out)  # (batch, out_channels, out_height, out_width)
         return out
 
 
@@ -90,42 +90,42 @@ class ResNet18(nn.Module):
 
     def forward(self, x):
         # Convert image input into stem features.
-        x = self.stem(x)
-        x = self.maxpool(x)
+        x = self.stem(x)  # (batch, 3, 224, 224) -> (batch, 64, 112, 112)
+        x = self.maxpool(x)  # (batch, 64, 112, 112) -> (batch, 64, 56, 56)
 
         # Run residual stages while reducing spatial size.
-        x = self.layer1(x)
-        x = self.layer2(x)
-        x = self.layer3(x)
-        x = self.layer4(x)
+        x = self.layer1(x)  # (batch, 64, 56, 56)
+        x = self.layer2(x)  # (batch, 64, 56, 56) -> (batch, 128, 28, 28)
+        x = self.layer3(x)  # (batch, 128, 28, 28) -> (batch, 256, 14, 14)
+        x = self.layer4(x)  # (batch, 256, 14, 14) -> (batch, 512, 7, 7)
 
         # Pool final features and classify.
-        x = self.avgpool(x)
-        x = torch.flatten(x, 1)
-        logits = self.fc(x)
+        x = self.avgpool(x)  # (batch, 512, 7, 7) -> (batch, 512, 1, 1)
+        x = torch.flatten(x, 1)  # (batch, 512, 1, 1) -> (batch, 512)
+        logits = self.fc(x)  # (batch, 512) -> (batch, num_classes)
         return logits
 
 
 # Create and run a sample image batch: (2, 3, 224, 224) -> (2, 1000).
 model = ResNet18(num_classes=1000)
-test_input = torch.randn(2, 3, 224, 224)
-logits = model(test_input)
+test_input = torch.randn(2, 3, 224, 224)  # -> (2, 3, 224, 224)
+logits = model(test_input)  # (2, 3, 224, 224) -> (2, 1000)
 
 
 # Train on a tiny synthetic image batch.
 model = ResNet18(num_classes=2)
-train_images = torch.zeros(2, 3, 224, 224)
+train_images = torch.zeros(2, 3, 224, 224)  # -> (2, 3, 224, 224)
 train_images[0, :, 32:96, 32:96] = 1.0
 train_images[1, :, 128:192, 128:192] = 1.0
-train_targets = torch.tensor([0, 1])
+train_targets = torch.tensor([0, 1])  # -> (2)
 criterion = nn.CrossEntropyLoss()
 optimizer = torch.optim.SGD(model.parameters(), lr=0.01)
 
 # Fit the model for a few steps on the tiny dataset.
 for step in range(3):
     optimizer.zero_grad()
-    logits = model(train_images)
-    loss = criterion(logits, train_targets)
+    logits = model(train_images)  # (2, 3, 224, 224) -> (2, 2)
+    loss = criterion(logits, train_targets)  # (2, 2), (2) -> scalar
     loss.backward()
     optimizer.step()
 
