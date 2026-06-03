@@ -96,6 +96,20 @@ type ChatMessage = {
   role: "user" | "assistant";
   content: string;
 };
+type PaperSelection = {
+  modelId: string;
+  pageNumber: number;
+  text: string;
+} | null;
+type PdfTextSpan = {
+  id: string;
+  text: string;
+  left: number;
+  top: number;
+  fontSize: number;
+  width: number;
+  transform: string;
+};
 
 const languageLabels: Record<CodeLanguage, string> = {
   pytorch: "PyTorch",
@@ -3873,6 +3887,14 @@ function selectedCodeContext(model: ModelSpec, selected: ArchNode | null, langua
     }));
 }
 
+function previewText(text: string, maxLength = 180) {
+  if (text.length <= maxLength) {
+    return text;
+  }
+
+  return `${text.slice(0, maxLength).trimEnd()}...`;
+}
+
 function ArchitectureTree({
   nodes,
   selectedId,
@@ -4203,6 +4225,7 @@ function ChatPanel({
   selected,
   language,
   query,
+  paperSelection,
   messages,
   setMessages,
 }: {
@@ -4210,6 +4233,7 @@ function ChatPanel({
   selected: ArchNode | null;
   language: CodeLanguage;
   query: string;
+  paperSelection: PaperSelection;
   messages: ChatMessage[];
   setMessages: Dispatch<SetStateAction<ChatMessage[]>>;
 }) {
@@ -4267,6 +4291,13 @@ function ChatPanel({
               venue: model.paper.venue,
               focus: model.paper.focus,
             },
+            paperSelection:
+              paperSelection && paperSelection.modelId === model.id
+                ? {
+                    pageNumber: paperSelection.pageNumber,
+                    text: paperSelection.text,
+                  }
+                : null,
             selection: selected
               ? {
                   id: selected.id,
@@ -4318,6 +4349,9 @@ function ChatPanel({
           <div className="chat-empty">
             <strong>Ask about the current selection.</strong>
             <span>{selected ? `${selected.type} · ${selected.id}` : model.label}</span>
+            {paperSelection && paperSelection.modelId === model.id ? (
+              <span>Paper page {paperSelection.pageNumber} · {previewText(paperSelection.text)}</span>
+            ) : null}
           </div>
         ) : null}
         {messages.map((message, index) => (
@@ -4358,22 +4392,40 @@ function ChatPanel({
   );
 }
 
-function PaperPane({ model }: { model: ModelSpec }) {
+function PaperPane({
+  model,
+  paperSelection,
+  onPaperSelectionChange,
+}: {
+  model: ModelSpec;
+  paperSelection: PaperSelection;
+  onPaperSelectionChange: (selection: PaperSelection) => void;
+}) {
   return (
     <section className="paper-pane">
-      <PdfViewer model={model} />
+      <PdfViewer model={model} paperSelection={paperSelection} onPaperSelectionChange={onPaperSelectionChange} />
     </section>
   );
 }
 
-function PdfViewer({ model }: { model: ModelSpec }) {
+function PdfViewer({
+  model,
+  paperSelection,
+  onPaperSelectionChange,
+}: {
+  model: ModelSpec;
+  paperSelection: PaperSelection;
+  onPaperSelectionChange: (selection: PaperSelection) => void;
+}) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const viewerRef = useRef<HTMLDivElement>(null);
+  const textLayerRef = useRef<HTMLDivElement>(null);
   const [pageNumber, setPageNumber] = useState(1);
   const [pageCount, setPageCount] = useState(0);
   const [viewerWidth, setViewerWidth] = useState(0);
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [textSpans, setTextSpans] = useState<PdfTextSpan[]>([]);
 
   useEffect(() => {
     setPageNumber(1);
@@ -4417,6 +4469,7 @@ function PdfViewer({ model }: { model: ModelSpec }) {
       }
 
       setStatus("loading");
+      setTextSpans([]);
 
       try {
         const pdfjs = await import("pdfjs-dist");
@@ -4450,6 +4503,47 @@ function PdfViewer({ model }: { model: ModelSpec }) {
         renderTask = page.render({ canvasContext: context, viewport });
         await renderTask.promise;
 
+        const textContent = await page.getTextContent();
+        const textItems = textContent.items as Array<{
+          str?: unknown;
+          transform?: unknown;
+          width?: unknown;
+          height?: unknown;
+        }>;
+        const nextTextSpans = textItems
+          .map((item, index) => {
+            if (typeof item.str !== "string" || !Array.isArray(item.transform)) {
+              return null;
+            }
+
+            const matrix = item.transform.filter((value): value is number => typeof value === "number");
+            if (matrix.length !== 6) {
+              return null;
+            }
+
+            const textMatrix = pdfjs.Util.transform(viewport.transform, matrix);
+            const fontSize = Math.max(Math.hypot(textMatrix[2], textMatrix[3]), 1);
+            const left = textMatrix[4];
+            const top = textMatrix[5] - fontSize;
+            const width = Math.max((typeof item.width === "number" ? item.width : item.str.length * 4) * scale, 1);
+            const angle = Math.atan2(textMatrix[1], textMatrix[0]);
+
+            return {
+              id: `${pageNumber}-${index}`,
+              text: item.str,
+              left,
+              top,
+              fontSize,
+              width,
+              transform: `rotate(${angle}rad)`,
+            };
+          })
+          .filter((item): item is PdfTextSpan => item !== null);
+
+        if (!cancelled) {
+          setTextSpans(nextTextSpans);
+        }
+
         if (!cancelled) {
           setStatus("ready");
         }
@@ -4469,6 +4563,32 @@ function PdfViewer({ model }: { model: ModelSpec }) {
       void loadingTask?.destroy();
     };
   }, [model.paper.pdfUrl, pageNumber, viewerWidth]);
+
+  const capturePaperSelection = () => {
+    const selection = window.getSelection();
+    const textLayer = textLayerRef.current;
+    if (!selection || !textLayer || selection.rangeCount === 0) {
+      return;
+    }
+
+    const anchorInside = selection.anchorNode ? textLayer.contains(selection.anchorNode) : false;
+    const focusInside = selection.focusNode ? textLayer.contains(selection.focusNode) : false;
+    const selectedText = selection.toString().replace(/\s+/g, " ").trim();
+    if (!anchorInside && !focusInside) {
+      return;
+    }
+
+    if (!selectedText) {
+      onPaperSelectionChange(null);
+      return;
+    }
+
+    onPaperSelectionChange({
+      modelId: model.id,
+      pageNumber,
+      text: selectedText.slice(0, 4000),
+    });
+  };
 
   const toggleFullscreen = async () => {
     const viewer = viewerRef.current;
@@ -4498,7 +4618,33 @@ function PdfViewer({ model }: { model: ModelSpec }) {
             {status === "error" ? "PDF could not be rendered" : "Rendering PDF"}
           </div>
         ) : null}
-        <canvas ref={canvasRef} className="pdf-canvas" aria-label={`${model.paper.title} page ${pageNumber}`} />
+        <div className="pdf-page-shell">
+          <canvas ref={canvasRef} className="pdf-canvas" aria-label={`${model.paper.title} page ${pageNumber}`} />
+          <div
+            className="pdf-text-layer"
+            ref={textLayerRef}
+            onMouseUp={capturePaperSelection}
+            onTouchEnd={capturePaperSelection}
+          >
+            {textSpans.map((span) => (
+              <span
+                style={{
+                  left: span.left,
+                  top: span.top,
+                  fontSize: span.fontSize,
+                  width: span.width,
+                  transform: span.transform,
+                }}
+                key={span.id}
+              >
+                {span.text}
+              </span>
+            ))}
+          </div>
+        </div>
+        {paperSelection && paperSelection.modelId === model.id && paperSelection.pageNumber === pageNumber ? (
+          <div className="pdf-selection-status">Paper text selected</div>
+        ) : null}
       </div>
       <div className="pdf-controls-dock">
         <div className="pdf-controls">
@@ -4571,6 +4717,7 @@ export default function ModelArchVizApp({ initialModelId }: ModelArchVizAppProps
   const [query, setQuery] = useState("");
   const [codeLanguage, setCodeLanguage] = useState<CodeLanguage>("pytorch");
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [paperSelection, setPaperSelection] = useState<PaperSelection>(null);
 
   const paneOrder: PaneKey[] = ["architecture", "code", "paper", "chat"];
   const visiblePanes = paneOrder.filter((pane) => visibleColumns[pane]);
@@ -4581,6 +4728,7 @@ export default function ModelArchVizApp({ initialModelId }: ModelArchVizAppProps
     setModelId(initialModel.id);
     setExpandedByModel({});
     setSelectedByModel({});
+    setPaperSelection(null);
     setQuery("");
   }, [initialModel.id]);
 
@@ -4595,6 +4743,7 @@ export default function ModelArchVizApp({ initialModelId }: ModelArchVizAppProps
     setModelId(nextModelId);
     setExpandedByModel({});
     setSelectedByModel({});
+    setPaperSelection(null);
     setQuery("");
 
     const nextPath = `/models/${nextModelId}`;
@@ -4652,7 +4801,7 @@ export default function ModelArchVizApp({ initialModelId }: ModelArchVizAppProps
     }
 
     if (pane === "paper") {
-      return <PaperPane model={model} />;
+      return <PaperPane model={model} paperSelection={paperSelection} onPaperSelectionChange={setPaperSelection} />;
     }
 
     if (pane === "chat") {
@@ -4662,6 +4811,7 @@ export default function ModelArchVizApp({ initialModelId }: ModelArchVizAppProps
           selected={selected}
           language={codeLanguage}
           query={query}
+          paperSelection={paperSelection}
           messages={chatMessages}
           setMessages={setChatMessages}
         />

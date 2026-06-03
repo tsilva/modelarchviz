@@ -26,6 +26,10 @@ type ChatContext = {
     venue?: string;
     focus?: string[];
   };
+  paperSelection?: {
+    pageNumber?: number;
+    text?: string;
+  } | null;
   selection?: {
     id?: string;
     label?: string;
@@ -79,6 +83,7 @@ function formatSourceLines(lines: SourceLine[] | undefined) {
 function formatContext(context: ChatContext) {
   const model = context.model ?? {};
   const paper = context.paper ?? {};
+  const paperSelection = context.paperSelection ?? null;
   const selection = context.selection ?? null;
   const source = context.source ?? {};
   const sourceCode = Array.isArray(source.code) ? source.code.join("\n").slice(0, maxSourceCharacters) : "";
@@ -93,6 +98,11 @@ function formatContext(context: ChatContext) {
 - Venue: ${safeString(paper.venue)}
 - Paper focus: ${Array.isArray(paper.focus) ? paper.focus.join(", ") : "unknown"}
 - Search/filter text: ${safeString(context.searchQuery, "none")}
+- Selected paper text: ${
+    paperSelection && typeof paperSelection.text === "string" && paperSelection.text.trim().length > 0
+      ? `page ${Number.isFinite(paperSelection.pageNumber) ? paperSelection.pageNumber : "unknown"}: ${paperSelection.text.trim().slice(0, 4000)}`
+      : "none"
+  }
 
 Current selection:
 ${
@@ -168,7 +178,7 @@ export async function POST(request: Request) {
         {
           role: "system",
           content:
-            "You are the embedded ModelArchViz assistant. Use the provided current app state as ground truth. When the user says 'this', assume they mean the current selected architecture node and highlighted code lines. Explain architecture and code precisely, cite line numbers when useful, and keep answers concise.",
+            "You are the embedded ModelArchViz assistant. Use the provided current app state as ground truth. When the user says 'this', assume they mean the selected paper text when present, otherwise the current selected architecture node and highlighted code lines. Explain architecture, paper text, and code precisely, cite line numbers or paper pages when useful, and keep answers concise.",
         },
         {
           role: "system",

@@ -652,12 +652,59 @@ select {
   padding: 26px 14px 106px;
 }
 
+.pdf-page-shell {
+  position: relative;
+  max-width: 100%;
+}
+
 .pdf-canvas {
   display: block;
   max-width: 100%;
   border: 1px solid #c9d2dc;
   background: #ffffff;
   box-shadow: 0 12px 28px rgba(15, 23, 42, 0.14);
+}
+
+.pdf-text-layer {
+  position: absolute;
+  inset: 1px;
+  overflow: hidden;
+  color: transparent;
+  line-height: 1;
+  text-align: initial;
+  text-size-adjust: none;
+  transform-origin: 0 0;
+  user-select: text;
+}
+
+.pdf-text-layer span {
+  position: absolute;
+  display: inline-block;
+  min-height: 1em;
+  color: transparent;
+  font-family: var(--font-sans);
+  white-space: pre;
+  transform-origin: 0 0;
+}
+
+.pdf-text-layer ::selection {
+  background: rgba(216, 138, 21, 0.32);
+  color: transparent;
+}
+
+.pdf-selection-status {
+  position: absolute;
+  top: 38px;
+  right: 24px;
+  z-index: 2;
+  border: 1px solid rgba(216, 138, 21, 0.35);
+  border-radius: 7px;
+  background: rgba(255, 243, 220, 0.96);
+  color: #6f470e;
+  padding: 7px 10px;
+  font-size: 12px;
+  font-weight: 700;
+  pointer-events: none;
 }
 
 .pdf-status {
