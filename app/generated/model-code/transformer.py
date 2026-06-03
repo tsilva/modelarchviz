@@ -11,25 +11,25 @@ class PositionalEncoding(nn.Module):
         super().__init__()
 
         # Build sinusoidal position table: (max_len, d_model).
-        positions = torch.arange(max_len)
-        position = positions.unsqueeze(1)
-        even_indices = torch.arange(0, d_model, 2)
-        log_base = torch.log(torch.tensor(10000.0))
-        scale = -log_base / d_model
-        div_term = torch.exp(even_indices * scale)
-        pe = torch.zeros(max_len, d_model)
-        sin_values = torch.sin(position * div_term)
-        cos_values = torch.cos(position * div_term)
-        pe[:, 0::2] = sin_values
-        pe[:, 1::2] = cos_values
+        positions = torch.arange(max_len)  # -> (max_len)
+        position = positions.unsqueeze(1)  # (max_len) -> (max_len, 1)
+        even_indices = torch.arange(0, d_model, 2)  # -> (d_model // 2)
+        log_base = torch.log(torch.tensor(10000.0))  # -> scalar
+        scale = -log_base / d_model  # scalar -> scalar
+        div_term = torch.exp(even_indices * scale)  # (d_model // 2) -> (d_model // 2)
+        pe = torch.zeros(max_len, d_model)  # -> (max_len, d_model)
+        sin_values = torch.sin(position * div_term)  # (max_len, 1), (d_model // 2) -> (max_len, d_model // 2)
+        cos_values = torch.cos(position * div_term)  # (max_len, 1), (d_model // 2) -> (max_len, d_model // 2)
+        pe[:, 0::2] = sin_values  # (max_len, d_model), (max_len, d_model // 2) -> (max_len, d_model)
+        pe[:, 1::2] = cos_values  # (max_len, d_model), (max_len, d_model // 2) -> (max_len, d_model)
         self.register_buffer('pe', pe)
 
     def forward(self, x):
         # Add position encodings to embeddings: (batch, steps, d_model).
-        seq_len = x.size(1)
-        position_encoding = self.pe[:seq_len]
-        encoded = x + position_encoding
-        return encoded
+        seq_len = x.size(1)  # (batch, steps, d_model) -> scalar
+        position_encoding = self.pe[:seq_len]  # (max_len, d_model) -> (steps, d_model)
+        encoded = x + position_encoding  # (batch, steps, d_model), (steps, d_model) -> (batch, steps, d_model)
+        return encoded  # (batch, steps, d_model)
 
 
 class EncoderLayer(nn.Module):
@@ -53,15 +53,15 @@ class EncoderLayer(nn.Module):
 
     def forward(self, x, src_mask=None):
         # Apply self-attention with residual normalization: (batch, steps, d_model).
-        attn, _ = self.self_attn(x, x, x, attn_mask=src_mask)
-        attn_residual = x + attn
-        x = self.norm1(attn_residual)
+        attn, _ = self.self_attn(x, x, x, attn_mask=src_mask)  # (batch, steps, d_model) -> (batch, steps, d_model)
+        attn_residual = x + attn  # (batch, steps, d_model), (batch, steps, d_model) -> (batch, steps, d_model)
+        x = self.norm1(attn_residual)  # (batch, steps, d_model) -> (batch, steps, d_model)
 
         # Apply feed-forward block with residual normalization.
-        ffn = self.ffn(x)
-        ffn_residual = x + ffn
-        out = self.norm2(ffn_residual)
-        return out
+        ffn = self.ffn(x)  # (batch, steps, d_model) -> (batch, steps, d_model)
+        ffn_residual = x + ffn  # (batch, steps, d_model), (batch, steps, d_model) -> (batch, steps, d_model)
+        out = self.norm2(ffn_residual)  # (batch, steps, d_model) -> (batch, steps, d_model)
+        return out  # (batch, steps, d_model)
 
 
 class DecoderLayer(nn.Module):
@@ -87,20 +87,20 @@ class DecoderLayer(nn.Module):
 
     def forward(self, x, memory, tgt_mask=None):
         # Apply masked self-attention with residual normalization.
-        masked, _ = self.self_attn(x, x, x, attn_mask=tgt_mask)
-        masked_residual = x + masked
-        x = self.norm1(masked_residual)
+        masked, _ = self.self_attn(x, x, x, attn_mask=tgt_mask)  # (batch, target_steps, d_model) -> (batch, target_steps, d_model)
+        masked_residual = x + masked  # (batch, target_steps, d_model), (batch, target_steps, d_model) -> (batch, target_steps, d_model)
+        x = self.norm1(masked_residual)  # (batch, target_steps, d_model) -> (batch, target_steps, d_model)
 
         # Attend over encoder memory with residual normalization.
-        cross, _ = self.cross_attn(x, memory, memory)
-        cross_residual = x + cross
-        x = self.norm2(cross_residual)
+        cross, _ = self.cross_attn(x, memory, memory)  # (batch, target_steps, d_model), (batch, source_steps, d_model) -> (batch, target_steps, d_model)
+        cross_residual = x + cross  # (batch, target_steps, d_model), (batch, target_steps, d_model) -> (batch, target_steps, d_model)
+        x = self.norm2(cross_residual)  # (batch, target_steps, d_model) -> (batch, target_steps, d_model)
 
         # Apply feed-forward block with residual normalization.
-        ffn = self.ffn(x)
-        ffn_residual = x + ffn
-        out = self.norm3(ffn_residual)
-        return out
+        ffn = self.ffn(x)  # (batch, target_steps, d_model) -> (batch, target_steps, d_model)
+        ffn_residual = x + ffn  # (batch, target_steps, d_model), (batch, target_steps, d_model) -> (batch, target_steps, d_model)
+        out = self.norm3(ffn_residual)  # (batch, target_steps, d_model) -> (batch, target_steps, d_model)
+        return out  # (batch, target_steps, d_model)
 
 
 class Transformer(nn.Module):
@@ -123,54 +123,54 @@ class Transformer(nn.Module):
 
     def forward(self, src_ids, tgt_ids, tgt_mask):
         # Embed and encode the source tokens: (batch, source_steps) -> memory.
-        src_embeddings = self.src_embed(src_ids)
-        memory = self.pos(src_embeddings)
+        src_embeddings = self.src_embed(src_ids)  # (batch, source_steps) -> (batch, source_steps, d_model)
+        memory = self.pos(src_embeddings)  # (batch, source_steps, d_model) -> (batch, source_steps, d_model)
         for layer in self.encoder:
-            memory = layer(memory)
+            memory = layer(memory)  # (batch, source_steps, d_model) -> (batch, source_steps, d_model)
 
         # Embed target tokens and decode against source memory.
-        tgt_embeddings = self.tgt_embed(tgt_ids)
-        x = self.pos(tgt_embeddings)
+        tgt_embeddings = self.tgt_embed(tgt_ids)  # (batch, target_steps) -> (batch, target_steps, d_model)
+        x = self.pos(tgt_embeddings)  # (batch, target_steps, d_model) -> (batch, target_steps, d_model)
         for layer in self.decoder:
-            x = layer(x, memory, tgt_mask)
+            x = layer(x, memory, tgt_mask)  # (batch, target_steps, d_model) -> (batch, target_steps, d_model)
 
         # Project decoder states to vocabulary logits.
-        logits = self.generator(x)
-        return logits
+        logits = self.generator(x)  # (batch, target_steps, d_model) -> (batch, target_steps, vocab_size)
+        return logits  # (batch, target_steps, vocab_size)
 
 
 # Create and run a sample translation batch.
 model = Transformer(vocab_size=37000)
-src_ids = torch.randint(0, 37000, (2, 16))
-tgt_ids = torch.randint(0, 37000, (2, 16))
+src_ids = torch.randint(0, 37000, (2, 16))  # -> (2, 16)
+tgt_ids = torch.randint(0, 37000, (2, 16))  # -> (2, 16)
 
 # Build a causal target mask: (16, 16).
-mask_values = torch.ones(16, 16)
-mask_values = mask_values * float('-inf')
-tgt_mask = torch.triu(mask_values, diagonal=1)
-logits = model(src_ids, tgt_ids, tgt_mask)
+mask_values = torch.ones(16, 16)  # -> (16, 16)
+mask_values = mask_values * float('-inf')  # (16, 16) -> (16, 16)
+tgt_mask = torch.triu(mask_values, diagonal=1)  # (16, 16) -> (16, 16)
+logits = model(src_ids, tgt_ids, tgt_mask)  # (2, 16), (2, 16), (16, 16) -> (2, 16, 37000)
 
 # Train on a tiny copy-style token batch.
 model = Transformer(vocab_size=20, d_model=16, nhead=4, num_layers=1)
-src_ids = torch.tensor([[1, 2, 3, 4], [4, 3, 2, 1]])
-tgt_ids = torch.tensor([[0, 1, 2, 3], [0, 4, 3, 2]])
-train_targets = torch.tensor([[1, 2, 3, 4], [4, 3, 2, 1]])
-mask_values = torch.ones(4, 4)
-mask_values = mask_values * float('-inf')
-tgt_mask = torch.triu(mask_values, diagonal=1)
+src_ids = torch.tensor([[1, 2, 3, 4], [4, 3, 2, 1]])  # -> (2, 4)
+tgt_ids = torch.tensor([[0, 1, 2, 3], [0, 4, 3, 2]])  # -> (2, 4)
+train_targets = torch.tensor([[1, 2, 3, 4], [4, 3, 2, 1]])  # -> (2, 4)
+mask_values = torch.ones(4, 4)  # -> (4, 4)
+mask_values = mask_values * float('-inf')  # (4, 4) -> (4, 4)
+tgt_mask = torch.triu(mask_values, diagonal=1)  # (4, 4) -> (4, 4)
 criterion = nn.CrossEntropyLoss()
 optimizer = torch.optim.SGD(model.parameters(), lr=0.1)
 
 # Fit the model for a few steps on the tiny dataset.
 for step in range(3):
     optimizer.zero_grad()
-    logits = model(src_ids, tgt_ids, tgt_mask)
-    vocab_size = logits.size(-1)
-    flat_logits = logits.reshape(-1, vocab_size)
-    flat_targets = train_targets.reshape(-1)
-    loss = criterion(flat_logits, flat_targets)
+    logits = model(src_ids, tgt_ids, tgt_mask)  # (2, 4), (2, 4), (4, 4) -> (2, 4, 20)
+    vocab_size = logits.size(-1)  # (2, 4, 20) -> scalar
+    flat_logits = logits.reshape(-1, vocab_size)  # (2, 4, 20) -> (8, 20)
+    flat_targets = train_targets.reshape(-1)  # (2, 4) -> (8)
+    loss = criterion(flat_logits, flat_targets)  # (8, 20), (8) -> scalar
     loss.backward()
     optimizer.step()
 
 # Keep the final scalar loss for inspection.
-final_loss = loss.item()
+final_loss = loss.item()  # scalar -> scalar
