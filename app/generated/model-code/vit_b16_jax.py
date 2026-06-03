@@ -29,10 +29,10 @@ class MultiHeadSelfAttention(nn.Module):
         # Project tokens into per-head query, key, and value tensors.
         batch_size = x.shape[0]  # (batch, tokens, embed_dim) -> scalar
         tokens = x.shape[1]  # (batch, tokens, embed_dim) -> scalar
-        head_dim = self.embed_dim // self.num_heads  # scalar -> scalar
-        q = nn.Dense(self.embed_dim, name='q_proj')(x)  # (batch, tokens, embed_dim) -> (batch, tokens, embed_dim)
-        k = nn.Dense(self.embed_dim, name='k_proj')(x)  # (batch, tokens, embed_dim) -> (batch, tokens, embed_dim)
-        v = nn.Dense(self.embed_dim, name='v_proj')(x)  # (batch, tokens, embed_dim) -> (batch, tokens, embed_dim)
+        head_dim = self.embed_dim // self.num_heads  # scalar
+        q = nn.Dense(self.embed_dim, name='q_proj')(x)  # (batch, tokens, embed_dim)
+        k = nn.Dense(self.embed_dim, name='k_proj')(x)  # (batch, tokens, embed_dim)
+        v = nn.Dense(self.embed_dim, name='v_proj')(x)  # (batch, tokens, embed_dim)
 
         # Split model width across heads: (batch, tokens, embed_dim) -> (batch, heads, tokens, head_dim).
         head_shape = (batch_size, tokens, self.num_heads, head_dim)
@@ -46,16 +46,16 @@ class MultiHeadSelfAttention(nn.Module):
         # Compute scaled dot-product attention over all image tokens.
         key_transpose = jnp.swapaxes(k, -2, -1)  # (batch, heads, tokens, head_dim) -> (batch, heads, head_dim, tokens)
         scores = q @ key_transpose  # (batch, heads, tokens, head_dim), (batch, heads, head_dim, tokens) -> (batch, heads, tokens, tokens)
-        scale = head_dim ** -0.5  # scalar -> scalar
-        attn_scores = scores * scale  # (batch, heads, tokens, tokens) -> (batch, heads, tokens, tokens)
-        attn_weights = nn.softmax(attn_scores, axis=-1)  # (batch, heads, tokens, tokens) -> (batch, heads, tokens, tokens)
+        scale = head_dim ** -0.5  # scalar
+        attn_scores = scores * scale  # (batch, heads, tokens, tokens)
+        attn_weights = nn.softmax(attn_scores, axis=-1)  # (batch, heads, tokens, tokens)
 
         # Mix values, merge heads, and project back to embedding width.
         context = attn_weights @ v  # (batch, heads, tokens, tokens), (batch, heads, tokens, head_dim) -> (batch, heads, tokens, head_dim)
         context = jnp.transpose(context, (0, 2, 1, 3))  # (batch, heads, tokens, head_dim) -> (batch, tokens, heads, head_dim)
         merged_shape = (batch_size, tokens, self.embed_dim)
         merged = context.reshape(merged_shape)  # (batch, tokens, heads, head_dim) -> (batch, tokens, embed_dim)
-        out = nn.Dense(self.embed_dim, name='out_proj')(merged)  # (batch, tokens, embed_dim) -> (batch, tokens, embed_dim)
+        out = nn.Dense(self.embed_dim, name='out_proj')(merged)  # (batch, tokens, embed_dim)
         return out  # (batch, tokens, embed_dim)
 
 

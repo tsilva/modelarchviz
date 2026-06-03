@@ -67,9 +67,9 @@ class BertSelfAttention(nn.Module):
         # Project token states into per-head query, key, and value tensors.
         batch_size = x.size(0)  # (batch, steps, hidden_size) -> scalar
         steps = x.size(1)  # (batch, steps, hidden_size) -> scalar
-        q = self.q_proj(x)  # (batch, steps, hidden_size) -> (batch, steps, hidden_size)
-        k = self.k_proj(x)  # (batch, steps, hidden_size) -> (batch, steps, hidden_size)
-        v = self.v_proj(x)  # (batch, steps, hidden_size) -> (batch, steps, hidden_size)
+        q = self.q_proj(x)  # (batch, steps, hidden_size)
+        k = self.k_proj(x)  # (batch, steps, hidden_size)
+        v = self.v_proj(x)  # (batch, steps, hidden_size)
 
         # Split model width across heads: (batch, steps, hidden_size) -> (batch, heads, steps, head_dim).
         q = q.view(batch_size, steps, self.num_heads, self.head_dim)  # (batch, steps, hidden_size) -> (batch, steps, heads, head_dim)
@@ -82,19 +82,19 @@ class BertSelfAttention(nn.Module):
         # Compute scaled dot-product attention and mask padded keys.
         key_transpose = k.transpose(-2, -1)  # (batch, heads, steps, head_dim) -> (batch, heads, head_dim, steps)
         scores = q @ key_transpose  # (batch, heads, steps, head_dim), (batch, heads, head_dim, steps) -> (batch, heads, steps, steps)
-        scale = self.head_dim ** -0.5  # scalar -> scalar
-        attn_scores = scores * scale  # (batch, heads, steps, steps) -> (batch, heads, steps, steps)
+        scale = self.head_dim ** -0.5  # scalar
+        attn_scores = scores * scale  # (batch, heads, steps, steps)
         if attention_mask is not None:
             mask = attention_mask[:, None, None, :]  # (batch, steps) -> (batch, 1, 1, steps)
-            attn_scores = attn_scores.masked_fill(mask, -1e9)  # (batch, heads, steps, steps) -> (batch, heads, steps, steps)
-        attn_weights = torch.softmax(attn_scores, dim=-1)  # (batch, heads, steps, steps) -> (batch, heads, steps, steps)
+            attn_scores = attn_scores.masked_fill(mask, -1e9)  # (batch, heads, steps, steps)
+        attn_weights = torch.softmax(attn_scores, dim=-1)  # (batch, heads, steps, steps)
 
         # Mix values, merge heads, and project back to hidden width.
         context = attn_weights @ v  # (batch, heads, steps, steps), (batch, heads, steps, head_dim) -> (batch, heads, steps, head_dim)
         context = context.transpose(1, 2)  # (batch, heads, steps, head_dim) -> (batch, steps, heads, head_dim)
-        context = context.contiguous()  # (batch, steps, heads, head_dim) -> (batch, steps, heads, head_dim)
+        context = context.contiguous()  # (batch, steps, heads, head_dim)
         merged = context.view(batch_size, steps, self.num_heads * self.head_dim)  # (batch, steps, heads, head_dim) -> (batch, steps, hidden_size)
-        out = self.out_proj(merged)  # (batch, steps, hidden_size) -> (batch, steps, hidden_size)
+        out = self.out_proj(merged)  # (batch, steps, hidden_size)
         return out  # (batch, steps, hidden_size)
 
 

@@ -25,8 +25,8 @@ Use this skill to author model implementation code for architecture visualizatio
 - Avoid chaining shape-changing operations such as `reshape(...).transpose(...)`; assign each step.
 - Avoid returning a nested call directly; assign `logits`, `out`, `outputs`, or another descriptive result first.
 - Add one standalone comment before each meaningful logical block, especially blocks that transform tensor shape, compute a gate, form attention scores, apply a residual, or pack outputs.
-- By default, add inline shape comments to tensor-producing and shape-transforming lines using `# input_shape -> output_shape`.
-- For tensor creation with no tensor input, use `# -> output_shape`; for scalar shape metadata, use `# tensor_shape -> scalar`; for unchanged tensors, repeat the shape on both sides.
+- By default, add inline shape comments to tensor-producing and shape-transforming lines using `# input_shape -> output_shape` when the shape changes.
+- For tensor creation with no tensor input, use `# -> output_shape`; for scalar shape metadata, use `# tensor_shape -> scalar`; for unchanged tensors, use one shape only, for example `# (batch, steps, hidden_size)`.
 - Keep inline shape comments concise so the line remains readable. Prefer symbolic names such as `(batch, steps, d_model)` over concrete dimensions unless the example intentionally fixes the batch or sequence length.
 - Do not comment every non-tensor line. Use inline shape comments for tensor dataflow and one block comment for several consecutive code lines that form one concept.
 - Put an empty line before each standalone line comment.

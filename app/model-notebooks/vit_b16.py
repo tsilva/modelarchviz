@@ -61,9 +61,9 @@ class MultiHeadSelfAttention(nn.Module):
         # Project tokens into per-head query, key, and value tensors.
         batch_size = x.size(0)  # (batch, tokens, embed_dim) -> scalar
         tokens = x.size(1)  # (batch, tokens, embed_dim) -> scalar
-        q = self.q_proj(x)  # (batch, tokens, embed_dim) -> (batch, tokens, embed_dim)
-        k = self.k_proj(x)  # (batch, tokens, embed_dim) -> (batch, tokens, embed_dim)
-        v = self.v_proj(x)  # (batch, tokens, embed_dim) -> (batch, tokens, embed_dim)
+        q = self.q_proj(x)  # (batch, tokens, embed_dim)
+        k = self.k_proj(x)  # (batch, tokens, embed_dim)
+        v = self.v_proj(x)  # (batch, tokens, embed_dim)
 
         # Split model width across heads: (batch, tokens, embed_dim) -> (batch, heads, tokens, head_dim).
         q = q.view(batch_size, tokens, self.num_heads, self.head_dim)  # (batch, tokens, embed_dim) -> (batch, tokens, heads, head_dim)
@@ -76,16 +76,16 @@ class MultiHeadSelfAttention(nn.Module):
         # Compute scaled dot-product attention over all image tokens.
         key_transpose = k.transpose(-2, -1)  # (batch, heads, tokens, head_dim) -> (batch, heads, head_dim, tokens)
         scores = q @ key_transpose  # (batch, heads, tokens, head_dim), (batch, heads, head_dim, tokens) -> (batch, heads, tokens, tokens)
-        scale = self.head_dim ** -0.5  # scalar -> scalar
-        attn_scores = scores * scale  # (batch, heads, tokens, tokens) -> (batch, heads, tokens, tokens)
-        attn_weights = torch.softmax(attn_scores, dim=-1)  # (batch, heads, tokens, tokens) -> (batch, heads, tokens, tokens)
+        scale = self.head_dim ** -0.5  # scalar
+        attn_scores = scores * scale  # (batch, heads, tokens, tokens)
+        attn_weights = torch.softmax(attn_scores, dim=-1)  # (batch, heads, tokens, tokens)
 
         # Mix values, merge heads, and project back to embedding width.
         context = attn_weights @ v  # (batch, heads, tokens, tokens), (batch, heads, tokens, head_dim) -> (batch, heads, tokens, head_dim)
         context = context.transpose(1, 2)  # (batch, heads, tokens, head_dim) -> (batch, tokens, heads, head_dim)
-        context = context.contiguous()  # (batch, tokens, heads, head_dim) -> (batch, tokens, heads, head_dim)
+        context = context.contiguous()  # (batch, tokens, heads, head_dim)
         merged = context.view(batch_size, tokens, self.num_heads * self.head_dim)  # (batch, tokens, heads, head_dim) -> (batch, tokens, embed_dim)
-        out = self.out_proj(merged)  # (batch, tokens, embed_dim) -> (batch, tokens, embed_dim)
+        out = self.out_proj(merged)  # (batch, tokens, embed_dim)
         return out  # (batch, tokens, embed_dim)
 
 

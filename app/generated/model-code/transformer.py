@@ -15,8 +15,8 @@ class PositionalEncoding(nn.Module):
         position = positions.unsqueeze(1)  # (max_len) -> (max_len, 1)
         even_indices = torch.arange(0, d_model, 2)  # -> (d_model // 2)
         log_base = torch.log(torch.tensor(10000.0))  # -> scalar
-        scale = -log_base / d_model  # scalar -> scalar
-        div_term = torch.exp(even_indices * scale)  # (d_model // 2) -> (d_model // 2)
+        scale = -log_base / d_model  # scalar
+        div_term = torch.exp(even_indices * scale)  # (d_model // 2)
         pe = torch.zeros(max_len, d_model)  # -> (max_len, d_model)
         sin_values = torch.sin(position * div_term)  # (max_len, 1), (d_model // 2) -> (max_len, d_model // 2)
         cos_values = torch.cos(position * div_term)  # (max_len, 1), (d_model // 2) -> (max_len, d_model // 2)
@@ -53,9 +53,9 @@ class MultiHeadAttention(nn.Module):
         batch_size = query.size(0)  # (batch, query_steps, d_model) -> scalar
         query_steps = query.size(1)  # (batch, query_steps, d_model) -> scalar
         key_steps = key.size(1)  # (batch, key_steps, d_model) -> scalar
-        q = self.q_proj(query)  # (batch, query_steps, d_model) -> (batch, query_steps, d_model)
-        k = self.k_proj(key)  # (batch, key_steps, d_model) -> (batch, key_steps, d_model)
-        v = self.v_proj(value)  # (batch, key_steps, d_model) -> (batch, key_steps, d_model)
+        q = self.q_proj(query)  # (batch, query_steps, d_model)
+        k = self.k_proj(key)  # (batch, key_steps, d_model)
+        v = self.v_proj(value)  # (batch, key_steps, d_model)
 
         # Split model width across heads: (batch, steps, d_model) -> (batch, heads, steps, head_dim).
         q = q.view(batch_size, query_steps, self.nhead, self.head_dim)  # (batch, query_steps, d_model) -> (batch, query_steps, heads, head_dim)
@@ -68,19 +68,19 @@ class MultiHeadAttention(nn.Module):
         # Compute scaled dot-product attention scores.
         key_transpose = k.transpose(-2, -1)  # (batch, heads, key_steps, head_dim) -> (batch, heads, head_dim, key_steps)
         scores = q @ key_transpose  # (batch, heads, query_steps, head_dim), (batch, heads, head_dim, key_steps) -> (batch, heads, query_steps, key_steps)
-        scale = self.head_dim ** -0.5  # scalar -> scalar
-        attn_scores = scores * scale  # (batch, heads, query_steps, key_steps) -> (batch, heads, query_steps, key_steps)
+        scale = self.head_dim ** -0.5  # scalar
+        attn_scores = scores * scale  # (batch, heads, query_steps, key_steps)
         if attn_mask is not None:
             mask = attn_mask[None, None, :, :]  # (query_steps, key_steps) -> (1, 1, query_steps, key_steps)
-            attn_scores = attn_scores + mask  # (batch, heads, query_steps, key_steps) -> (batch, heads, query_steps, key_steps)
-        attn_weights = torch.softmax(attn_scores, dim=-1)  # (batch, heads, query_steps, key_steps) -> (batch, heads, query_steps, key_steps)
+            attn_scores = attn_scores + mask  # (batch, heads, query_steps, key_steps)
+        attn_weights = torch.softmax(attn_scores, dim=-1)  # (batch, heads, query_steps, key_steps)
 
         # Mix values, merge heads, and project back to model width.
         context = attn_weights @ v  # (batch, heads, query_steps, key_steps), (batch, heads, key_steps, head_dim) -> (batch, heads, query_steps, head_dim)
         context = context.transpose(1, 2)  # (batch, heads, query_steps, head_dim) -> (batch, query_steps, heads, head_dim)
-        context = context.contiguous()  # (batch, query_steps, heads, head_dim) -> (batch, query_steps, heads, head_dim)
+        context = context.contiguous()  # (batch, query_steps, heads, head_dim)
         merged = context.view(batch_size, query_steps, self.nhead * self.head_dim)  # (batch, query_steps, heads, head_dim) -> (batch, query_steps, d_model)
-        out = self.out_proj(merged)  # (batch, query_steps, d_model) -> (batch, query_steps, d_model)
+        out = self.out_proj(merged)  # (batch, query_steps, d_model)
         return out  # (batch, query_steps, d_model)
 
 
@@ -105,14 +105,14 @@ class EncoderLayer(nn.Module):
 
     def forward(self, x, src_mask=None):
         # Apply self-attention with residual normalization: (batch, steps, d_model).
-        attn = self.self_attn(x, x, x, src_mask)  # (batch, steps, d_model) -> (batch, steps, d_model)
+        attn = self.self_attn(x, x, x, src_mask)  # (batch, steps, d_model)
         attn_residual = x + attn  # (batch, steps, d_model), (batch, steps, d_model) -> (batch, steps, d_model)
-        x = self.norm1(attn_residual)  # (batch, steps, d_model) -> (batch, steps, d_model)
+        x = self.norm1(attn_residual)  # (batch, steps, d_model)
 
         # Apply feed-forward block with residual normalization.
-        ffn = self.ffn(x)  # (batch, steps, d_model) -> (batch, steps, d_model)
+        ffn = self.ffn(x)  # (batch, steps, d_model)
         ffn_residual = x + ffn  # (batch, steps, d_model), (batch, steps, d_model) -> (batch, steps, d_model)
-        out = self.norm2(ffn_residual)  # (batch, steps, d_model) -> (batch, steps, d_model)
+        out = self.norm2(ffn_residual)  # (batch, steps, d_model)
         return out  # (batch, steps, d_model)
 
 
@@ -139,19 +139,19 @@ class DecoderLayer(nn.Module):
 
     def forward(self, x, memory, tgt_mask=None):
         # Apply masked self-attention with residual normalization.
-        masked = self.self_attn(x, x, x, tgt_mask)  # (batch, target_steps, d_model) -> (batch, target_steps, d_model)
+        masked = self.self_attn(x, x, x, tgt_mask)  # (batch, target_steps, d_model)
         masked_residual = x + masked  # (batch, target_steps, d_model), (batch, target_steps, d_model) -> (batch, target_steps, d_model)
-        x = self.norm1(masked_residual)  # (batch, target_steps, d_model) -> (batch, target_steps, d_model)
+        x = self.norm1(masked_residual)  # (batch, target_steps, d_model)
 
         # Attend over encoder memory with residual normalization.
         cross = self.cross_attn(x, memory, memory)  # (batch, target_steps, d_model), (batch, source_steps, d_model) -> (batch, target_steps, d_model)
         cross_residual = x + cross  # (batch, target_steps, d_model), (batch, target_steps, d_model) -> (batch, target_steps, d_model)
-        x = self.norm2(cross_residual)  # (batch, target_steps, d_model) -> (batch, target_steps, d_model)
+        x = self.norm2(cross_residual)  # (batch, target_steps, d_model)
 
         # Apply feed-forward block with residual normalization.
-        ffn = self.ffn(x)  # (batch, target_steps, d_model) -> (batch, target_steps, d_model)
+        ffn = self.ffn(x)  # (batch, target_steps, d_model)
         ffn_residual = x + ffn  # (batch, target_steps, d_model), (batch, target_steps, d_model) -> (batch, target_steps, d_model)
-        out = self.norm3(ffn_residual)  # (batch, target_steps, d_model) -> (batch, target_steps, d_model)
+        out = self.norm3(ffn_residual)  # (batch, target_steps, d_model)
         return out  # (batch, target_steps, d_model)
 
 
@@ -176,15 +176,15 @@ class Transformer(nn.Module):
     def forward(self, src_ids, tgt_ids, tgt_mask):
         # Embed and encode the source tokens: (batch, source_steps) -> memory.
         src_embeddings = self.src_embed(src_ids)  # (batch, source_steps) -> (batch, source_steps, d_model)
-        memory = self.pos(src_embeddings)  # (batch, source_steps, d_model) -> (batch, source_steps, d_model)
+        memory = self.pos(src_embeddings)  # (batch, source_steps, d_model)
         for layer in self.encoder:
-            memory = layer(memory)  # (batch, source_steps, d_model) -> (batch, source_steps, d_model)
+            memory = layer(memory)  # (batch, source_steps, d_model)
 
         # Embed target tokens and decode against source memory.
         tgt_embeddings = self.tgt_embed(tgt_ids)  # (batch, target_steps) -> (batch, target_steps, d_model)
-        x = self.pos(tgt_embeddings)  # (batch, target_steps, d_model) -> (batch, target_steps, d_model)
+        x = self.pos(tgt_embeddings)  # (batch, target_steps, d_model)
         for layer in self.decoder:
-            x = layer(x, memory, tgt_mask)  # (batch, target_steps, d_model) -> (batch, target_steps, d_model)
+            x = layer(x, memory, tgt_mask)  # (batch, target_steps, d_model)
 
         # Project decoder states to vocabulary logits.
         logits = self.generator(x)  # (batch, target_steps, d_model) -> (batch, target_steps, vocab_size)
@@ -198,8 +198,8 @@ tgt_ids = torch.randint(0, 37000, (2, 16))  # -> (2, 16)
 
 # Build a causal target mask: (16, 16).
 mask_values = torch.ones(16, 16)  # -> (16, 16)
-mask_values = mask_values * float('-inf')  # (16, 16) -> (16, 16)
-tgt_mask = torch.triu(mask_values, diagonal=1)  # (16, 16) -> (16, 16)
+mask_values = mask_values * float('-inf')  # (16, 16)
+tgt_mask = torch.triu(mask_values, diagonal=1)  # (16, 16)
 logits = model(src_ids, tgt_ids, tgt_mask)  # (2, 16), (2, 16), (16, 16) -> (2, 16, 37000)
 
 # Train on a tiny copy-style token batch.
@@ -208,8 +208,8 @@ src_ids = torch.tensor([[1, 2, 3, 4], [4, 3, 2, 1]])  # -> (2, 4)
 tgt_ids = torch.tensor([[0, 1, 2, 3], [0, 4, 3, 2]])  # -> (2, 4)
 train_targets = torch.tensor([[1, 2, 3, 4], [4, 3, 2, 1]])  # -> (2, 4)
 mask_values = torch.ones(4, 4)  # -> (4, 4)
-mask_values = mask_values * float('-inf')  # (4, 4) -> (4, 4)
-tgt_mask = torch.triu(mask_values, diagonal=1)  # (4, 4) -> (4, 4)
+mask_values = mask_values * float('-inf')  # (4, 4)
+tgt_mask = torch.triu(mask_values, diagonal=1)  # (4, 4)
 criterion = nn.CrossEntropyLoss()
 optimizer = torch.optim.SGD(model.parameters(), lr=0.1)
 
@@ -225,4 +225,4 @@ for step in range(3):
     optimizer.step()
 
 # Keep the final scalar loss for inspection.
-final_loss = loss.item()  # scalar -> scalar
+final_loss = loss.item()  # scalar

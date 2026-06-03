@@ -49,10 +49,10 @@ class BertSelfAttention(nn.Module):
         # Project token states into per-head query, key, and value tensors.
         batch_size = x.shape[0]  # (batch, steps, hidden_size) -> scalar
         steps = x.shape[1]  # (batch, steps, hidden_size) -> scalar
-        head_dim = self.hidden_size // self.num_heads  # scalar -> scalar
-        q = nn.Dense(self.hidden_size, name='q_proj')(x)  # (batch, steps, hidden_size) -> (batch, steps, hidden_size)
-        k = nn.Dense(self.hidden_size, name='k_proj')(x)  # (batch, steps, hidden_size) -> (batch, steps, hidden_size)
-        v = nn.Dense(self.hidden_size, name='v_proj')(x)  # (batch, steps, hidden_size) -> (batch, steps, hidden_size)
+        head_dim = self.hidden_size // self.num_heads  # scalar
+        q = nn.Dense(self.hidden_size, name='q_proj')(x)  # (batch, steps, hidden_size)
+        k = nn.Dense(self.hidden_size, name='k_proj')(x)  # (batch, steps, hidden_size)
+        v = nn.Dense(self.hidden_size, name='v_proj')(x)  # (batch, steps, hidden_size)
 
         # Split model width across heads: (batch, steps, hidden_size) -> (batch, heads, steps, head_dim).
         head_shape = (batch_size, steps, self.num_heads, head_dim)
@@ -66,18 +66,18 @@ class BertSelfAttention(nn.Module):
         # Compute scaled dot-product attention and mask padded keys.
         key_transpose = jnp.swapaxes(k, -2, -1)  # (batch, heads, steps, head_dim) -> (batch, heads, head_dim, steps)
         scores = q @ key_transpose  # (batch, heads, steps, head_dim), (batch, heads, head_dim, steps) -> (batch, heads, steps, steps)
-        scale = head_dim ** -0.5  # scalar -> scalar
-        attn_scores = scores * scale  # (batch, heads, steps, steps) -> (batch, heads, steps, steps)
+        scale = head_dim ** -0.5  # scalar
+        attn_scores = scores * scale  # (batch, heads, steps, steps)
         if attention_mask is not None:
-            attn_scores = jnp.where(attention_mask, attn_scores, -jnp.inf)  # (batch, heads, steps, steps) -> (batch, heads, steps, steps)
-        attn_weights = nn.softmax(attn_scores, axis=-1)  # (batch, heads, steps, steps) -> (batch, heads, steps, steps)
+            attn_scores = jnp.where(attention_mask, attn_scores, -jnp.inf)  # (batch, heads, steps, steps)
+        attn_weights = nn.softmax(attn_scores, axis=-1)  # (batch, heads, steps, steps)
 
         # Mix values, merge heads, and project back to hidden width.
         context = attn_weights @ v  # (batch, heads, steps, steps), (batch, heads, steps, head_dim) -> (batch, heads, steps, head_dim)
         context = jnp.transpose(context, (0, 2, 1, 3))  # (batch, heads, steps, head_dim) -> (batch, steps, heads, head_dim)
         merged_shape = (batch_size, steps, self.hidden_size)
         merged = context.reshape(merged_shape)  # (batch, steps, heads, head_dim) -> (batch, steps, hidden_size)
-        out = nn.Dense(self.hidden_size, name='out_proj')(merged)  # (batch, steps, hidden_size) -> (batch, steps, hidden_size)
+        out = nn.Dense(self.hidden_size, name='out_proj')(merged)  # (batch, steps, hidden_size)
         return out  # (batch, steps, hidden_size)
 
 
