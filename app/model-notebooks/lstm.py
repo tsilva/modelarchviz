@@ -121,3 +121,25 @@ logits = outputs[0]
 states = outputs[1]
 
 # logits: (2, 10), states: (2, 8, 64)
+
+# Train on two synthetic sequences with opposite labels.
+model = LSTMSequence(input_size=3, hidden_size=8, output_size=2)
+train_sequences = torch.tensor(
+    [
+        [[1.0, 0.0, 0.0], [0.5, 0.0, 0.0], [1.0, 0.0, 0.0]],
+        [[0.0, 1.0, 0.0], [0.0, 0.5, 0.0], [0.0, 1.0, 0.0]],
+    ]
+)
+train_targets = torch.tensor([0, 1])
+criterion = nn.CrossEntropyLoss()
+optimizer = torch.optim.SGD(model.parameters(), lr=0.1)
+
+for step in range(3):
+    optimizer.zero_grad()
+    outputs = model(train_sequences)
+    logits = outputs[0]
+    loss = criterion(logits, train_targets)
+    loss.backward()
+    optimizer.step()
+
+final_loss = loss.item()

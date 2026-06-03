@@ -100,3 +100,23 @@ test_input = torch.randn(2, 1, 572, 572)
 logits = model(test_input)
 
 # logits: (2, 2, 572, 572)
+
+# Train on two synthetic segmentation masks.
+model = UNet(num_classes=2)
+train_images = torch.zeros(2, 1, 64, 64)
+train_images[0, :, 8:32, 8:32] = 1.0
+train_images[1, :, 32:56, 32:56] = 1.0
+train_targets = torch.zeros(2, 64, 64, dtype=torch.long)
+train_targets[0, 8:32, 8:32] = 1
+train_targets[1, 32:56, 32:56] = 1
+criterion = nn.CrossEntropyLoss()
+optimizer = torch.optim.SGD(model.parameters(), lr=0.01)
+
+for step in range(3):
+    optimizer.zero_grad()
+    logits = model(train_images)
+    loss = criterion(logits, train_targets)
+    loss.backward()
+    optimizer.step()
+
+final_loss = loss.item()

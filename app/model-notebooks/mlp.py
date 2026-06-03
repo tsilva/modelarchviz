@@ -51,3 +51,24 @@ inputs = torch.randn(2, 784)
 logits = model(inputs)
 
 # logits: (2, 10)
+
+# Train on a tiny synthetic classification batch.
+model = MLP(input_dim=4, hidden_dim=8, output_dim=2)
+train_inputs = torch.tensor(
+    [
+        [1.0, 0.0, 1.0, 0.0],
+        [0.0, 1.0, 0.0, 1.0],
+    ]
+)
+train_targets = torch.tensor([0, 1])
+criterion = nn.CrossEntropyLoss()
+optimizer = torch.optim.SGD(model.parameters(), lr=0.1)
+
+for step in range(3):
+    optimizer.zero_grad()
+    logits = model(train_inputs)
+    loss = criterion(logits, train_targets)
+    loss.backward()
+    optimizer.step()
+
+final_loss = loss.item()

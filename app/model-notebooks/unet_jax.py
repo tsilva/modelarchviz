@@ -81,3 +81,32 @@ params = model.init(jax.random.PRNGKey(0), test_input)
 logits = model.apply(params, test_input)
 
 # logits: (2, 572, 572, 2)
+
+# Train on two synthetic segmentation masks.
+model = UNet(num_classes=2)
+train_images = jnp.zeros((2, 64, 64, 1))
+train_images = train_images.at[0, 8:32, 8:32, :].set(1.0)
+train_images = train_images.at[1, 32:56, 32:56, :].set(1.0)
+train_targets = jnp.zeros((2, 64, 64), dtype=jnp.int32)
+train_targets = train_targets.at[0, 8:32, 8:32].set(1)
+train_targets = train_targets.at[1, 32:56, 32:56].set(1)
+params = model.init(jax.random.PRNGKey(1), train_images)
+
+
+def train_step(params, inputs, targets, learning_rate=0.01):
+    def loss_fn(current_params):
+        logits = model.apply(current_params, inputs)
+        one_hot_targets = jax.nn.one_hot(targets, logits.shape[-1])
+        log_probs = jax.nn.log_softmax(logits, axis=-1)
+        loss = -jnp.mean(jnp.sum(one_hot_targets * log_probs, axis=-1))
+        return loss
+
+    loss, grads = jax.value_and_grad(loss_fn)(params)
+    params = jax.tree_util.tree_map(lambda p, g: p - learning_rate * g, params, grads)
+    return params, loss
+
+
+for step in range(3):
+    params, loss = train_step(params, train_images, train_targets)
+
+final_loss = loss

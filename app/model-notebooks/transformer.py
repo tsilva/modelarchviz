@@ -165,3 +165,25 @@ tgt_mask = torch.triu(mask_values, diagonal=1)
 logits = model(src_ids, tgt_ids, tgt_mask)
 
 # logits: (2, 16, 37000)
+
+# Train on a tiny copy-style token batch.
+model = Transformer(vocab_size=20, d_model=16, nhead=4, num_layers=1)
+src_ids = torch.tensor([[1, 2, 3, 4], [4, 3, 2, 1]])
+tgt_ids = torch.tensor([[0, 1, 2, 3], [0, 4, 3, 2]])
+train_targets = torch.tensor([[1, 2, 3, 4], [4, 3, 2, 1]])
+mask_values = torch.ones(4, 4)
+mask_values = mask_values * float('-inf')
+tgt_mask = torch.triu(mask_values, diagonal=1)
+criterion = nn.CrossEntropyLoss()
+optimizer = torch.optim.SGD(model.parameters(), lr=0.1)
+
+for step in range(3):
+    optimizer.zero_grad()
+    logits = model(src_ids, tgt_ids, tgt_mask)
+    flat_logits = logits.reshape(-1, logits.size(-1))
+    flat_targets = train_targets.reshape(-1)
+    loss = criterion(flat_logits, flat_targets)
+    loss.backward()
+    optimizer.step()
+
+final_loss = loss.item()

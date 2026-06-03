@@ -95,3 +95,31 @@ mlm_logits = outputs[0]
 pooled = outputs[1]
 
 # mlm_logits: (2, 16, 30522), pooled: (2, 768)
+
+# Train on a tiny masked-token prediction batch.
+model = BERTBase(vocab_size=20, hidden_size=12, num_layers=1)
+input_ids = jnp.array([[1, 2, 3, 4], [4, 3, 2, 1]], dtype=jnp.int32)
+token_type_ids = jnp.zeros((2, 4), dtype=jnp.int32)
+attention_mask = jnp.ones((2, 1, 1, 4), dtype=jnp.bool_)
+train_targets = jnp.array([[2, 3, 4, 5], [3, 2, 1, 0]], dtype=jnp.int32)
+params = model.init(jax.random.PRNGKey(1), input_ids, token_type_ids, attention_mask, train=False)
+
+
+def train_step(params, input_ids, token_type_ids, attention_mask, targets, learning_rate=0.1):
+    def loss_fn(current_params):
+        outputs = model.apply(current_params, input_ids, token_type_ids, attention_mask, train=False)
+        mlm_logits = outputs[0]
+        one_hot_targets = jax.nn.one_hot(targets, mlm_logits.shape[-1])
+        log_probs = jax.nn.log_softmax(mlm_logits, axis=-1)
+        loss = -jnp.mean(jnp.sum(one_hot_targets * log_probs, axis=-1))
+        return loss
+
+    loss, grads = jax.value_and_grad(loss_fn)(params)
+    params = jax.tree_util.tree_map(lambda p, g: p - learning_rate * g, params, grads)
+    return params, loss
+
+
+for step in range(3):
+    params, loss = train_step(params, input_ids, token_type_ids, attention_mask, train_targets)
+
+final_loss = loss

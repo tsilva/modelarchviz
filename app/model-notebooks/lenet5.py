@@ -56,3 +56,21 @@ test_input = torch.randn(2, 1, 32, 32)
 logits = model(test_input)
 
 # logits: (2, 10)
+
+# Train on a tiny synthetic image batch.
+model = LeNet5()
+train_images = torch.zeros(2, 1, 32, 32)
+train_images[0, :, 8:16, 8:16] = 1.0
+train_images[1, :, 16:24, 16:24] = 1.0
+train_targets = torch.tensor([0, 1])
+criterion = nn.CrossEntropyLoss()
+optimizer = torch.optim.SGD(model.parameters(), lr=0.1)
+
+for step in range(3):
+    optimizer.zero_grad()
+    logits = model(train_images)
+    loss = criterion(logits, train_targets)
+    loss.backward()
+    optimizer.step()
+
+final_loss = loss.item()

@@ -107,3 +107,31 @@ params = model.init(jax.random.PRNGKey(0), test_input, mask)
 logits = model.apply(params, test_input, mask)
 
 # logits: (2, 16, 50257)
+
+# Train on a tiny next-token prediction batch.
+model = GPT2Small(vocab_size=20, n_layer=1)
+input_ids = jnp.array([[1, 2, 3, 4], [4, 3, 2, 1]], dtype=jnp.int32)
+train_targets = jnp.array([[2, 3, 4, 5], [3, 2, 1, 0]], dtype=jnp.int32)
+mask_values = jnp.ones((4, 4))
+mask = jnp.tril(mask_values)
+mask = mask.reshape(1, 1, 4, 4)
+params = model.init(jax.random.PRNGKey(1), input_ids, mask)
+
+
+def train_step(params, inputs, mask, targets, learning_rate=0.01):
+    def loss_fn(current_params):
+        logits = model.apply(current_params, inputs, mask)
+        one_hot_targets = jax.nn.one_hot(targets, logits.shape[-1])
+        log_probs = jax.nn.log_softmax(logits, axis=-1)
+        loss = -jnp.mean(jnp.sum(one_hot_targets * log_probs, axis=-1))
+        return loss
+
+    loss, grads = jax.value_and_grad(loss_fn)(params)
+    params = jax.tree_util.tree_map(lambda p, g: p - learning_rate * g, params, grads)
+    return params, loss
+
+
+for step in range(3):
+    params, loss = train_step(params, input_ids, mask, train_targets)
+
+final_loss = loss

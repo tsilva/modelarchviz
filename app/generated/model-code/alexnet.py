@@ -59,3 +59,21 @@ test_input = torch.randn(2, 3, 227, 227)
 logits = model(test_input)
 
 # logits: (2, 1000)
+
+# Train on a tiny synthetic image batch.
+model = AlexNet(num_classes=2)
+train_images = torch.zeros(2, 3, 227, 227)
+train_images[0, :, 40:100, 40:100] = 1.0
+train_images[1, :, 120:180, 120:180] = 1.0
+train_targets = torch.tensor([0, 1])
+criterion = nn.CrossEntropyLoss()
+optimizer = torch.optim.SGD(model.parameters(), lr=0.01)
+
+for step in range(3):
+    optimizer.zero_grad()
+    logits = model(train_images)
+    loss = criterion(logits, train_targets)
+    loss.backward()
+    optimizer.step()
+
+final_loss = loss.item()

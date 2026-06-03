@@ -122,3 +122,24 @@ mlm_logits = outputs[0]
 pooled = outputs[1]
 
 # mlm_logits: (2, 16, 30522), pooled: (2, 768)
+
+# Train on a tiny masked-token prediction batch.
+model = BERTBase(vocab_size=20, hidden_size=12, num_layers=1)
+input_ids = torch.tensor([[1, 2, 3, 4], [4, 3, 2, 1]])
+token_type_ids = torch.zeros((2, 4), dtype=torch.long)
+attention_mask = torch.zeros((2, 4), dtype=torch.bool)
+train_targets = torch.tensor([[2, 3, 4, 5], [3, 2, 1, 0]])
+criterion = nn.CrossEntropyLoss()
+optimizer = torch.optim.SGD(model.parameters(), lr=0.1)
+
+for step in range(3):
+    optimizer.zero_grad()
+    outputs = model(input_ids, token_type_ids, attention_mask)
+    mlm_logits = outputs[0]
+    flat_logits = mlm_logits.reshape(-1, mlm_logits.size(-1))
+    flat_targets = train_targets.reshape(-1)
+    loss = criterion(flat_logits, flat_targets)
+    loss.backward()
+    optimizer.step()
+
+final_loss = loss.item()
