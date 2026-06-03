@@ -10,7 +10,7 @@ Do not create new branches by default. Work on the current branch unless the use
 
 ## Model File Code Style
 
-Use the `$format-model-code` skill when creating, editing, reviewing, or normalizing model implementation files, including canonical notebook-source files under `app/model-notebooks/*.py` and generated UI sources under `app/generated/model-code/*.py`.
+Use the `$model-code-author` skill when creating, editing, reviewing, or normalizing model implementation files, including canonical notebook-source files under `app/model-notebooks/*.py` and generated UI sources under `app/generated/model-code/*.py`.
 
 Edit `app/model-notebooks/*.py` as the source of truth. Do not hand-edit `app/generated/model-code/*.py` or `public/notebooks/*.ipynb`; regenerate them with `pnpm generate:model-artifacts`.
 
