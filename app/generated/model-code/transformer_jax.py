@@ -27,6 +27,46 @@ class PositionalEncoding(nn.Module):
         return encoded  # (batch, steps, d_model)
 
 
+class MultiHeadAttention(nn.Module):
+    d_model: int = 512
+    nhead: int = 8
+
+    @nn.compact
+    def __call__(self, query, key, value, mask=None):
+        # Project inputs into per-head query, key, and value tensors.
+        batch_size = query.shape[0]  # (batch, query_steps, d_model) -> scalar
+        query_steps = query.shape[1]  # (batch, query_steps, d_model) -> scalar
+        key_steps = key.shape[1]  # (batch, key_steps, d_model) -> scalar
+        head_dim = self.d_model // self.nhead  # scalar -> scalar
+        q = nn.Dense(self.d_model)(query)  # (batch, query_steps, d_model) -> (batch, query_steps, d_model)
+        k = nn.Dense(self.d_model)(key)  # (batch, key_steps, d_model) -> (batch, key_steps, d_model)
+        v = nn.Dense(self.d_model)(value)  # (batch, key_steps, d_model) -> (batch, key_steps, d_model)
+
+        # Split model width across heads: (batch, steps, d_model) -> (batch, heads, steps, head_dim).
+        q = q.reshape(batch_size, query_steps, self.nhead, head_dim)  # (batch, query_steps, d_model) -> (batch, query_steps, heads, head_dim)
+        q = jnp.transpose(q, (0, 2, 1, 3))  # (batch, query_steps, heads, head_dim) -> (batch, heads, query_steps, head_dim)
+        k = k.reshape(batch_size, key_steps, self.nhead, head_dim)  # (batch, key_steps, d_model) -> (batch, key_steps, heads, head_dim)
+        k = jnp.transpose(k, (0, 2, 1, 3))  # (batch, key_steps, heads, head_dim) -> (batch, heads, key_steps, head_dim)
+        v = v.reshape(batch_size, key_steps, self.nhead, head_dim)  # (batch, key_steps, d_model) -> (batch, key_steps, heads, head_dim)
+        v = jnp.transpose(v, (0, 2, 1, 3))  # (batch, key_steps, heads, head_dim) -> (batch, heads, key_steps, head_dim)
+
+        # Compute scaled dot-product attention scores.
+        key_transpose = jnp.swapaxes(k, -2, -1)  # (batch, heads, key_steps, head_dim) -> (batch, heads, head_dim, key_steps)
+        scores = q @ key_transpose  # (batch, heads, query_steps, head_dim), (batch, heads, head_dim, key_steps) -> (batch, heads, query_steps, key_steps)
+        scale = head_dim ** -0.5  # scalar -> scalar
+        attn_scores = scores * scale  # (batch, heads, query_steps, key_steps) -> (batch, heads, query_steps, key_steps)
+        if mask is not None:
+            attn_scores = jnp.where(mask == 0, -jnp.inf, attn_scores)  # (batch, heads, query_steps, key_steps) -> (batch, heads, query_steps, key_steps)
+        attn_weights = nn.softmax(attn_scores, axis=-1)  # (batch, heads, query_steps, key_steps) -> (batch, heads, query_steps, key_steps)
+
+        # Mix values, merge heads, and project back to model width.
+        context = attn_weights @ v  # (batch, heads, query_steps, key_steps), (batch, heads, key_steps, head_dim) -> (batch, heads, query_steps, head_dim)
+        context = jnp.transpose(context, (0, 2, 1, 3))  # (batch, heads, query_steps, head_dim) -> (batch, query_steps, heads, head_dim)
+        merged = context.reshape(batch_size, query_steps, self.d_model)  # (batch, query_steps, heads, head_dim) -> (batch, query_steps, d_model)
+        out = nn.Dense(self.d_model)(merged)  # (batch, query_steps, d_model) -> (batch, query_steps, d_model)
+        return out  # (batch, query_steps, d_model)
+
+
 class EncoderLayer(nn.Module):
     d_model: int = 512
     nhead: int = 8
@@ -35,7 +75,7 @@ class EncoderLayer(nn.Module):
     @nn.compact
     def __call__(self, x):
         # Apply self-attention with residual normalization: (batch, steps, d_model).
-        attn = nn.MultiHeadDotProductAttention(num_heads=self.nhead)(x, x)  # (batch, steps, d_model) -> (batch, steps, d_model)
+        attn = MultiHeadAttention(self.d_model, self.nhead)(x, x, x)  # (batch, steps, d_model) -> (batch, steps, d_model)
         attn_residual = x + attn  # (batch, steps, d_model), (batch, steps, d_model) -> (batch, steps, d_model)
         x = nn.LayerNorm()(attn_residual)  # (batch, steps, d_model) -> (batch, steps, d_model)
 
@@ -55,12 +95,12 @@ class DecoderLayer(nn.Module):
     @nn.compact
     def __call__(self, x, memory, mask):
         # Apply masked self-attention with residual normalization.
-        masked = nn.MultiHeadDotProductAttention(num_heads=self.nhead)(x, x, mask=mask)  # (batch, target_steps, d_model) -> (batch, target_steps, d_model)
+        masked = MultiHeadAttention(self.d_model, self.nhead)(x, x, x, mask)  # (batch, target_steps, d_model) -> (batch, target_steps, d_model)
         masked_residual = x + masked  # (batch, target_steps, d_model), (batch, target_steps, d_model) -> (batch, target_steps, d_model)
         x = nn.LayerNorm()(masked_residual)  # (batch, target_steps, d_model) -> (batch, target_steps, d_model)
 
         # Attend over encoder memory with residual normalization.
-        cross = nn.MultiHeadDotProductAttention(num_heads=self.nhead)(x, memory)  # (batch, target_steps, d_model), (batch, source_steps, d_model) -> (batch, target_steps, d_model)
+        cross = MultiHeadAttention(self.d_model, self.nhead)(x, memory, memory)  # (batch, target_steps, d_model), (batch, source_steps, d_model) -> (batch, target_steps, d_model)
         cross_residual = x + cross  # (batch, target_steps, d_model), (batch, target_steps, d_model) -> (batch, target_steps, d_model)
         x = nn.LayerNorm()(cross_residual)  # (batch, target_steps, d_model) -> (batch, target_steps, d_model)
 

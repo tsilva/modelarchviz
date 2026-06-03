@@ -175,7 +175,10 @@ function makeTransformerEncoderBlock(index: number, defaultExpanded = false): Ar
     kind: "group",
     summary: "self-attn + ffn",
     defaultExpanded,
-    codeLines: [35, 36, 42, 45, 46, 47, 48, 49, 50, 51, 52, 54, 56, 57, 58, 61, 62, 63, 64, 128, 129],
+    codeLines: [
+      35, 43, 46, 47, 48, 49, 51, 56, 57, 58, 61, 62, 63, 64, 65, 66, 69, 70, 71, 72, 76, 79, 80, 82,
+      83, 84, 87, 96, 97, 98, 99, 100, 101, 103, 104, 106, 108, 109, 110, 113, 114, 115, 116, 172, 173,
+    ],
     lazyChildren: () => [
       {
         id: `encoder.${index}.self_attn`,
@@ -183,14 +186,17 @@ function makeTransformerEncoderBlock(index: number, defaultExpanded = false): Ar
         type: "MultiHeadAttention",
         kind: "attention",
         badges: ["8 heads", "d=512"],
-        codeLines: [45, 56],
+        codeLines: [
+          46, 47, 48, 49, 56, 57, 58, 61, 62, 63, 64, 65, 66, 69, 70, 71, 72, 74, 75, 76, 79, 80, 81, 82,
+          83, 97, 108,
+        ],
       },
       {
         id: `encoder.${index}.norm1`,
         label: "add + norm",
         type: "ResidualLayerNorm",
         kind: "residual",
-        codeLines: [51, 57, 58],
+        codeLines: [109, 110],
       },
       {
         id: `encoder.${index}.ffn`,
@@ -198,14 +204,14 @@ function makeTransformerEncoderBlock(index: number, defaultExpanded = false): Ar
         type: "FeedForward",
         kind: "mlp",
         badges: ["512->2048->512"],
-        codeLines: [46, 47, 48, 49, 50, 61],
+        codeLines: [98, 99, 100, 101, 113],
       },
       {
         id: `encoder.${index}.norm2`,
         label: "add + norm",
         type: "ResidualLayerNorm",
         kind: "residual",
-        codeLines: [52, 62, 63, 64],
+        codeLines: [114, 115, 116],
       },
     ],
   };
@@ -311,7 +317,11 @@ function makeTransformerDecoderBlock(index: number, defaultExpanded = false): Ar
     kind: "group",
     summary: "masked + cross + ffn",
     defaultExpanded,
-    codeLines: [67, 68, 74, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 88, 90, 91, 92, 95, 96, 97, 100, 101, 102, 103, 134, 135],
+    codeLines: [
+      35, 43, 46, 47, 48, 49, 51, 56, 57, 58, 61, 62, 63, 64, 65, 66, 69, 70, 71, 72, 76, 79, 80, 82,
+      83, 84, 119, 128, 129, 130, 131, 132, 133, 134, 136, 137, 138, 140, 142, 143, 144, 147, 148, 149,
+      152, 153, 154, 155, 172, 173,
+    ],
     lazyChildren: () => [
       {
         id: `decoder.${index}.masked_self_attn`,
@@ -319,14 +329,17 @@ function makeTransformerDecoderBlock(index: number, defaultExpanded = false): Ar
         type: "CausalMultiHeadAttention",
         kind: "attention",
         badges: ["8 heads", "causal"],
-        codeLines: [77, 90, 148, 149, 150],
+        codeLines: [
+          46, 47, 48, 49, 56, 57, 58, 61, 62, 63, 64, 65, 66, 69, 70, 71, 72, 74, 75, 76, 79, 80, 81, 82,
+          83, 129, 142, 200, 201, 202,
+        ],
       },
       {
         id: `decoder.${index}.norm1`,
         label: "add + norm",
         type: "ResidualLayerNorm",
         kind: "residual",
-        codeLines: [84, 91, 92],
+        codeLines: [143, 144],
       },
       {
         id: `decoder.${index}.cross_attn`,
@@ -334,14 +347,17 @@ function makeTransformerDecoderBlock(index: number, defaultExpanded = false): Ar
         type: "EncoderDecoderAttention",
         kind: "attention",
         badges: ["Q=decoder", "K,V=encoder"],
-        codeLines: [78, 95],
+        codeLines: [
+          46, 47, 48, 49, 56, 57, 58, 61, 62, 63, 64, 65, 66, 69, 70, 71, 72, 76, 79, 80, 82, 83, 130,
+          147,
+        ],
       },
       {
         id: `decoder.${index}.norm2`,
         label: "add + norm",
         type: "ResidualLayerNorm",
         kind: "residual",
-        codeLines: [85, 96, 97],
+        codeLines: [148, 149],
       },
       {
         id: `decoder.${index}.ffn`,
@@ -349,14 +365,14 @@ function makeTransformerDecoderBlock(index: number, defaultExpanded = false): Ar
         type: "FeedForward",
         kind: "mlp",
         badges: ["512->2048->512"],
-        codeLines: [79, 80, 81, 82, 83, 100],
+        codeLines: [131, 132, 133, 134, 152],
       },
       {
         id: `decoder.${index}.norm3`,
         label: "add + norm",
         type: "ResidualLayerNorm",
         kind: "residual",
-        codeLines: [86, 101, 102, 103],
+        codeLines: [153, 154, 155],
       },
     ],
   };
@@ -370,7 +386,11 @@ function makeBertLayer(index: number, defaultExpanded = false): ArchNode {
     kind: "group",
     summary: "self-attn + ffn",
     defaultExpanded,
-    codeLines: [36, 37, 43, 46, 47, 48, 49, 50, 51, 52, 53, 54, 56, 58, 59, 60, 61, 64, 65, 66, 67, 68, 89, 90],
+    codeLines: [
+      36, 44, 47, 48, 49, 50, 52, 56, 57, 58, 61, 62, 63, 64, 65, 66, 69, 70, 71, 72, 76, 79, 80, 82,
+      83, 84, 87, 96, 97, 98, 99, 100, 101, 102, 104, 105, 107, 109, 110, 111, 112, 115, 116, 117, 118,
+      119, 133, 140, 141,
+    ],
     lazyChildren: () => [
       {
         id: `encoder.layer.${index}.self_attn`,
@@ -378,14 +398,17 @@ function makeBertLayer(index: number, defaultExpanded = false): ArchNode {
         type: "BidirectionalSelfAttention",
         kind: "attention",
         badges: ["12 heads", "768"],
-        codeLines: [46, 58],
+        codeLines: [
+          47, 48, 49, 50, 56, 57, 58, 61, 62, 63, 64, 65, 66, 69, 70, 71, 72, 74, 75, 76, 79, 80, 81, 82,
+          83, 97, 109,
+        ],
       },
       {
         id: `encoder.layer.${index}.attn_norm`,
         label: "add + norm",
         type: "ResidualLayerNorm",
         kind: "residual",
-        codeLines: [47, 59, 60, 61],
+        codeLines: [110, 111, 112],
       },
       {
         id: `encoder.layer.${index}.intermediate`,
@@ -393,7 +416,7 @@ function makeBertLayer(index: number, defaultExpanded = false): ArchNode {
         type: "Dense + GELU",
         kind: "mlp",
         badges: ["768->3072"],
-        codeLines: [48, 49, 50, 51, 52, 64],
+        codeLines: [99, 100, 101, 102, 115],
       },
       {
         id: `encoder.layer.${index}.output`,
@@ -401,14 +424,14 @@ function makeBertLayer(index: number, defaultExpanded = false): ArchNode {
         type: "Dense",
         kind: "mlp",
         badges: ["3072->768"],
-        codeLines: [48, 49, 50, 51, 52, 64],
+        codeLines: [99, 100, 101, 102, 115],
       },
       {
         id: `encoder.layer.${index}.output_norm`,
         label: "add + norm",
         type: "ResidualLayerNorm",
         kind: "residual",
-        codeLines: [53, 65, 66, 67, 68],
+        codeLines: [116, 117, 118, 119],
       },
     ],
   };
@@ -636,7 +659,10 @@ function makeVitBlock(index: number, defaultExpanded = false): ArchNode {
     kind: "group",
     summary: "self-attn + mlp",
     defaultExpanded,
-    codeLines: [30, 31, 37, 40, 41, 42, 43, 44, 45, 46, 47, 49, 51, 52, 53, 56, 57, 58, 59, 89, 90],
+    codeLines: [
+      30, 38, 41, 42, 43, 44, 46, 50, 51, 52, 55, 56, 57, 58, 59, 60, 63, 64, 65, 66, 67, 70, 71, 73,
+      74, 75, 78, 87, 88, 89, 90, 91, 92, 93, 94, 97, 99, 100, 101, 104, 105, 106, 107, 124, 137, 138,
+    ],
     lazyChildren: () => [
       {
         id: `encoder.block.${index}.ln1`,
@@ -644,7 +670,7 @@ function makeVitBlock(index: number, defaultExpanded = false): ArchNode {
         type: "LayerNorm",
         kind: "norm",
         badges: ["768"],
-        codeLines: [40, 51],
+        codeLines: [88, 99],
       },
       {
         id: `encoder.block.${index}.attn`,
@@ -652,21 +678,24 @@ function makeVitBlock(index: number, defaultExpanded = false): ArchNode {
         type: "MultiHeadSelfAttention",
         kind: "attention",
         badges: ["12 heads", "197 tokens"],
-        codeLines: [41, 52],
+        codeLines: [
+          41, 42, 43, 44, 50, 51, 52, 55, 56, 57, 58, 59, 60, 63, 64, 65, 66, 67, 70, 71, 72, 73, 74, 75,
+          89, 100,
+        ],
       },
       {
         id: `encoder.block.${index}.resid1`,
         label: "resid_1",
         type: "Add",
         kind: "residual",
-        codeLines: [53],
+        codeLines: [101],
       },
       {
         id: `encoder.block.${index}.ln2`,
         label: "ln_2",
         type: "LayerNorm",
         kind: "norm",
-        codeLines: [42, 56],
+        codeLines: [90, 104],
       },
       {
         id: `encoder.block.${index}.mlp`,
@@ -674,14 +703,14 @@ function makeVitBlock(index: number, defaultExpanded = false): ArchNode {
         type: "FeedForward",
         kind: "mlp",
         badges: ["768->3072->768"],
-        codeLines: [43, 44, 45, 46, 47, 57],
+        codeLines: [91, 92, 93, 94, 105],
       },
       {
         id: `encoder.block.${index}.resid2`,
         label: "resid_2",
         type: "Add",
         kind: "residual",
-        codeLines: [58],
+        codeLines: [106, 107],
       },
     ],
   };
@@ -2060,7 +2089,7 @@ const models: ModelSpec[] = [
         type: "TokenIds",
         kind: "input",
         badges: ["source", "16 tokens"],
-        codeLines: [101],
+        codeLines: [176, 178, 195, 196],
       },
       {
         id: "tgt.input",
@@ -2068,7 +2097,7 @@ const models: ModelSpec[] = [
         type: "TokenIds",
         kind: "input",
         badges: ["target", "shifted"],
-        codeLines: [102],
+        codeLines: [176, 184, 195, 197],
       },
       {
         id: "embeddings",
@@ -2077,7 +2106,7 @@ const models: ModelSpec[] = [
         kind: "group",
         summary: "token + position",
         defaultExpanded: true,
-        codeLines: [78, 79, 80, 86, 90],
+        codeLines: [169, 170, 171, 178, 179, 184, 185],
         children: [
           {
             id: "src_embed",
@@ -2085,7 +2114,7 @@ const models: ModelSpec[] = [
             type: "Embedding",
             kind: "embedding",
             badges: ["vocab", "512"],
-            codeLines: [78, 86],
+            codeLines: [169, 178],
           },
           {
             id: "tgt_embed",
@@ -2093,7 +2122,7 @@ const models: ModelSpec[] = [
             type: "Embedding",
             kind: "embedding",
             badges: ["vocab", "512"],
-            codeLines: [79, 90],
+            codeLines: [170, 184],
           },
           {
             id: "positional_encoding",
@@ -2101,7 +2130,7 @@ const models: ModelSpec[] = [
             type: "SinusoidalEncoding",
             kind: "embedding",
             badges: ["absolute"],
-            codeLines: [5, 6, 14, 15, 16, 17, 18, 19, 80, 86, 90],
+            codeLines: [5, 6, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 29, 30, 31, 171, 179, 185],
           },
         ],
       },
@@ -2113,7 +2142,7 @@ const models: ModelSpec[] = [
         summary: "6 layers",
         badges: ["bidirectional"],
         defaultExpanded: true,
-        codeLines: [81, 87, 88],
+        codeLines: [172, 180, 181],
         children: Array.from({ length: 6 }, (_, index) => makeTransformerEncoderBlock(index, index === 0)),
       },
       {
@@ -2124,7 +2153,7 @@ const models: ModelSpec[] = [
         summary: "6 layers",
         badges: ["causal", "cross-attn"],
         defaultExpanded: true,
-        codeLines: [82, 91, 92],
+        codeLines: [173, 186, 187],
         children: Array.from({ length: 6 }, (_, index) => makeTransformerDecoderBlock(index, index === 0)),
       },
       {
@@ -2133,7 +2162,7 @@ const models: ModelSpec[] = [
         type: "Linear",
         kind: "linear",
         badges: ["512->vocab"],
-        codeLines: [83, 95],
+        codeLines: [174, 190],
       },
     ],
     code: codeLines(transformerPythonSource),
@@ -2165,7 +2194,7 @@ const models: ModelSpec[] = [
         type: "TokenIds",
         kind: "input",
         badges: ["WordPiece", "16 tokens"],
-        codeLines: [81],
+        codeLines: [137, 139, 153, 154, 164],
       },
       {
         id: "token_type_ids",
@@ -2173,7 +2202,7 @@ const models: ModelSpec[] = [
         type: "SegmentIds",
         kind: "input",
         badges: ["sentence A/B"],
-        codeLines: [82],
+        codeLines: [137, 139, 153, 155, 165],
       },
       {
         id: "embeddings",
@@ -2182,7 +2211,7 @@ const models: ModelSpec[] = [
         kind: "group",
         summary: "token + position + segment",
         defaultExpanded: true,
-        codeLines: [15, 16, 17, 18, 19, 21, 23, 24, 25, 26, 27, 58, 66],
+        codeLines: [15, 16, 17, 18, 19, 21, 23, 24, 25, 26, 27, 28, 31, 32, 132, 139],
         children: [
           {
             id: "embeddings.word",
@@ -2198,7 +2227,7 @@ const models: ModelSpec[] = [
             type: "PositionEmbedding",
             kind: "embedding",
             badges: ["512", "768"],
-            codeLines: [16, 23, 25],
+            codeLines: [16, 23, 25, 26, 27],
           },
           {
             id: "embeddings.segment",
@@ -2206,14 +2235,14 @@ const models: ModelSpec[] = [
             type: "TokenTypeEmbedding",
             kind: "embedding",
             badges: ["2", "768"],
-            codeLines: [17, 26],
+            codeLines: [17, 28],
           },
           {
             id: "embeddings.norm",
             label: "norm",
             type: "LayerNorm",
             kind: "norm",
-            codeLines: [18, 27],
+            codeLines: [18, 31],
           },
           {
             id: "embeddings.dropout",
@@ -2221,7 +2250,7 @@ const models: ModelSpec[] = [
             type: "Dropout",
             kind: "dropout",
             badges: ["p=0.1"],
-            codeLines: [19, 27],
+            codeLines: [19, 32],
           },
         ],
       },
@@ -2233,7 +2262,7 @@ const models: ModelSpec[] = [
         summary: "12 bidirectional layers",
         badges: ["no causal mask"],
         defaultExpanded: true,
-        codeLines: [59, 67, 68],
+        codeLines: [133, 140, 141],
         children: Array.from({ length: 12 }, (_, index) => makeBertLayer(index, index === 3)),
       },
       {
@@ -2242,7 +2271,7 @@ const models: ModelSpec[] = [
         type: "CLSProjection",
         kind: "linear",
         badges: ["CLS", "768->768"],
-        codeLines: [60, 69, 84],
+        codeLines: [134, 144, 145, 146],
       },
       {
         id: "mlm_head",
@@ -2250,7 +2279,7 @@ const models: ModelSpec[] = [
         type: "MaskedLMHead",
         kind: "head",
         badges: ["768->30522"],
-        codeLines: [61, 70, 84],
+        codeLines: [135, 147],
       },
     ],
     code: codeLines(bertPythonSource),
@@ -2330,7 +2359,7 @@ const models: ModelSpec[] = [
         type: "Image",
         kind: "input",
         badges: ["3 x 224 x 224"],
-        codeLines: [79],
+        codeLines: [128, 130, 148, 149],
       },
       {
         id: "patch_embed",
@@ -2339,7 +2368,7 @@ const models: ModelSpec[] = [
         kind: "conv",
         badges: ["16x16", "196 tokens", "768"],
         defaultExpanded: true,
-        codeLines: [16, 19, 20, 52, 61],
+        codeLines: [16, 17, 18, 20, 22, 25, 26, 121, 130],
         children: [
           {
             id: "patch_embed.proj",
@@ -2347,7 +2376,7 @@ const models: ModelSpec[] = [
             type: "Conv2d",
             kind: "conv",
             badges: ["3->768", "k=16", "s=16"],
-            codeLines: [16, 19],
+            codeLines: [16, 22],
           },
           {
             id: "patch_embed.flatten",
@@ -2355,7 +2384,7 @@ const models: ModelSpec[] = [
             type: "Flatten",
             kind: "reshape",
             badges: ["14x14 -> 196"],
-            codeLines: [20],
+            codeLines: [25, 26],
           },
         ],
       },
@@ -2366,7 +2395,7 @@ const models: ModelSpec[] = [
         kind: "group",
         summary: "class + position",
         defaultExpanded: true,
-        codeLines: [53, 56, 62, 63, 70],
+        codeLines: [122, 123, 131, 132, 133, 136],
         children: [
           {
             id: "tokens.cls",
@@ -2374,7 +2403,7 @@ const models: ModelSpec[] = [
             type: "LearnedToken",
             kind: "embedding",
             badges: ["1 x 768"],
-            codeLines: [53, 62, 63],
+            codeLines: [122, 131, 132, 133],
           },
           {
             id: "tokens.position",
@@ -2382,7 +2411,7 @@ const models: ModelSpec[] = [
             type: "PositionEmbedding",
             kind: "embedding",
             badges: ["197 x 768"],
-            codeLines: [56, 70],
+            codeLines: [123, 136],
           },
         ],
       },
@@ -2393,7 +2422,7 @@ const models: ModelSpec[] = [
         kind: "group",
         summary: "12 Transformer blocks",
         defaultExpanded: true,
-        codeLines: [57, 73, 74],
+        codeLines: [124, 137, 138],
         children: Array.from({ length: 12 }, (_, index) => makeVitBlock(index, index === 3)),
       },
       {
@@ -2402,7 +2431,7 @@ const models: ModelSpec[] = [
         type: "LayerNorm",
         kind: "norm",
         badges: ["CLS"],
-        codeLines: [58, 75],
+        codeLines: [125, 141],
       },
       {
         id: "head",
@@ -2410,7 +2439,7 @@ const models: ModelSpec[] = [
         type: "Linear",
         kind: "linear",
         badges: ["768->1000"],
-        codeLines: [59, 76],
+        codeLines: [126, 143],
       },
     ],
     code: codeLines(vitPythonSource),

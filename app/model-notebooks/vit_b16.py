@@ -41,6 +41,54 @@ class PatchEmbed(nn.Module):
         return x
 
 
+class MultiHeadSelfAttention(nn.Module):
+    def __init__(
+        self,
+        embed_dim=768,  # Token embedding width.
+        num_heads=12  # Number of attention heads.
+    ):
+        super().__init__()
+
+        # Register explicit Q/K/V projections and the output projection.
+        self.num_heads = num_heads
+        self.head_dim = embed_dim // num_heads
+        self.q_proj = nn.Linear(embed_dim, embed_dim)
+        self.k_proj = nn.Linear(embed_dim, embed_dim)
+        self.v_proj = nn.Linear(embed_dim, embed_dim)
+        self.out_proj = nn.Linear(embed_dim, embed_dim)
+
+    def forward(self, x):
+        # Project tokens into per-head query, key, and value tensors.
+        batch_size = x.size(0)  # (batch, tokens, embed_dim) -> scalar
+        tokens = x.size(1)  # (batch, tokens, embed_dim) -> scalar
+        q = self.q_proj(x)  # (batch, tokens, embed_dim) -> (batch, tokens, embed_dim)
+        k = self.k_proj(x)  # (batch, tokens, embed_dim) -> (batch, tokens, embed_dim)
+        v = self.v_proj(x)  # (batch, tokens, embed_dim) -> (batch, tokens, embed_dim)
+
+        # Split model width across heads: (batch, tokens, embed_dim) -> (batch, heads, tokens, head_dim).
+        q = q.view(batch_size, tokens, self.num_heads, self.head_dim)  # (batch, tokens, embed_dim) -> (batch, tokens, heads, head_dim)
+        q = q.transpose(1, 2)  # (batch, tokens, heads, head_dim) -> (batch, heads, tokens, head_dim)
+        k = k.view(batch_size, tokens, self.num_heads, self.head_dim)  # (batch, tokens, embed_dim) -> (batch, tokens, heads, head_dim)
+        k = k.transpose(1, 2)  # (batch, tokens, heads, head_dim) -> (batch, heads, tokens, head_dim)
+        v = v.view(batch_size, tokens, self.num_heads, self.head_dim)  # (batch, tokens, embed_dim) -> (batch, tokens, heads, head_dim)
+        v = v.transpose(1, 2)  # (batch, tokens, heads, head_dim) -> (batch, heads, tokens, head_dim)
+
+        # Compute scaled dot-product attention over all image tokens.
+        key_transpose = k.transpose(-2, -1)  # (batch, heads, tokens, head_dim) -> (batch, heads, head_dim, tokens)
+        scores = q @ key_transpose  # (batch, heads, tokens, head_dim), (batch, heads, head_dim, tokens) -> (batch, heads, tokens, tokens)
+        scale = self.head_dim ** -0.5  # scalar -> scalar
+        attn_scores = scores * scale  # (batch, heads, tokens, tokens) -> (batch, heads, tokens, tokens)
+        attn_weights = torch.softmax(attn_scores, dim=-1)  # (batch, heads, tokens, tokens) -> (batch, heads, tokens, tokens)
+
+        # Mix values, merge heads, and project back to embedding width.
+        context = attn_weights @ v  # (batch, heads, tokens, tokens), (batch, heads, tokens, head_dim) -> (batch, heads, tokens, head_dim)
+        context = context.transpose(1, 2)  # (batch, heads, tokens, head_dim) -> (batch, tokens, heads, head_dim)
+        context = context.contiguous()  # (batch, tokens, heads, head_dim) -> (batch, tokens, heads, head_dim)
+        merged = context.view(batch_size, tokens, self.num_heads * self.head_dim)  # (batch, tokens, heads, head_dim) -> (batch, tokens, embed_dim)
+        out = self.out_proj(merged)  # (batch, tokens, embed_dim) -> (batch, tokens, embed_dim)
+        return out  # (batch, tokens, embed_dim)
+
+
 class EncoderBlock(nn.Module):
     def __init__(
         self,
@@ -52,7 +100,7 @@ class EncoderBlock(nn.Module):
 
         # Register pre-normalized attention and MLP sublayers.
         self.norm1 = nn.LayerNorm(embed_dim)
-        self.attn = nn.MultiheadAttention(embed_dim, num_heads, batch_first=True)
+        self.attn = MultiHeadSelfAttention(embed_dim, num_heads)
         self.norm2 = nn.LayerNorm(embed_dim)
         self.mlp = nn.Sequential(
             nn.Linear(embed_dim, mlp_dim),
@@ -63,7 +111,7 @@ class EncoderBlock(nn.Module):
     def forward(self, x):
         # Apply self-attention with a residual connection.
         attn_input = self.norm1(x)
-        attn_output, _ = self.attn(attn_input, attn_input, attn_input)
+        attn_output = self.attn(attn_input)
         x = x + attn_output
 
         # Apply MLP with a residual connection.

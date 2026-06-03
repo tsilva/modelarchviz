@@ -21,6 +21,7 @@ Use this skill to author model implementation code for architecture visualizatio
 
 - Split indexing, nested calls, arithmetic, assignments, and returns into separate named steps where practical.
 - Prefer names that describe tensor roles: `batch_size`, `hidden_shape`, `current_input`, `gate_pre`, `state_trace`, `logits`, `outputs`.
+- Prefer low-level implementations for the model's core mechanism. For example, implement attention with explicit Q/K/V projections, score scaling, masking, softmax, weighted value mixing, head merging, and output projection instead of using high-level attention modules.
 - Avoid chaining shape-changing operations such as `reshape(...).transpose(...)`; assign each step.
 - Avoid returning a nested call directly; assign `logits`, `out`, `outputs`, or another descriptive result first.
 - Add one standalone comment before each meaningful logical block, especially blocks that transform tensor shape, compute a gate, form attention scores, apply a residual, or pack outputs.

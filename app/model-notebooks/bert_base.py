@@ -47,6 +47,57 @@ class BertEmbeddings(nn.Module):
         return x
 
 
+class BertSelfAttention(nn.Module):
+    def __init__(
+        self,
+        hidden_size=768,  # Embedding width.
+        num_heads=12  # Number of attention heads.
+    ):
+        super().__init__()
+
+        # Register explicit Q/K/V projections and the output projection.
+        self.num_heads = num_heads
+        self.head_dim = hidden_size // num_heads
+        self.q_proj = nn.Linear(hidden_size, hidden_size)
+        self.k_proj = nn.Linear(hidden_size, hidden_size)
+        self.v_proj = nn.Linear(hidden_size, hidden_size)
+        self.out_proj = nn.Linear(hidden_size, hidden_size)
+
+    def forward(self, x, attention_mask=None):
+        # Project token states into per-head query, key, and value tensors.
+        batch_size = x.size(0)  # (batch, steps, hidden_size) -> scalar
+        steps = x.size(1)  # (batch, steps, hidden_size) -> scalar
+        q = self.q_proj(x)  # (batch, steps, hidden_size) -> (batch, steps, hidden_size)
+        k = self.k_proj(x)  # (batch, steps, hidden_size) -> (batch, steps, hidden_size)
+        v = self.v_proj(x)  # (batch, steps, hidden_size) -> (batch, steps, hidden_size)
+
+        # Split model width across heads: (batch, steps, hidden_size) -> (batch, heads, steps, head_dim).
+        q = q.view(batch_size, steps, self.num_heads, self.head_dim)  # (batch, steps, hidden_size) -> (batch, steps, heads, head_dim)
+        q = q.transpose(1, 2)  # (batch, steps, heads, head_dim) -> (batch, heads, steps, head_dim)
+        k = k.view(batch_size, steps, self.num_heads, self.head_dim)  # (batch, steps, hidden_size) -> (batch, steps, heads, head_dim)
+        k = k.transpose(1, 2)  # (batch, steps, heads, head_dim) -> (batch, heads, steps, head_dim)
+        v = v.view(batch_size, steps, self.num_heads, self.head_dim)  # (batch, steps, hidden_size) -> (batch, steps, heads, head_dim)
+        v = v.transpose(1, 2)  # (batch, steps, heads, head_dim) -> (batch, heads, steps, head_dim)
+
+        # Compute scaled dot-product attention and mask padded keys.
+        key_transpose = k.transpose(-2, -1)  # (batch, heads, steps, head_dim) -> (batch, heads, head_dim, steps)
+        scores = q @ key_transpose  # (batch, heads, steps, head_dim), (batch, heads, head_dim, steps) -> (batch, heads, steps, steps)
+        scale = self.head_dim ** -0.5  # scalar -> scalar
+        attn_scores = scores * scale  # (batch, heads, steps, steps) -> (batch, heads, steps, steps)
+        if attention_mask is not None:
+            mask = attention_mask[:, None, None, :]  # (batch, steps) -> (batch, 1, 1, steps)
+            attn_scores = attn_scores.masked_fill(mask, -1e9)  # (batch, heads, steps, steps) -> (batch, heads, steps, steps)
+        attn_weights = torch.softmax(attn_scores, dim=-1)  # (batch, heads, steps, steps) -> (batch, heads, steps, steps)
+
+        # Mix values, merge heads, and project back to hidden width.
+        context = attn_weights @ v  # (batch, heads, steps, steps), (batch, heads, steps, head_dim) -> (batch, heads, steps, head_dim)
+        context = context.transpose(1, 2)  # (batch, heads, steps, head_dim) -> (batch, steps, heads, head_dim)
+        context = context.contiguous()  # (batch, steps, heads, head_dim) -> (batch, steps, heads, head_dim)
+        merged = context.view(batch_size, steps, self.num_heads * self.head_dim)  # (batch, steps, heads, head_dim) -> (batch, steps, hidden_size)
+        out = self.out_proj(merged)  # (batch, steps, hidden_size) -> (batch, steps, hidden_size)
+        return out  # (batch, steps, hidden_size)
+
+
 class BertLayer(nn.Module):
     def __init__(
         self,
@@ -57,7 +108,7 @@ class BertLayer(nn.Module):
         super().__init__()
 
         # Register attention, feed-forward, normalization, and dropout layers.
-        self.self_attn = nn.MultiheadAttention(hidden_size, num_heads, batch_first=True)
+        self.self_attn = BertSelfAttention(hidden_size, num_heads)
         self.attn_norm = nn.LayerNorm(hidden_size)
         self.ffn = nn.Sequential(
             nn.Linear(hidden_size, intermediate_size),
@@ -69,7 +120,7 @@ class BertLayer(nn.Module):
 
     def forward(self, x, attention_mask=None):
         # Apply self-attention with residual normalization: (batch, steps, hidden_size).
-        attn, _ = self.self_attn(x, x, x, key_padding_mask=attention_mask)
+        attn = self.self_attn(x, attention_mask)
         attn = self.dropout(attn)
         attn_residual = x + attn
         x = self.attn_norm(attn_residual)
