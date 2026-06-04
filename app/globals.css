@@ -33,7 +33,7 @@ html,
 body {
   height: 100%;
   scrollbar-color: #9ca8b6 #e3e8ee;
-  scrollbar-gutter: stable;
+  overflow: hidden;
 }
 
 body {
@@ -79,7 +79,9 @@ button {
 .app-shell {
   display: flex;
   height: 100vh;
-  min-height: 100vh;
+  height: 100dvh;
+  min-height: 0;
+  max-height: 100dvh;
   flex-direction: column;
   overflow: hidden;
 }
@@ -675,6 +677,19 @@ select {
   background: #ffffff;
 }
 
+.pdf-selection-highlight {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.pdf-selection-highlight span {
+  position: absolute;
+  border-radius: 2px;
+  background: rgba(216, 138, 21, 0.28);
+}
+
 .pdf-text-layer {
   position: absolute;
   top: 0;
@@ -687,7 +702,7 @@ select {
   text-size-adjust: none;
   transform-origin: 0 0;
   user-select: text;
-  z-index: 1;
+  z-index: 2;
 }
 
 .pdf-text-layer :is(span, br) {

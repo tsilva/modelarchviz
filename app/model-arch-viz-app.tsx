@@ -104,10 +104,17 @@ type AgentCodeSelection = {
   reason?: string;
 };
 type MarkdownInlineDelimiter = "`" | "**" | "*";
+type PaperSelectionHighlightRect = {
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+};
 type PaperSelection = {
   modelId: string;
   pageNumber: number;
   text: string;
+  highlightRects: PaperSelectionHighlightRect[];
 } | null;
 
 const defaultVisibleColumns: Record<PaneKey, boolean> = {
@@ -4943,14 +4950,32 @@ function PdfViewer({
     }
 
     if (!selectedText) {
-      onPaperSelectionChange(null);
       return;
     }
+
+    const textLayerRect = textLayer.getBoundingClientRect();
+    const range = selection.getRangeAt(0);
+    const highlightRects = Array.from(range.getClientRects())
+      .map((rect) => {
+        const left = Math.max(rect.left, textLayerRect.left) - textLayerRect.left;
+        const top = Math.max(rect.top, textLayerRect.top) - textLayerRect.top;
+        const right = Math.min(rect.right, textLayerRect.right) - textLayerRect.left;
+        const bottom = Math.min(rect.bottom, textLayerRect.bottom) - textLayerRect.top;
+
+        return {
+          left,
+          top,
+          width: Math.max(right - left, 0),
+          height: Math.max(bottom - top, 0),
+        };
+      })
+      .filter((rect) => rect.width > 0 && rect.height > 0);
 
     onPaperSelectionChange({
       modelId: model.id,
       pageNumber,
       text: selectedText.slice(0, 4000),
+      highlightRects,
     });
   };
 
@@ -4984,6 +5009,21 @@ function PdfViewer({
         ) : null}
         <div className="pdf-page-shell">
           <canvas ref={canvasRef} className="pdf-canvas" aria-label={`${model.paper.title} page ${pageNumber}`} />
+          {paperSelection && paperSelection.modelId === model.id && paperSelection.pageNumber === pageNumber ? (
+            <div className="pdf-selection-highlight" aria-hidden="true">
+              {paperSelection.highlightRects.map((rect, index) => (
+                <span
+                  key={`${index}-${rect.left}-${rect.top}`}
+                  style={{
+                    left: `${rect.left}px`,
+                    top: `${rect.top}px`,
+                    width: `${rect.width}px`,
+                    height: `${rect.height}px`,
+                  }}
+                />
+              ))}
+            </div>
+          ) : null}
           <div
             className="pdf-text-layer"
             ref={textLayerRef}

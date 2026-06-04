@@ -102,22 +102,106 @@ function formatFullSource(lines: string[] | undefined) {
   return lines.map((line, index) => `${index + 1}: ${line}`).join("\n").slice(0, maxSourceCharacters);
 }
 
-function parseAssistantPayload(content: string): { message: string; codeSelection: CodeSelection | null } {
-  try {
-    const parsed = JSON.parse(content) as { message?: unknown; codeSelection?: unknown; code_selection?: unknown };
-    const message = typeof parsed.message === "string" ? parsed.message.trim() : "";
-    const codeSelection = parsed.codeSelection ?? parsed.code_selection ?? null;
+type AssistantPayload = {
+  message?: unknown;
+  codeSelection?: unknown;
+  code_selection?: unknown;
+};
 
-    return {
-      message: message || content,
-      codeSelection: codeSelection && typeof codeSelection === "object" ? (codeSelection as CodeSelection) : null,
-    };
+function isAssistantPayload(value: unknown): value is AssistantPayload {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+
+  const candidate = value as AssistantPayload;
+  return "message" in candidate || "codeSelection" in candidate || "code_selection" in candidate;
+}
+
+function parseAssistantJson(value: string) {
+  try {
+    const parsed = JSON.parse(value) as unknown;
+    return isAssistantPayload(parsed) ? parsed : null;
   } catch {
+    return null;
+  }
+}
+
+function findAssistantPayload(content: string) {
+  const exactPayload = parseAssistantJson(content);
+  if (exactPayload) {
+    return exactPayload;
+  }
+
+  const fencedJsonPattern = /```(?:json)?\s*([\s\S]*?)```/gi;
+  for (const match of content.matchAll(fencedJsonPattern)) {
+    const fencedPayload = parseAssistantJson(match[1].trim());
+    if (fencedPayload) {
+      return fencedPayload;
+    }
+  }
+
+  for (let startIndex = 0; startIndex < content.length; startIndex += 1) {
+    if (content[startIndex] !== "{") {
+      continue;
+    }
+
+    let depth = 0;
+    let inString = false;
+    let escaped = false;
+
+    for (let endIndex = startIndex; endIndex < content.length; endIndex += 1) {
+      const character = content[endIndex];
+
+      if (inString) {
+        if (escaped) {
+          escaped = false;
+        } else if (character === "\\") {
+          escaped = true;
+        } else if (character === '"') {
+          inString = false;
+        }
+
+        continue;
+      }
+
+      if (character === '"') {
+        inString = true;
+      } else if (character === "{") {
+        depth += 1;
+      } else if (character === "}") {
+        depth -= 1;
+
+        if (depth === 0) {
+          const payload = parseAssistantJson(content.slice(startIndex, endIndex + 1));
+          if (payload) {
+            return payload;
+          }
+
+          break;
+        }
+      }
+    }
+  }
+
+  return null;
+}
+
+function parseAssistantPayload(content: string): { message: string; codeSelection: CodeSelection | null } {
+  const parsed = findAssistantPayload(content);
+  if (!parsed) {
     return {
       message: content,
       codeSelection: null,
     };
   }
+
+  const message = typeof parsed.message === "string" ? parsed.message.trim() : "";
+  const codeSelection = parsed.codeSelection ?? parsed.code_selection ?? null;
+
+  return {
+    message: message || content,
+    codeSelection: codeSelection && typeof codeSelection === "object" ? (codeSelection as CodeSelection) : null,
+  };
 }
 
 function normalizeLineNumbers(selection: CodeSelection, lineCount: number) {
