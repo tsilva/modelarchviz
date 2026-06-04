@@ -126,6 +126,15 @@ const defaultVisibleColumns: Record<PaneKey, boolean> = {
 
 let activeVisibleColumns = defaultVisibleColumns;
 
+const paneMinWidths: Record<PaneKey, number> = {
+  architecture: 320,
+  paper: 300,
+  code: 420,
+  chat: 300,
+};
+
+const paneResizeStep = 24;
+
 const languageLabels: Record<CodeLanguage, string> = {
   pytorch: "PyTorch",
   jax: "JAX",
@@ -919,7 +928,7 @@ const models: ModelSpec[] = [
         type: "Logits + StateTrace",
         kind: "head",
         badges: ["classes", "all states"],
-        codeLines: [38, 39, 40, 41, 47, 48, 49, 51],
+        codeLines: [38, 39, 40, 41],
       },
     ],
     code: codeLines(rnnPythonSource),
@@ -5103,9 +5112,19 @@ export default function ModelArchVizApp({ initialModelId }: ModelArchVizAppProps
   const [agentCodeSelection, setAgentCodeSelection] = useState<AgentCodeSelection | null>(null);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [paperSelection, setPaperSelection] = useState<PaperSelection>(null);
+  const [customPaneWidths, setCustomPaneWidths] = useState<Record<string, number[]>>({});
+  const workspaceRef = useRef<HTMLDivElement>(null);
 
   const paneOrder: PaneKey[] = ["architecture", "code", "paper", "chat"];
   const visiblePanes = paneOrder.filter((pane) => visibleColumns[pane]);
+  const paneLayout = visiblePanes.join("-");
+  const resizedPaneWidths =
+    customPaneWidths[paneLayout]?.length === visiblePanes.length ? customPaneWidths[paneLayout] : null;
+  const workspaceStyle = resizedPaneWidths
+    ? ({
+        gridTemplateColumns: resizedPaneWidths.map((width) => `${Math.round(width)}px`).join(" 8px "),
+      } as React.CSSProperties)
+    : undefined;
   const expanded = expandedByModel[model.id] ?? new Set<string>();
   const selected = selectedByModel[model.id] ?? findNodeById(model.nodes, model.selectedId);
 
@@ -5176,6 +5195,88 @@ export default function ModelArchVizApp({ initialModelId }: ModelArchVizAppProps
 
       return next;
     });
+  };
+
+  const readCurrentPaneWidths = () => {
+    const workspace = workspaceRef.current;
+    if (!workspace) {
+      return null;
+    }
+
+    const widths = visiblePanes.map((pane) => {
+      const element = workspace.querySelector(`:scope > .${pane}-pane`);
+      if (!(element instanceof HTMLElement)) {
+        return 0;
+      }
+
+      return element.getBoundingClientRect().width;
+    });
+
+    if (widths.some((width) => width <= 0)) {
+      return null;
+    }
+
+    return widths;
+  };
+
+  const applyPaneResize = (leftPaneIndex: number, delta: number, startingWidths?: number[]) => {
+    const widths = startingWidths ?? resizedPaneWidths ?? readCurrentPaneWidths();
+    const rightPaneIndex = leftPaneIndex + 1;
+    if (!widths || !visiblePanes[leftPaneIndex] || !visiblePanes[rightPaneIndex]) {
+      return;
+    }
+
+    const pairTotal = widths[leftPaneIndex] + widths[rightPaneIndex];
+    const leftMin = paneMinWidths[visiblePanes[leftPaneIndex]];
+    const rightMin = paneMinWidths[visiblePanes[rightPaneIndex]];
+    if (pairTotal <= leftMin + rightMin) {
+      return;
+    }
+
+    const nextLeftWidth = Math.min(Math.max(widths[leftPaneIndex] + delta, leftMin), pairTotal - rightMin);
+    const nextWidths = widths.map((width) => Math.round(width));
+    nextWidths[leftPaneIndex] = Math.round(nextLeftWidth);
+    nextWidths[rightPaneIndex] = Math.round(pairTotal - nextLeftWidth);
+
+    setCustomPaneWidths((current) => ({
+      ...current,
+      [paneLayout]: nextWidths,
+    }));
+  };
+
+  const startPaneResize = (event: React.PointerEvent<HTMLDivElement>, leftPaneIndex: number) => {
+    const startingWidths = readCurrentPaneWidths();
+    const workspace = workspaceRef.current;
+    if (!startingWidths || !workspace) {
+      return;
+    }
+
+    event.preventDefault();
+    workspace.dataset.resizing = "true";
+
+    const startX = event.clientX;
+    const onPointerMove = (moveEvent: PointerEvent) => {
+      moveEvent.preventDefault();
+      applyPaneResize(leftPaneIndex, moveEvent.clientX - startX, startingWidths);
+    };
+    const onPointerUp = () => {
+      delete workspace.dataset.resizing;
+      document.removeEventListener("pointermove", onPointerMove);
+      document.removeEventListener("pointerup", onPointerUp);
+    };
+
+    document.addEventListener("pointermove", onPointerMove);
+    document.addEventListener("pointerup", onPointerUp, { once: true });
+  };
+
+  const resizePaneFromKeyboard = (event: React.KeyboardEvent<HTMLDivElement>, leftPaneIndex: number) => {
+    if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") {
+      return;
+    }
+
+    event.preventDefault();
+    const delta = event.key === "ArrowLeft" ? -paneResizeStep : paneResizeStep;
+    applyPaneResize(leftPaneIndex, delta);
   };
 
   const renderPane = (pane: PaneKey) => {
@@ -5299,10 +5400,26 @@ export default function ModelArchVizApp({ initialModelId }: ModelArchVizAppProps
         </div>
       </header>
 
-      <div className="workspace" data-pane-count={visiblePanes.length}>
+      <div
+        className="workspace"
+        data-pane-count={visiblePanes.length}
+        data-pane-layout={paneLayout}
+        ref={workspaceRef}
+        style={workspaceStyle}
+      >
         {visiblePanes.map((pane, index) => (
           <Fragment key={pane}>
-            {index > 0 ? <div className="divider" aria-hidden="true" /> : null}
+            {index > 0 ? (
+              <div
+                className="divider"
+                role="separator"
+                aria-label={`Resize ${visiblePanes[index - 1]} and ${pane} panes`}
+                aria-orientation="vertical"
+                tabIndex={0}
+                onKeyDown={(event) => resizePaneFromKeyboard(event, index - 1)}
+                onPointerDown={(event) => startPaneResize(event, index - 1)}
+              />
+            ) : null}
             {renderPane(pane)}
           </Fragment>
         ))}

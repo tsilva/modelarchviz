@@ -51,6 +51,7 @@ class ElmanRNN(nn.Module):
         return outputs
 
 
+# %% [notebook-only]
 # Create and run a sample sequence: (2, 8, 32) -> logits and states.
 model = ElmanRNN(hidden_size=64, output_size=10)
 sequence = jnp.ones((2, 8, 32))  # -> (2, 8, 32)
@@ -59,7 +60,7 @@ outputs = model.apply(params, sequence)
 logits = outputs[0]  # (2, 10)
 states = outputs[1]  # (2, 8, 64)
 
-
+# %% [notebook-only]
 # Train on two synthetic sequences with opposite labels.
 model = ElmanRNN(hidden_size=8, output_size=2)
 train_sequences = jnp.array(

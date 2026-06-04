@@ -220,6 +220,10 @@ select {
   grid-template-columns: minmax(320px, 1fr) 8px minmax(360px, 1.08fr);
 }
 
+.workspace[data-pane-layout="architecture-code"] {
+  grid-template-columns: clamp(460px, 34vw, 680px) 8px minmax(520px, 1fr);
+}
+
 .workspace[data-pane-count="3"] {
   grid-template-columns: minmax(300px, 1.06fr) 8px minmax(380px, 1.3fr) 8px minmax(320px, 0.94fr);
 }
@@ -250,9 +254,45 @@ select {
 }
 
 .divider {
+  position: relative;
   border-right: 1px solid #c4ccd6;
   border-left: 1px solid #eef2f5;
   background: linear-gradient(90deg, #d7dde5, #edf1f5);
+  cursor: col-resize;
+  outline: 0;
+  touch-action: none;
+}
+
+.divider::before {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 2px;
+  height: 34px;
+  border-radius: 999px;
+  background: #8290a0;
+  content: "";
+  opacity: 0.72;
+  transform: translate(-50%, -50%);
+}
+
+.divider:hover::before,
+.divider:focus-visible::before,
+.workspace[data-resizing="true"] .divider::before {
+  background: #0f8f94;
+  opacity: 1;
+}
+
+.divider:focus-visible {
+  box-shadow: inset 0 0 0 2px rgba(15, 143, 148, 0.45);
+}
+
+.workspace[data-resizing="true"] {
+  cursor: col-resize;
+}
+
+.workspace[data-resizing="true"] * {
+  user-select: none;
 }
 
 .pane-toolbar {
