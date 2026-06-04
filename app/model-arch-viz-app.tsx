@@ -3890,10 +3890,56 @@ function getCodeForLanguage(model: ModelSpec, language: CodeLanguage) {
   };
 }
 
+function classNameForNode(node: ArchNode) {
+  const match = node.type.match(/^([A-Z][A-Za-z0-9_]*)(?:\s+x\d+)?$/);
+
+  return match?.[1] ?? null;
+}
+
+function classLineRange(code: string[], className: string) {
+  const startIndex = code.findIndex((line) => line.match(new RegExp(`^class\\s+${className}\\b`)));
+  if (startIndex === -1) {
+    return [];
+  }
+
+  let endExclusiveIndex = code.length;
+  for (let index = startIndex + 1; index < code.length; index += 1) {
+    const line = code[index];
+    if (line.trim().length === 0) {
+      continue;
+    }
+
+    const isTopLevelLine = !line.startsWith(" ") && !line.startsWith("\t");
+    if (isTopLevelLine) {
+      endExclusiveIndex = index;
+      break;
+    }
+  }
+
+  let endLineNumber = endExclusiveIndex;
+  while (endLineNumber > startIndex + 1 && code[endLineNumber - 1].trim().length === 0) {
+    endLineNumber -= 1;
+  }
+
+  return lineRange(startIndex + 1, endLineNumber);
+}
+
+function selectedLineNumbers(model: ModelSpec, selected: ArchNode | null, language: CodeLanguage) {
+  if (!selected) {
+    return [];
+  }
+
+  const currentFile = getCodeForLanguage(model, language);
+  const className = classNameForNode(selected);
+  const classLines = className ? classLineRange(currentFile.code, className) : [];
+
+  return classLines.length > 0 ? classLines : selected.codeLines;
+}
+
 function selectedCodeContext(model: ModelSpec, selected: ArchNode | null, language: CodeLanguage) {
   const currentFile = getCodeForLanguage(model, language);
 
-  return (selected?.codeLines ?? [])
+  return selectedLineNumbers(model, selected, language)
     .filter((lineNumber) => currentFile.code[lineNumber - 1] !== undefined)
     .map((lineNumber) => ({
       lineNumber,
@@ -4141,15 +4187,15 @@ function CodeEditor({
   } satisfies Record<CodeLanguage, Array<{ id: string; fileName: string; notebookName: string; code: string[] }>>;
   const filesForLanguage = codeFiles[language];
   const currentFile = filesForLanguage[0];
-  const selectedLineNumbers = selected?.codeLines ?? [];
+  const selectedLineNumbersForLanguage = selectedLineNumbers(model, selected, language);
   const selectedLines = new Set(
-    selectedLineNumbers.filter((lineNumber) => {
+    selectedLineNumbersForLanguage.filter((lineNumber) => {
       const line = currentFile.code[lineNumber - 1];
       return line !== undefined;
     }),
   );
   const firstSelectedLine =
-    selectedLineNumbers.find((lineNumber) => selectedLines.has(lineNumber)) ?? null;
+    selectedLineNumbersForLanguage.find((lineNumber) => selectedLines.has(lineNumber)) ?? null;
 
   useEffect(() => {
     const editor = editorRef.current;

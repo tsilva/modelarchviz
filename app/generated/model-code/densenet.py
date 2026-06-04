@@ -2,7 +2,6 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-
 class DenseLayer(nn.Module):
     def __init__(
         self,
@@ -52,7 +51,6 @@ class DenseLayer(nn.Module):
         out = torch.cat(features, dim=1)  # (batch, channels, height, width) -> (batch, channels + growth_rate, height, width)
         return out
 
-
 class DenseBlock(nn.Module):
     def __init__(
         self,
@@ -84,7 +82,6 @@ class DenseBlock(nn.Module):
             out = layer(out)  # (batch, channels, height, width) -> (batch, channels + growth_rate, height, width)
         return out
 
-
 class Transition(nn.Module):
     def __init__(
         self,
@@ -111,7 +108,6 @@ class Transition(nn.Module):
         out = self.conv(out)  # (batch, in_channels, height, width) -> (batch, out_channels, height, width)
         out = F.avg_pool2d(out, kernel_size=2, stride=2)  # (batch, out_channels, height, width) -> (batch, out_channels, height/2, width/2)
         return out
-
 
 class DenseNet(nn.Module):
     def __init__(
@@ -176,35 +172,3 @@ class DenseNet(nn.Module):
         x = torch.flatten(x, 1)  # (batch, num_features, 1, 1) -> (batch, num_features)
         logits = self.classifier(x)  # (batch, num_features) -> (batch, num_classes)
         return logits
-
-
-# Create and run a sample ImageNet-size batch: (2, 3, 224, 224) -> (2, 1000).
-model = DenseNet(num_classes=1000)
-test_input = torch.randn(2, 3, 224, 224)  # -> (2, 3, 224, 224)
-logits = model(test_input)  # (2, 3, 224, 224) -> (2, 1000)
-
-
-# Train on a tiny synthetic image batch.
-model = DenseNet(
-    growth_rate=4,
-    block_config=(1, 1, 1, 1),
-    num_init_features=8,
-    num_classes=2,
-)
-train_images = torch.zeros(2, 3, 224, 224)  # -> (2, 3, 224, 224)
-train_images[0, :, 32:96, 32:96] = 1.0
-train_images[1, :, 128:192, 128:192] = 1.0
-train_targets = torch.tensor([0, 1])  # -> (2)
-criterion = nn.CrossEntropyLoss()
-optimizer = torch.optim.SGD(model.parameters(), lr=0.01)
-
-# Fit the model for a few steps on the tiny dataset.
-for step in range(3):
-    optimizer.zero_grad()
-    logits = model(train_images)  # (2, 3, 224, 224) -> (2, 2)
-    loss = criterion(logits, train_targets)  # (2, 2), (2) -> scalar
-    loss.backward()
-    optimizer.step()
-
-# Keep the final scalar loss for inspection.
-final_loss = loss.item()  # scalar

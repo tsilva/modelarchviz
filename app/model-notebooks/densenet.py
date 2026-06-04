@@ -17,6 +17,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 
+# %%
 class DenseLayer(nn.Module):
     def __init__(
         self,
@@ -67,6 +68,14 @@ class DenseLayer(nn.Module):
         return out
 
 
+# %% [notebook-only]
+dense_layer = DenseLayer(in_channels=6, growth_rate=4)
+dense_input = torch.randn(2, 6, 8, 8)  # -> (2, 6, 8, 8)
+dense_output = dense_layer(dense_input)  # (2, 6, 8, 8) -> (2, 10, 8, 8)
+print(dense_output.shape)
+
+
+# %%
 class DenseBlock(nn.Module):
     def __init__(
         self,
@@ -99,6 +108,14 @@ class DenseBlock(nn.Module):
         return out
 
 
+# %% [notebook-only]
+dense_block = DenseBlock(layer_count=3, in_channels=6, growth_rate=4)
+block_input = torch.randn(2, 6, 8, 8)  # -> (2, 6, 8, 8)
+block_output = dense_block(block_input)  # (2, 6, 8, 8) -> (2, 18, 8, 8)
+print(block_output.shape)
+
+
+# %%
 class Transition(nn.Module):
     def __init__(
         self,
@@ -127,6 +144,14 @@ class Transition(nn.Module):
         return out
 
 
+# %% [notebook-only]
+transition = Transition(in_channels=18, out_channels=9)
+transition_input = torch.randn(2, 18, 8, 8)  # -> (2, 18, 8, 8)
+transition_output = transition(transition_input)  # (2, 18, 8, 8) -> (2, 9, 4, 4)
+print(transition_output.shape)
+
+
+# %%
 class DenseNet(nn.Module):
     def __init__(
         self,
@@ -192,12 +217,20 @@ class DenseNet(nn.Module):
         return logits
 
 
-# Create and run a sample ImageNet-size batch: (2, 3, 224, 224) -> (2, 1000).
-model = DenseNet(num_classes=1000)
-test_input = torch.randn(2, 3, 224, 224)  # -> (2, 3, 224, 224)
-logits = model(test_input)  # (2, 3, 224, 224) -> (2, 1000)
+# %% [notebook-only]
+# Create and run a compact image batch: (2, 3, 64, 64) -> (2, 10).
+model = DenseNet(
+    growth_rate=4,
+    block_config=(1, 1, 1, 1),
+    num_init_features=8,
+    num_classes=10,
+)
+test_input = torch.randn(2, 3, 64, 64)  # -> (2, 3, 64, 64)
+logits = model(test_input)  # (2, 3, 64, 64) -> (2, 10)
+print(logits.shape)
 
 
+# %% [notebook-only]
 # Train on a tiny synthetic image batch.
 model = DenseNet(
     growth_rate=4,
@@ -205,9 +238,9 @@ model = DenseNet(
     num_init_features=8,
     num_classes=2,
 )
-train_images = torch.zeros(2, 3, 224, 224)  # -> (2, 3, 224, 224)
-train_images[0, :, 32:96, 32:96] = 1.0
-train_images[1, :, 128:192, 128:192] = 1.0
+train_images = torch.zeros(2, 3, 64, 64)  # -> (2, 3, 64, 64)
+train_images[0, :, 8:24, 8:24] = 1.0
+train_images[1, :, 40:56, 40:56] = 1.0
 train_targets = torch.tensor([0, 1])  # -> (2)
 criterion = nn.CrossEntropyLoss()
 optimizer = torch.optim.SGD(model.parameters(), lr=0.01)
@@ -215,7 +248,7 @@ optimizer = torch.optim.SGD(model.parameters(), lr=0.01)
 # Fit the model for a few steps on the tiny dataset.
 for step in range(3):
     optimizer.zero_grad()
-    logits = model(train_images)  # (2, 3, 224, 224) -> (2, 2)
+    logits = model(train_images)  # (2, 3, 64, 64) -> (2, 2)
     loss = criterion(logits, train_targets)  # (2, 2), (2) -> scalar
     loss.backward()
     optimizer.step()
