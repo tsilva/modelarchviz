@@ -136,6 +136,10 @@ function codeLines(source: string) {
   return trimmed.split("\n");
 }
 
+function lineRange(start: number, end: number) {
+  return Array.from({ length: end - start + 1 }, (_, index) => start + index);
+}
+
 function notebookFileName(fileName: string) {
   return fileName.replace(/\.py$/, ".ipynb");
 }
@@ -3279,7 +3283,7 @@ const models: ModelSpec[] = [
         kind: "group",
         summary: "6 dense layers",
         badges: ["64->256", "56x56"],
-        codeLines: [56, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 80, 81, 82, 83, 84, 147, 148, 149, 150, 151, 152, 153, 154, 169, 170],
+        codeLines: [...lineRange(56, 85), 147, 148, 149, 150, 151, 152, 153, 154, 169, 170],
         children: [
           {
             id: "denseblock1.layer1",
@@ -3335,7 +3339,7 @@ const models: ModelSpec[] = [
         summary: "12 dense layers",
         badges: ["128->512", "28x28"],
         defaultExpanded: true,
-        codeLines: [56, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 80, 81, 82, 83, 84, 147, 148, 149, 150, 151, 152, 153, 154, 169, 170],
+        codeLines: [...lineRange(56, 85), 147, 148, 149, 150, 151, 152, 153, 154, 169, 170],
         children: [
           {
             id: "denseblock2.layer1",
@@ -3398,7 +3402,7 @@ const models: ModelSpec[] = [
         kind: "group",
         summary: "24 dense layers",
         badges: ["256->1024", "14x14"],
-        codeLines: [56, 66, 67, 68, 69, 70, 76, 80, 83, 84, 147, 148, 149, 150, 151, 152, 153, 154, 169, 170],
+        codeLines: [...lineRange(56, 85), 147, 148, 149, 150, 151, 152, 153, 154, 169, 170],
         children: [
           {
             id: "denseblock3.layer1",
@@ -3435,7 +3439,7 @@ const models: ModelSpec[] = [
         kind: "group",
         summary: "16 dense layers",
         badges: ["512->1024", "7x7"],
-        codeLines: [56, 66, 67, 68, 69, 70, 76, 80, 83, 84, 147, 148, 149, 150, 151, 152, 153, 154, 169, 170],
+        codeLines: [...lineRange(56, 85), 147, 148, 149, 150, 151, 152, 153, 154, 169, 170],
       },
       {
         id: "head",
@@ -4119,10 +4123,6 @@ function SyntaxLine({ line }: { line: string }) {
   );
 }
 
-function isCommentOnlyCodeLine(line: string) {
-  return line.trimStart().startsWith("#");
-}
-
 function CodeEditor({
   model,
   selected,
@@ -4145,7 +4145,7 @@ function CodeEditor({
   const selectedLines = new Set(
     selectedLineNumbers.filter((lineNumber) => {
       const line = currentFile.code[lineNumber - 1];
-      return line !== undefined && !isCommentOnlyCodeLine(line);
+      return line !== undefined;
     }),
   );
   const firstSelectedLine =

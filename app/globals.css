@@ -316,7 +316,8 @@ select {
 
 .tree {
   display: flex;
-  min-width: 560px;
+  width: 100%;
+  min-width: 0;
   flex-direction: column;
   gap: 8px;
   padding-bottom: 36px;
@@ -324,6 +325,7 @@ select {
 
 .node-wrap {
   display: flex;
+  min-width: 0;
   flex-direction: column;
   gap: 8px;
 }
@@ -331,6 +333,7 @@ select {
 .children {
   position: relative;
   display: flex;
+  min-width: 0;
   flex-direction: column;
   gap: 8px;
 }
@@ -350,6 +353,7 @@ select {
   position: relative;
   display: flex;
   min-height: 48px;
+  min-width: 0;
   width: 100%;
   align-items: center;
   justify-content: space-between;
@@ -444,11 +448,14 @@ select {
 }
 
 .row-left {
+  flex: 1 1 auto;
   gap: 8px;
 }
 
 .row-right {
+  max-width: 58%;
   flex: 0 1 auto;
+  flex-wrap: wrap;
   justify-content: flex-end;
   gap: 6px;
 }
@@ -494,19 +501,24 @@ select {
 .summary,
 .badge {
   display: inline-flex;
+  max-width: 100%;
   min-height: 23px;
   align-items: center;
+  overflow: hidden;
   border-radius: 6px;
   font-size: 11px;
   line-height: 1;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .summary {
+  min-width: 0;
   color: var(--muted);
 }
 
 .badge {
+  min-width: 0;
   border: 1px solid #d3dbe4;
   background: #f7f9fb;
   color: #4e5b6a;
