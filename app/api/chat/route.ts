@@ -12,6 +12,19 @@ type SourceLine = {
   text: string;
 };
 
+type CodeLineRange = {
+  start?: number;
+  end?: number;
+};
+
+type CodeSelection = {
+  language?: string;
+  fileName?: string;
+  lines?: number[];
+  ranges?: CodeLineRange[];
+  reason?: string;
+};
+
 type ChatContext = {
   model?: {
     id?: string;
@@ -44,6 +57,7 @@ type ChatContext = {
     fileName?: string;
     code?: string[];
     selectedLines?: SourceLine[];
+    agentSelectedLines?: SourceLine[];
   };
   searchQuery?: string;
 };
@@ -80,14 +94,97 @@ function formatSourceLines(lines: SourceLine[] | undefined) {
     .join("\n");
 }
 
+function formatFullSource(lines: string[] | undefined) {
+  if (!Array.isArray(lines) || lines.length === 0) {
+    return "";
+  }
+
+  return lines.map((line, index) => `${index + 1}: ${line}`).join("\n").slice(0, maxSourceCharacters);
+}
+
+function parseAssistantPayload(content: string): { message: string; codeSelection: CodeSelection | null } {
+  try {
+    const parsed = JSON.parse(content) as { message?: unknown; codeSelection?: unknown; code_selection?: unknown };
+    const message = typeof parsed.message === "string" ? parsed.message.trim() : "";
+    const codeSelection = parsed.codeSelection ?? parsed.code_selection ?? null;
+
+    return {
+      message: message || content,
+      codeSelection: codeSelection && typeof codeSelection === "object" ? (codeSelection as CodeSelection) : null,
+    };
+  } catch {
+    return {
+      message: content,
+      codeSelection: null,
+    };
+  }
+}
+
+function normalizeLineNumbers(selection: CodeSelection, lineCount: number) {
+  const lines = new Set<number>();
+
+  if (Array.isArray(selection.lines)) {
+    for (const line of selection.lines) {
+      if (Number.isInteger(line) && line >= 1 && line <= lineCount) {
+        lines.add(line);
+      }
+    }
+  }
+
+  if (Array.isArray(selection.ranges)) {
+    for (const range of selection.ranges) {
+      const rangeStart = range.start;
+      const rangeEnd = range.end;
+      if (
+        typeof rangeStart !== "number" ||
+        typeof rangeEnd !== "number" ||
+        !Number.isInteger(rangeStart) ||
+        !Number.isInteger(rangeEnd)
+      ) {
+        continue;
+      }
+
+      const start = Math.max(1, Math.min(rangeStart, rangeEnd));
+      const end = Math.min(lineCount, Math.max(rangeStart, rangeEnd));
+      for (let line = start; line <= end; line += 1) {
+        lines.add(line);
+      }
+    }
+  }
+
+  return [...lines].sort((left, right) => left - right);
+}
+
+function sanitizeCodeSelection(selection: CodeSelection | null, context: ChatContext) {
+  if (!selection) {
+    return null;
+  }
+
+  const source = context.source ?? {};
+  const sourceCode = Array.isArray(source.code) ? source.code : [];
+  const lines = normalizeLineNumbers(selection, sourceCode.length);
+  if (lines.length === 0) {
+    return null;
+  }
+
+  return {
+    modelId: safeString(context.model?.id, ""),
+    language: safeString(selection.language, safeString(source.language, "")),
+    fileName: safeString(selection.fileName, safeString(source.fileName, "")),
+    lines,
+    reason: safeString(selection.reason, ""),
+  };
+}
+
 function formatContext(context: ChatContext) {
   const model = context.model ?? {};
   const paper = context.paper ?? {};
   const paperSelection = context.paperSelection ?? null;
   const selection = context.selection ?? null;
   const source = context.source ?? {};
-  const sourceCode = Array.isArray(source.code) ? source.code.join("\n").slice(0, maxSourceCharacters) : "";
+  const sourceCode = formatFullSource(source.code);
   const selectedLines = formatSourceLines(source.selectedLines);
+  const agentSelectedLines = formatSourceLines(source.agentSelectedLines);
   const codeTruncated = sourceCode.length >= maxSourceCharacters ? "\n\n[Source truncated for request size.]" : "";
 
   return `Current ModelArchViz state:
@@ -124,7 +221,10 @@ Visible source file:
 Selected source lines:
 ${selectedLines}
 
-Full visible source:
+Assistant-selected source lines:
+${agentSelectedLines}
+
+Full visible source with line numbers:
 \`\`\`python
 ${sourceCode}
 \`\`\`${codeTruncated}`;
@@ -178,7 +278,7 @@ export async function POST(request: Request) {
         {
           role: "system",
           content:
-            "You are the embedded ModelArchViz assistant. Use the provided current app state as ground truth. When the user says 'this', assume they mean the selected paper text when present, otherwise the current selected architecture node and highlighted code lines. Explain architecture, paper text, and code precisely, cite line numbers or paper pages when useful, and keep answers concise.",
+            'You are the embedded ModelArchViz assistant. Use the provided current app state as ground truth. When the user says "this", assume they mean the selected paper text when present, otherwise the current selected architecture node and highlighted code lines. Explain architecture, paper text, and code precisely, cite line numbers or paper pages when useful, and keep answers concise. Return only valid JSON shaped as {"message":"user-facing markdown answer","codeSelection":null} or {"message":"user-facing markdown answer","codeSelection":{"language":"current source language","fileName":"current source file","lines":[line numbers to highlight],"ranges":[{"start":number,"end":number}],"reason":"short reason"}}. Include codeSelection when the user asks where paper text, a concept, or architecture behavior appears in code, or when highlighting code would directly answer the question. Use line numbers from the full visible source.',
         },
         {
           role: "system",
@@ -198,13 +298,16 @@ export async function POST(request: Request) {
   }
 
   const data = await openRouterResponse.json();
-  const message = data?.choices?.[0]?.message?.content;
-  if (typeof message !== "string" || message.trim().length === 0) {
+  const content = data?.choices?.[0]?.message?.content;
+  if (typeof content !== "string" || content.trim().length === 0) {
     return NextResponse.json({ error: "OpenRouter returned an empty response." }, { status: 502 });
   }
+  const parsed = parseAssistantPayload(content.trim());
+  const codeSelection = sanitizeCodeSelection(parsed.codeSelection, payload.context ?? {});
 
   return NextResponse.json({
-    message,
+    message: parsed.message,
+    codeSelection,
     model: data?.model ?? model,
   });
 }

@@ -677,29 +677,62 @@ select {
 
 .pdf-text-layer {
   position: absolute;
-  inset: 1px;
-  overflow: hidden;
+  top: 0;
+  left: 0;
+  overflow: clip;
   color: transparent;
+  forced-color-adjust: none;
   line-height: 1;
   text-align: initial;
   text-size-adjust: none;
   transform-origin: 0 0;
   user-select: text;
+  z-index: 1;
 }
 
-.pdf-text-layer span {
+.pdf-text-layer :is(span, br) {
   position: absolute;
-  display: inline-block;
-  min-height: 1em;
   color: transparent;
-  font-family: var(--font-sans);
+  cursor: text;
   white-space: pre;
-  transform-origin: 0 0;
+  transform-origin: 0% 0%;
+}
+
+.pdf-text-layer > :not(.markedContent),
+.pdf-text-layer .markedContent span:not(.markedContent) {
+  z-index: 1;
+}
+
+.pdf-text-layer span.markedContent {
+  top: 0;
+  height: 0;
+}
+
+.pdf-text-layer span[role="img"] {
+  cursor: default;
+  user-select: none;
 }
 
 .pdf-text-layer ::selection {
   background: rgba(216, 138, 21, 0.32);
   color: transparent;
+}
+
+.pdf-text-layer br::selection {
+  background: transparent;
+}
+
+.pdf-text-layer .endOfContent {
+  position: absolute;
+  inset: 100% 0 0;
+  z-index: 0;
+  display: block;
+  cursor: default;
+  user-select: none;
+}
+
+.pdf-text-layer.selecting .endOfContent {
+  top: 0;
 }
 
 .pdf-selection-status {
@@ -832,6 +865,43 @@ select {
 
 .code-toolbar .language-tab-group {
   margin-left: auto;
+}
+
+.code-selection-status {
+  display: flex;
+  min-height: 34px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border-bottom: 1px solid #2a3748;
+  background: #192434;
+  color: #d8e3ef;
+  padding: 6px 12px;
+  font-size: 12px;
+}
+
+.code-selection-status span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.code-selection-status button {
+  flex: 0 0 auto;
+  border: 1px solid #4b6076;
+  border-radius: 6px;
+  background: #223044;
+  color: #eef4fb;
+  padding: 4px 8px;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.code-selection-status button:hover {
+  border-color: #6d829b;
+  background: #2a3a51;
 }
 
 .tab-group {

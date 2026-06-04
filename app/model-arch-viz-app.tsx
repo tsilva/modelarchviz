@@ -96,21 +96,19 @@ type ChatMessage = {
   role: "user" | "assistant";
   content: string;
 };
+type AgentCodeSelection = {
+  modelId: string;
+  language: CodeLanguage;
+  fileName: string;
+  lines: number[];
+  reason?: string;
+};
 type MarkdownInlineDelimiter = "`" | "**" | "*";
 type PaperSelection = {
   modelId: string;
   pageNumber: number;
   text: string;
 } | null;
-type PdfTextSpan = {
-  id: string;
-  text: string;
-  left: number;
-  top: number;
-  fontSize: number;
-  width: number;
-  transform: string;
-};
 
 const defaultVisibleColumns: Record<PaneKey, boolean> = {
   architecture: true,
@@ -3947,6 +3945,67 @@ function selectedCodeContext(model: ModelSpec, selected: ArchNode | null, langua
     }));
 }
 
+function agentSelectedCodeContext(model: ModelSpec, selection: AgentCodeSelection | null) {
+  if (!selection || selection.modelId !== model.id) {
+    return [];
+  }
+
+  const currentFile = getCodeForLanguage(model, selection.language);
+  if (selection.fileName !== currentFile.fileName) {
+    return [];
+  }
+
+  return selection.lines
+    .filter((lineNumber) => currentFile.code[lineNumber - 1] !== undefined)
+    .map((lineNumber) => ({
+      lineNumber,
+      text: currentFile.code[lineNumber - 1],
+    }));
+}
+
+function coerceCodeLanguage(value: unknown, fallback: CodeLanguage): CodeLanguage {
+  if (value === "jax") {
+    return "jax";
+  }
+
+  if (value === "pytorch" || value === "python" || value === "torch") {
+    return "pytorch";
+  }
+
+  return fallback;
+}
+
+function normalizeAgentCodeSelection(
+  value: unknown,
+  model: ModelSpec,
+  fallbackLanguage: CodeLanguage,
+): AgentCodeSelection | null {
+  if (!value || typeof value !== "object") {
+    return null;
+  }
+
+  const candidate = value as Partial<AgentCodeSelection>;
+  const language = coerceCodeLanguage(candidate.language, fallbackLanguage);
+  const currentFile = getCodeForLanguage(model, language);
+  const lines = Array.isArray(candidate.lines)
+    ? [...new Set(candidate.lines)]
+        .filter((lineNumber) => Number.isInteger(lineNumber) && lineNumber >= 1 && lineNumber <= currentFile.code.length)
+        .sort((left, right) => left - right)
+    : [];
+
+  if (lines.length === 0) {
+    return null;
+  }
+
+  return {
+    modelId: model.id,
+    language,
+    fileName: currentFile.fileName,
+    lines,
+    reason: typeof candidate.reason === "string" ? candidate.reason : undefined,
+  };
+}
+
 function previewText(text: string, maxLength = 180) {
   if (text.length <= maxLength) {
     return text;
@@ -4174,11 +4233,15 @@ function CodeEditor({
   selected,
   language,
   setLanguage,
+  agentCodeSelection,
+  onAgentCodeSelectionChange,
 }: {
   model: ModelSpec;
   selected: ArchNode | null;
   language: CodeLanguage;
   setLanguage: (language: CodeLanguage) => void;
+  agentCodeSelection: AgentCodeSelection | null;
+  onAgentCodeSelectionChange: (selection: AgentCodeSelection | null) => void;
 }) {
   const editorRef = useRef<HTMLDivElement>(null);
   const codeFiles = {
@@ -4188,14 +4251,22 @@ function CodeEditor({
   const filesForLanguage = codeFiles[language];
   const currentFile = filesForLanguage[0];
   const selectedLineNumbersForLanguage = selectedLineNumbers(model, selected, language);
+  const activeAgentSelection =
+    agentCodeSelection &&
+    agentCodeSelection.modelId === model.id &&
+    agentCodeSelection.language === language &&
+    agentCodeSelection.fileName === currentFile.fileName
+      ? agentCodeSelection
+      : null;
+  const highlightedLineNumbers = activeAgentSelection ? activeAgentSelection.lines : selectedLineNumbersForLanguage;
   const selectedLines = new Set(
-    selectedLineNumbersForLanguage.filter((lineNumber) => {
+    highlightedLineNumbers.filter((lineNumber) => {
       const line = currentFile.code[lineNumber - 1];
       return line !== undefined;
     }),
   );
-  const firstSelectedLine =
-    selectedLineNumbersForLanguage.find((lineNumber) => selectedLines.has(lineNumber)) ?? null;
+  const firstSelectedLine = highlightedLineNumbers.find((lineNumber) => selectedLines.has(lineNumber)) ?? null;
+  const highlightedLineKey = highlightedLineNumbers.join(",");
 
   useEffect(() => {
     const editor = editorRef.current;
@@ -4214,7 +4285,7 @@ function CodeEditor({
       top: Math.max(0, centeredTop),
       behavior: "smooth",
     });
-  }, [firstSelectedLine, language, model.id, selected?.id]);
+  }, [firstSelectedLine, highlightedLineKey, language, model.id, selected?.id]);
 
   return (
     <section className="code-pane">
@@ -4244,7 +4315,10 @@ function CodeEditor({
             className="language-select"
             aria-label="Select code language"
             value={language}
-            onChange={(event) => setLanguage(event.currentTarget.value as CodeLanguage)}
+            onChange={(event) => {
+              setLanguage(event.currentTarget.value as CodeLanguage);
+              onAgentCodeSelectionChange(null);
+            }}
           >
             {(Object.keys(languageLabels) as CodeLanguage[]).map((entry) => (
               <option value={entry} key={entry}>
@@ -4254,6 +4328,18 @@ function CodeEditor({
           </select>
         </div>
       </div>
+      {activeAgentSelection ? (
+        <div className="code-selection-status">
+          <span>
+            Assistant highlighted {activeAgentSelection.lines.length} line
+            {activeAgentSelection.lines.length === 1 ? "" : "s"}
+            {activeAgentSelection.reason ? ` · ${activeAgentSelection.reason}` : ""}
+          </span>
+          <button type="button" onClick={() => onAgentCodeSelectionChange(null)}>
+            Clear
+          </button>
+        </div>
+      ) : null}
       <div className="editor" ref={editorRef}>
         {currentFile.code.map((line, index) => {
           const lineNumber = index + 1;
@@ -4282,6 +4368,8 @@ function ChatPanel({
   language,
   query,
   paperSelection,
+  agentCodeSelection,
+  onAgentCodeSelectionChange,
   messages,
   setMessages,
 }: {
@@ -4290,6 +4378,8 @@ function ChatPanel({
   language: CodeLanguage;
   query: string;
   paperSelection: PaperSelection;
+  agentCodeSelection: AgentCodeSelection | null;
+  onAgentCodeSelectionChange: (selection: AgentCodeSelection | null) => void;
   messages: ChatMessage[];
   setMessages: Dispatch<SetStateAction<ChatMessage[]>>;
 }) {
@@ -4299,6 +4389,7 @@ function ChatPanel({
   const scrollRef = useRef<HTMLDivElement>(null);
   const currentFile = getCodeForLanguage(model, language);
   const selectedLines = selectedCodeContext(model, selected, language);
+  const agentSelectedLines = agentSelectedCodeContext(model, agentCodeSelection);
 
   useEffect(() => {
     const scroller = scrollRef.current;
@@ -4370,17 +4461,28 @@ function ChatPanel({
               fileName: currentFile.fileName,
               code: currentFile.code,
               selectedLines,
+              agentSelectedLines,
             },
             searchQuery: query,
           },
         }),
       });
-      const payload = (await response.json()) as { message?: string; error?: string };
+      const payload = (await response.json()) as {
+        message?: string;
+        error?: string;
+        codeSelection?: unknown;
+      };
 
       if (!response.ok || !payload.message) {
         throw new Error(payload.error ?? "Chat request failed");
       }
 
+      if (payload.codeSelection !== null && payload.codeSelection !== undefined) {
+        const nextCodeSelection = normalizeAgentCodeSelection(payload.codeSelection, model, language);
+        if (nextCodeSelection) {
+          onAgentCodeSelectionChange(nextCodeSelection);
+        }
+      }
       setMessages((current) => [...current, { role: "assistant", content: payload.message ?? "" }]);
     } catch (caught) {
       const message = caught instanceof Error ? caught.message : "Chat request failed";
@@ -4702,7 +4804,6 @@ function PdfViewer({
   const [viewerSize, setViewerSize] = useState({ width: 0, height: 0 });
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [textSpans, setTextSpans] = useState<PdfTextSpan[]>([]);
 
   useEffect(() => {
     setPageNumber(1);
@@ -4747,16 +4848,18 @@ function PdfViewer({
     let cancelled = false;
     let loadingTask: any;
     let renderTask: any;
+    let textLayerTask: any;
 
     const renderPage = async () => {
       const canvas = canvasRef.current;
       const viewer = viewerRef.current;
-      if (!canvas || !viewer) {
+      const textLayer = textLayerRef.current;
+      if (!canvas || !viewer || !textLayer) {
         return;
       }
 
       setStatus("loading");
-      setTextSpans([]);
+      textLayer.replaceChildren();
 
       try {
         const pdfjs = await import("pdfjs-dist");
@@ -4793,46 +4896,16 @@ function PdfViewer({
         renderTask = page.render({ canvasContext: context, viewport });
         await renderTask.promise;
 
-        const textContent = await page.getTextContent();
-        const textItems = textContent.items as Array<{
-          str?: unknown;
-          transform?: unknown;
-          width?: unknown;
-          height?: unknown;
-        }>;
-        const nextTextSpans = textItems
-          .map((item, index) => {
-            if (typeof item.str !== "string" || !Array.isArray(item.transform)) {
-              return null;
-            }
-
-            const matrix = item.transform.filter((value): value is number => typeof value === "number");
-            if (matrix.length !== 6) {
-              return null;
-            }
-
-            const textMatrix = pdfjs.Util.transform(viewport.transform, matrix);
-            const fontSize = Math.max(Math.hypot(textMatrix[2], textMatrix[3]), 1);
-            const left = textMatrix[4];
-            const top = textMatrix[5] - fontSize;
-            const width = Math.max((typeof item.width === "number" ? item.width : item.str.length * 4) * scale, 1);
-            const angle = Math.atan2(textMatrix[1], textMatrix[0]);
-
-            return {
-              id: `${pageNumber}-${index}`,
-              text: item.str,
-              left,
-              top,
-              fontSize,
-              width,
-              transform: `rotate(${angle}rad)`,
-            };
-          })
-          .filter((item): item is PdfTextSpan => item !== null);
-
-        if (!cancelled) {
-          setTextSpans(nextTextSpans);
-        }
+        textLayer.style.setProperty("--scale-factor", String(viewport.scale));
+        textLayerTask = new pdfjs.TextLayer({
+          textContentSource: page.streamTextContent({
+            includeMarkedContent: true,
+            disableNormalization: true,
+          }),
+          container: textLayer,
+          viewport,
+        });
+        await textLayerTask.render();
 
         if (!cancelled) {
           setStatus("ready");
@@ -4850,6 +4923,7 @@ function PdfViewer({
     return () => {
       cancelled = true;
       renderTask?.cancel();
+      textLayerTask?.cancel();
       void loadingTask?.destroy();
     };
   }, [model.paper.pdfUrl, pageNumber, viewerSize.height, viewerSize.width]);
@@ -4915,22 +4989,7 @@ function PdfViewer({
             ref={textLayerRef}
             onMouseUp={capturePaperSelection}
             onTouchEnd={capturePaperSelection}
-          >
-            {textSpans.map((span) => (
-              <span
-                style={{
-                  left: span.left,
-                  top: span.top,
-                  fontSize: span.fontSize,
-                  width: span.width,
-                  transform: span.transform,
-                }}
-                key={span.id}
-              >
-                {span.text}
-              </span>
-            ))}
-          </div>
+          />
         </div>
         {paperSelection && paperSelection.modelId === model.id && paperSelection.pageNumber === pageNumber ? (
           <div className="pdf-selection-status">Paper text selected</div>
@@ -5001,6 +5060,7 @@ export default function ModelArchVizApp({ initialModelId }: ModelArchVizAppProps
   const [visibleColumns, setVisibleColumns] = useState<Record<PaneKey, boolean>>(() => activeVisibleColumns);
   const [query, setQuery] = useState("");
   const [codeLanguage, setCodeLanguage] = useState<CodeLanguage>("pytorch");
+  const [agentCodeSelection, setAgentCodeSelection] = useState<AgentCodeSelection | null>(null);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [paperSelection, setPaperSelection] = useState<PaperSelection>(null);
 
@@ -5013,6 +5073,7 @@ export default function ModelArchVizApp({ initialModelId }: ModelArchVizAppProps
     setModelId(initialModel.id);
     setExpandedByModel({});
     setSelectedByModel({});
+    setAgentCodeSelection(null);
     setPaperSelection(null);
     setQuery("");
   }, [initialModel.id]);
@@ -5028,6 +5089,7 @@ export default function ModelArchVizApp({ initialModelId }: ModelArchVizAppProps
     setModelId(nextModelId);
     setExpandedByModel({});
     setSelectedByModel({});
+    setAgentCodeSelection(null);
     setPaperSelection(null);
     setQuery("");
 
@@ -5035,6 +5097,28 @@ export default function ModelArchVizApp({ initialModelId }: ModelArchVizAppProps
     if (pathname !== nextPath) {
       router.push(nextPath);
     }
+  };
+
+  const updateAgentCodeSelection = (selection: AgentCodeSelection | null) => {
+    setAgentCodeSelection(selection);
+    if (!selection) {
+      return;
+    }
+
+    setCodeLanguage(selection.language);
+    setVisibleColumns((current) => {
+      if (current.code) {
+        return current;
+      }
+
+      const next = {
+        ...current,
+        code: true,
+      };
+      activeVisibleColumns = next;
+
+      return next;
+    });
   };
 
   const toggleColumn = (pane: PaneKey) => {
@@ -5068,12 +5152,13 @@ export default function ModelArchVizApp({ initialModelId }: ModelArchVizAppProps
             <ArchitectureTree
               nodes={model.nodes}
               selectedId={selected?.id ?? null}
-              onSelect={(node) =>
+              onSelect={(node) => {
+                setAgentCodeSelection(null);
                 setSelectedByModel((current) => ({
                   ...current,
                   [model.id]: node,
-                }))
-              }
+                }));
+              }}
               expanded={expanded}
               setExpanded={(next) =>
                 setExpandedByModel((current) => ({
@@ -5100,13 +5185,24 @@ export default function ModelArchVizApp({ initialModelId }: ModelArchVizAppProps
           language={codeLanguage}
           query={query}
           paperSelection={paperSelection}
+          agentCodeSelection={agentCodeSelection}
+          onAgentCodeSelectionChange={updateAgentCodeSelection}
           messages={chatMessages}
           setMessages={setChatMessages}
         />
       );
     }
 
-    return <CodeEditor model={model} selected={selected} language={codeLanguage} setLanguage={setCodeLanguage} />;
+    return (
+      <CodeEditor
+        model={model}
+        selected={selected}
+        language={codeLanguage}
+        setLanguage={setCodeLanguage}
+        agentCodeSelection={agentCodeSelection}
+        onAgentCodeSelectionChange={updateAgentCodeSelection}
+      />
+    );
   };
 
   return (
