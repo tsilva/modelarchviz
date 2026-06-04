@@ -5259,14 +5259,16 @@ export default function ModelArchVizApp({ initialModelId }: ModelArchVizAppProps
       moveEvent.preventDefault();
       applyPaneResize(leftPaneIndex, moveEvent.clientX - startX, startingWidths);
     };
-    const onPointerUp = () => {
+    const stopPaneResize = () => {
       delete workspace.dataset.resizing;
       document.removeEventListener("pointermove", onPointerMove);
-      document.removeEventListener("pointerup", onPointerUp);
+      document.removeEventListener("pointerup", stopPaneResize);
+      document.removeEventListener("pointercancel", stopPaneResize);
     };
 
     document.addEventListener("pointermove", onPointerMove);
-    document.addEventListener("pointerup", onPointerUp, { once: true });
+    document.addEventListener("pointerup", stopPaneResize, { once: true });
+    document.addEventListener("pointercancel", stopPaneResize, { once: true });
   };
 
   const resizePaneFromKeyboard = (event: React.KeyboardEvent<HTMLDivElement>, leftPaneIndex: number) => {
