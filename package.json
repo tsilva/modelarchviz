@@ -10,6 +10,7 @@
     "typecheck": "pnpm generate:model-artifacts && tsc --noEmit"
   },
   "dependencies": {
+    "@sentry/nextjs": "^10",
     "next": "14.2.35",
     "pdfjs-dist": "4.10.38",
     "react": "18.3.1",
