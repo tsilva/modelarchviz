@@ -140,6 +140,13 @@ type AgentCodeSelection = {
   lines: number[];
   reason?: string;
 };
+type UserCodeSelection = {
+  modelId: string;
+  language: CodeLanguage;
+  fileName: string;
+  lines: number[];
+  text: string;
+};
 type MarkdownInlineDelimiter = "`" | "**" | "*";
 type PaperSelectionHighlightRect = {
   left: number;
@@ -4421,6 +4428,24 @@ function agentSelectedCodeContext(model: ModelSpec, selection: AgentCodeSelectio
     }));
 }
 
+function userSelectedCodeContext(model: ModelSpec, selection: UserCodeSelection | null) {
+  if (!selection || selection.modelId !== model.id) {
+    return [];
+  }
+
+  const currentFile = getCodeForLanguage(model, selection.language);
+  if (selection.fileName !== currentFile.fileName) {
+    return [];
+  }
+
+  return selection.lines
+    .filter((lineNumber) => currentFile.code[lineNumber - 1] !== undefined)
+    .map((lineNumber) => ({
+      lineNumber,
+      text: currentFile.code[lineNumber - 1],
+    }));
+}
+
 function coerceCodeLanguage(value: unknown, fallback: CodeLanguage): CodeLanguage {
   if (value === "jax") {
     return "jax";
@@ -4462,6 +4487,80 @@ function normalizeAgentCodeSelection(
     lines,
     reason: typeof candidate.reason === "string" ? candidate.reason : undefined,
   };
+}
+
+function lineNumberFromCodeLine(element: Element | null) {
+  if (!(element instanceof HTMLElement)) {
+    return null;
+  }
+
+  const lineNumber = Number(element.dataset.lineNumber);
+  return Number.isInteger(lineNumber) ? lineNumber : null;
+}
+
+function closestCodeLine(node: Node | null) {
+  if (!node) {
+    return null;
+  }
+
+  const element = node instanceof Element ? node : node.parentElement;
+  return element?.closest("[data-line-number]") ?? null;
+}
+
+function codeSelectionFromBrowserRange(
+  model: ModelSpec,
+  language: CodeLanguage,
+  fileName: string,
+  editor: HTMLElement,
+) {
+  const selection = window.getSelection();
+  const selectedText = selection?.toString() ?? "";
+  if (!selection || selection.rangeCount === 0 || selectedText.trim().length === 0) {
+    return null;
+  }
+
+  const anchorInside = selection.anchorNode ? editor.contains(selection.anchorNode) : false;
+  const focusInside = selection.focusNode ? editor.contains(selection.focusNode) : false;
+  if (!anchorInside || !focusInside) {
+    return null;
+  }
+
+  const range = selection.getRangeAt(0);
+  const lineNumbers = new Set<number>();
+  editor.querySelectorAll("[data-line-number]").forEach((lineElement) => {
+    try {
+      if (range.intersectsNode(lineElement)) {
+        const lineNumber = lineNumberFromCodeLine(lineElement);
+        if (lineNumber !== null) {
+          lineNumbers.add(lineNumber);
+        }
+      }
+    } catch {
+      // Ignore transient selection ranges that cannot be compared to a line node.
+    }
+  });
+
+  if (lineNumbers.size === 0) {
+    for (const node of [selection.anchorNode, selection.focusNode]) {
+      const lineNumber = lineNumberFromCodeLine(closestCodeLine(node));
+      if (lineNumber !== null) {
+        lineNumbers.add(lineNumber);
+      }
+    }
+  }
+
+  const lines = [...lineNumbers].sort((left, right) => left - right);
+  if (lines.length === 0) {
+    return null;
+  }
+
+  return {
+    modelId: model.id,
+    language,
+    fileName,
+    lines,
+    text: selectedText.trim(),
+  } satisfies UserCodeSelection;
 }
 
 function previewText(text: string, maxLength = 180) {
@@ -4693,6 +4792,8 @@ function CodeEditor({
   setLanguage,
   agentCodeSelection,
   onAgentCodeSelectionChange,
+  userCodeSelection,
+  onUserCodeSelectionChange,
 }: {
   model: ModelSpec;
   selected: ArchNode | null;
@@ -4700,6 +4801,8 @@ function CodeEditor({
   setLanguage: (language: CodeLanguage) => void;
   agentCodeSelection: AgentCodeSelection | null;
   onAgentCodeSelectionChange: (selection: AgentCodeSelection | null) => void;
+  userCodeSelection: UserCodeSelection | null;
+  onUserCodeSelectionChange: (selection: UserCodeSelection | null) => void;
 }) {
   const editorRef = useRef<HTMLDivElement>(null);
   const codeFiles = {
@@ -4716,12 +4819,27 @@ function CodeEditor({
     agentCodeSelection.fileName === currentFile.fileName
       ? agentCodeSelection
       : null;
+  const activeUserSelection =
+    userCodeSelection &&
+    userCodeSelection.modelId === model.id &&
+    userCodeSelection.language === language &&
+    userCodeSelection.fileName === currentFile.fileName
+      ? userCodeSelection
+      : null;
   const highlightedLineNumbers = activeAgentSelection ? activeAgentSelection.lines : selectedLineNumbersForLanguage;
   const selectedLines = new Set(
     highlightedLineNumbers.filter((lineNumber) => {
       const line = currentFile.code[lineNumber - 1];
       return line !== undefined;
     }),
+  );
+  const userSelectedLines = new Set(
+    activeUserSelection
+      ? activeUserSelection.lines.filter((lineNumber) => {
+          const line = currentFile.code[lineNumber - 1];
+          return line !== undefined;
+        })
+      : [],
   );
   const firstSelectedLine = highlightedLineNumbers.find((lineNumber) => selectedLines.has(lineNumber)) ?? null;
   const highlightedLineKey = highlightedLineNumbers.join(",");
@@ -4744,6 +4862,42 @@ function CodeEditor({
       behavior: "smooth",
     });
   }, [firstSelectedLine, highlightedLineKey, language, model.id, selected?.id]);
+
+  const captureUserCodeSelection = () => {
+    const editor = editorRef.current;
+    if (!editor) {
+      return;
+    }
+
+    const nextSelection = codeSelectionFromBrowserRange(model, language, currentFile.fileName, editor);
+    if (!nextSelection) {
+      return;
+    }
+
+    onAgentCodeSelectionChange(null);
+    onUserCodeSelectionChange(nextSelection);
+  };
+
+  const captureClickedCodeLine = (event: React.MouseEvent<HTMLDivElement>) => {
+    const lineNumber = lineNumberFromCodeLine(closestCodeLine(event.target as Node));
+    if (lineNumber === null) {
+      return;
+    }
+
+    const lineText = currentFile.code[lineNumber - 1];
+    if (lineText === undefined) {
+      return;
+    }
+
+    onAgentCodeSelectionChange(null);
+    onUserCodeSelectionChange({
+      modelId: model.id,
+      language,
+      fileName: currentFile.fileName,
+      lines: [lineNumber],
+      text: lineText.trim().length > 0 ? lineText.trim() : `line ${lineNumber}`,
+    });
+  };
 
   return (
     <section className="code-pane">
@@ -4776,6 +4930,7 @@ function CodeEditor({
             onChange={(event) => {
               setLanguage(event.currentTarget.value as CodeLanguage);
               onAgentCodeSelectionChange(null);
+              onUserCodeSelectionChange(null);
             }}
           >
             {(Object.keys(languageLabels) as CodeLanguage[]).map((entry) => (
@@ -4786,6 +4941,17 @@ function CodeEditor({
           </select>
         </div>
       </div>
+      {activeUserSelection ? (
+        <div className="code-selection-status user-code-selection-status">
+          <span>
+            User selected {activeUserSelection.lines.length} line
+            {activeUserSelection.lines.length === 1 ? "" : "s"} · {previewText(activeUserSelection.text, 96)}
+          </span>
+          <button type="button" onClick={() => onUserCodeSelectionChange(null)}>
+            Clear
+          </button>
+        </div>
+      ) : null}
       {activeAgentSelection ? (
         <div className="code-selection-status">
           <span>
@@ -4798,13 +4964,21 @@ function CodeEditor({
           </button>
         </div>
       ) : null}
-      <div className="editor" ref={editorRef}>
+      <div
+        className="editor"
+        ref={editorRef}
+        onKeyUp={captureUserCodeSelection}
+        onMouseUp={captureUserCodeSelection}
+        onDoubleClick={captureClickedCodeLine}
+        onTouchEnd={captureUserCodeSelection}
+      >
         {currentFile.code.map((line, index) => {
           const lineNumber = index + 1;
           const highlighted = selectedLines.has(lineNumber);
+          const userSelected = userSelectedLines.has(lineNumber);
           return (
             <div
-              className={`code-line ${highlighted ? "highlighted" : ""}`}
+              className={`code-line ${highlighted ? "highlighted" : ""} ${userSelected ? "user-selected" : ""}`}
               data-line-number={lineNumber}
               key={`${lineNumber}-${line}`}
             >
@@ -4827,6 +5001,7 @@ function ChatPanel({
   query,
   paperSelection,
   agentCodeSelection,
+  userCodeSelection,
   onAgentCodeSelectionChange,
   messages,
   setMessages,
@@ -4837,6 +5012,7 @@ function ChatPanel({
   query: string;
   paperSelection: PaperSelection;
   agentCodeSelection: AgentCodeSelection | null;
+  userCodeSelection: UserCodeSelection | null;
   onAgentCodeSelectionChange: (selection: AgentCodeSelection | null) => void;
   messages: ChatMessage[];
   setMessages: Dispatch<SetStateAction<ChatMessage[]>>;
@@ -4848,6 +5024,14 @@ function ChatPanel({
   const currentFile = getCodeForLanguage(model, language);
   const selectedLines = selectedCodeContext(model, selected, language);
   const agentSelectedLines = agentSelectedCodeContext(model, agentCodeSelection);
+  const userSelectedLines = userSelectedCodeContext(model, userCodeSelection);
+  const activeUserCodeSelection =
+    userCodeSelection &&
+    userCodeSelection.modelId === model.id &&
+    userCodeSelection.language === language &&
+    userCodeSelection.fileName === currentFile.fileName
+      ? userCodeSelection
+      : null;
 
   useEffect(() => {
     const scroller = scrollRef.current;
@@ -4919,6 +5103,8 @@ function ChatPanel({
               fileName: currentFile.fileName,
               code: currentFile.code,
               selectedLines,
+              userSelectedLines,
+              userSelectedText: activeUserCodeSelection?.text ?? "",
               agentSelectedLines,
             },
             searchQuery: query,
@@ -4965,6 +5151,9 @@ function ChatPanel({
           <div className="chat-empty">
             <strong>Ask about the current selection.</strong>
             <span>{selected ? `${selected.type} · ${selected.id}` : model.label}</span>
+            {activeUserCodeSelection ? (
+              <span>Code lines {activeUserCodeSelection.lines.join(", ")} · {previewText(activeUserCodeSelection.text)}</span>
+            ) : null}
             {paperSelection && paperSelection.modelId === model.id ? (
               <span>Paper page {paperSelection.pageNumber} · {previewText(paperSelection.text)}</span>
             ) : null}
@@ -5866,6 +6055,7 @@ export default function ModelArchVizApp({ initialModelId }: ModelArchVizAppProps
   const [query, setQuery] = useState("");
   const [codeLanguage, setCodeLanguage] = useState<CodeLanguage>("pytorch");
   const [agentCodeSelection, setAgentCodeSelection] = useState<AgentCodeSelection | null>(null);
+  const [userCodeSelection, setUserCodeSelection] = useState<UserCodeSelection | null>(null);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [paperSelection, setPaperSelection] = useState<PaperSelection>(null);
   const [customPaneWidths, setCustomPaneWidths] = useState<Record<string, number[]>>({});
@@ -5889,6 +6079,7 @@ export default function ModelArchVizApp({ initialModelId }: ModelArchVizAppProps
     setExpandedByModel({});
     setSelectedByModel({});
     setAgentCodeSelection(null);
+    setUserCodeSelection(null);
     setPaperSelection(null);
     setQuery("");
   }, [initialModel.id]);
@@ -5905,6 +6096,7 @@ export default function ModelArchVizApp({ initialModelId }: ModelArchVizAppProps
     setExpandedByModel({});
     setSelectedByModel({});
     setAgentCodeSelection(null);
+    setUserCodeSelection(null);
     setPaperSelection(null);
     setQuery("");
 
@@ -5920,6 +6112,7 @@ export default function ModelArchVizApp({ initialModelId }: ModelArchVizAppProps
       [baseModel.id]: nextVariantId,
     }));
     setAgentCodeSelection(null);
+    setUserCodeSelection(null);
     setPaperSelection(null);
   };
 
@@ -6095,6 +6288,7 @@ export default function ModelArchVizApp({ initialModelId }: ModelArchVizAppProps
           query={query}
           paperSelection={paperSelection}
           agentCodeSelection={agentCodeSelection}
+          userCodeSelection={userCodeSelection}
           onAgentCodeSelectionChange={updateAgentCodeSelection}
           messages={chatMessages}
           setMessages={setChatMessages}
@@ -6110,6 +6304,8 @@ export default function ModelArchVizApp({ initialModelId }: ModelArchVizAppProps
         setLanguage={setCodeLanguage}
         agentCodeSelection={agentCodeSelection}
         onAgentCodeSelectionChange={updateAgentCodeSelection}
+        userCodeSelection={userCodeSelection}
+        onUserCodeSelectionChange={setUserCodeSelection}
       />
     );
   };

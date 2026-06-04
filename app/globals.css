@@ -1060,6 +1060,11 @@ select {
   font-size: 12px;
 }
 
+.user-code-selection-status {
+  border-bottom-color: #174850;
+  background: #122b34;
+}
+
 .code-selection-status span {
   min-width: 0;
   overflow: hidden;
@@ -1196,6 +1201,15 @@ select {
   background: var(--code-highlight);
 }
 
+.code-line.user-selected {
+  position: relative;
+  background: rgba(22, 141, 166, 0.24);
+}
+
+.code-line.highlighted.user-selected {
+  background: linear-gradient(90deg, rgba(22, 141, 166, 0.25), rgba(216, 138, 21, 0.18));
+}
+
 .code-line.highlighted::before {
   position: absolute;
   top: 0;
@@ -1203,6 +1217,16 @@ select {
   left: 0;
   width: 4px;
   background: var(--amber);
+  content: "";
+}
+
+.code-line.user-selected::after {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 5px;
+  width: 4px;
+  background: var(--cyan);
   content: "";
 }
 

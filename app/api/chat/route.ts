@@ -57,6 +57,8 @@ type ChatContext = {
     fileName?: string;
     code?: string[];
     selectedLines?: SourceLine[];
+    userSelectedLines?: SourceLine[];
+    userSelectedText?: string;
     agentSelectedLines?: SourceLine[];
   };
   searchQuery?: string;
@@ -268,6 +270,8 @@ function formatContext(context: ChatContext) {
   const source = context.source ?? {};
   const sourceCode = formatFullSource(source.code);
   const selectedLines = formatSourceLines(source.selectedLines);
+  const userSelectedLines = formatSourceLines(source.userSelectedLines);
+  const userSelectedText = safeString(source.userSelectedText, "none");
   const agentSelectedLines = formatSourceLines(source.agentSelectedLines);
   const codeTruncated = sourceCode.length >= maxSourceCharacters ? "\n\n[Source truncated for request size.]" : "";
 
@@ -302,7 +306,13 @@ Visible source file:
 - Language: ${safeString(source.language)}
 - File: ${safeString(source.fileName)}
 
-Selected source lines:
+User-selected code text:
+${userSelectedText === "none" ? "none" : userSelectedText.slice(0, 4000)}
+
+User-selected source lines:
+${userSelectedLines}
+
+Architecture-selected source lines:
 ${selectedLines}
 
 Assistant-selected source lines:
@@ -362,7 +372,7 @@ export async function POST(request: Request) {
         {
           role: "system",
           content:
-            'You are the embedded ModelArchViz assistant. Use the provided current app state as ground truth. When the user says "this", assume they mean the selected paper text when present, otherwise the current selected architecture node and highlighted code lines. Explain architecture, paper text, and code precisely, cite line numbers or paper pages when useful, and keep answers concise. Return only valid JSON shaped as {"message":"user-facing markdown answer","codeSelection":null} or {"message":"user-facing markdown answer","codeSelection":{"language":"current source language","fileName":"current source file","lines":[line numbers to highlight],"ranges":[{"start":number,"end":number}],"reason":"short reason"}}. Include codeSelection when the user asks where paper text, a concept, or architecture behavior appears in code, or when highlighting code would directly answer the question. Use line numbers from the full visible source.',
+            'You are the embedded ModelArchViz assistant. Use the provided current app state as ground truth. When the user says "this", assume they mean the user-selected code when present, otherwise the selected paper text when present, otherwise the current selected architecture node and highlighted code lines. Explain architecture, paper text, and code precisely, cite line numbers or paper pages when useful, and keep answers concise. Return only valid JSON shaped as {"message":"user-facing markdown answer","codeSelection":null} or {"message":"user-facing markdown answer","codeSelection":{"language":"current source language","fileName":"current source file","lines":[line numbers to highlight],"ranges":[{"start":number,"end":number}],"reason":"short reason"}}. Include codeSelection when the user asks where paper text, a concept, or architecture behavior appears in code, or when highlighting code would directly answer the question. Use line numbers from the full visible source.',
         },
         {
           role: "system",
