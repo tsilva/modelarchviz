@@ -58,7 +58,7 @@ class Bottleneck(nn.Module):
         y = nn.relu(y)  # (batch, out_height, out_width, expanded_channels)
         return y
 
-class ResNet18(nn.Module):
+class ResNet34(nn.Module):
     num_classes: int = 1000
 
     @nn.compact
@@ -71,10 +71,10 @@ class ResNet18(nn.Module):
 
         # Run residual stages while reducing spatial size.
         block = BasicBlock
-        x = self._stage(x, block, 64, blocks=2, stride=1, train=train)  # (batch, 56, 56, 64)
-        x = self._stage(x, block, 128, blocks=2, stride=2, train=train)  # (batch, 56, 56, channels) -> (batch, 28, 28, channels)
-        x = self._stage(x, block, 256, blocks=2, stride=2, train=train)  # (batch, 28, 28, channels) -> (batch, 14, 14, channels)
-        x = self._stage(x, block, 512, blocks=2, stride=2, train=train)  # (batch, 14, 14, channels) -> (batch, 7, 7, channels)
+        x = self._stage(x, block, 64, blocks=3, stride=1, train=train)  # (batch, 56, 56, 64)
+        x = self._stage(x, block, 128, blocks=4, stride=2, train=train)  # (batch, 56, 56, channels) -> (batch, 28, 28, channels)
+        x = self._stage(x, block, 256, blocks=6, stride=2, train=train)  # (batch, 28, 28, channels) -> (batch, 14, 14, channels)
+        x = self._stage(x, block, 512, blocks=3, stride=2, train=train)  # (batch, 14, 14, channels) -> (batch, 7, 7, channels)
 
         # Pool final features and classify.
         x = jnp.mean(x, axis=(1, 2))  # (batch, 7, 7, channels) -> (batch, channels)

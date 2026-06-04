@@ -65,10 +65,10 @@ export const modelRouteSummaries = [
   },
   {
     id: "resnet18",
-    label: "ResNet-18",
+    label: "ResNet",
     publishedDate: "2015-12-10",
-    title: "ResNet-18 Architecture",
-    description: "Inspect ResNet-18 residual blocks, stage transitions, implementation code, and paper context.",
+    title: "ResNet Architecture Variants",
+    description: "Inspect ResNet-18 through ResNet-152 residual stages, generated implementation code, and paper context.",
   },
   {
     id: "widenet",

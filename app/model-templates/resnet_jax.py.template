@@ -1,7 +1,23 @@
+# ---
+# jupyter:
+#   jupytext:
+#     formats: ipynb,py:percent
+#     text_representation:
+#       extension: .py
+#       format_name: percent
+#       format_version: '1.3'
+#   kernelspec:
+#     display_name: Python 3
+#     language: python
+#     name: python3
+# ---
+# %%
 import jax
 import jax.numpy as jnp
 from flax import linen as nn
 
+
+# %%
 class BasicBlock(nn.Module):
     out_channels: int
     stride: int = 1
@@ -28,6 +44,8 @@ class BasicBlock(nn.Module):
         y = nn.relu(y)  # (batch, out_height, out_width, out_channels)
         return y
 
+
+# %%
 class Bottleneck(nn.Module):
     out_channels: int
     stride: int = 1
@@ -58,7 +76,9 @@ class Bottleneck(nn.Module):
         y = nn.relu(y)  # (batch, out_height, out_width, expanded_channels)
         return y
 
-class ResNet18(nn.Module):
+
+# %%
+class {{ className }}(nn.Module):
     num_classes: int = 1000
 
     @nn.compact
@@ -70,11 +90,11 @@ class ResNet18(nn.Module):
         x = nn.max_pool(x, window_shape=(3, 3), strides=(2, 2), padding="SAME")  # (batch, 112, 112, 64) -> (batch, 56, 56, 64)
 
         # Run residual stages while reducing spatial size.
-        block = BasicBlock
-        x = self._stage(x, block, 64, blocks=2, stride=1, train=train)  # (batch, 56, 56, 64)
-        x = self._stage(x, block, 128, blocks=2, stride=2, train=train)  # (batch, 56, 56, channels) -> (batch, 28, 28, channels)
-        x = self._stage(x, block, 256, blocks=2, stride=2, train=train)  # (batch, 28, 28, channels) -> (batch, 14, 14, channels)
-        x = self._stage(x, block, 512, blocks=2, stride=2, train=train)  # (batch, 14, 14, channels) -> (batch, 7, 7, channels)
+        block = {{ blockClass }}
+        x = self._stage(x, block, 64, blocks={{ stage1Blocks }}, stride=1, train=train)  # (batch, 56, 56, 64)
+        x = self._stage(x, block, 128, blocks={{ stage2Blocks }}, stride=2, train=train)  # (batch, 56, 56, channels) -> (batch, 28, 28, channels)
+        x = self._stage(x, block, 256, blocks={{ stage3Blocks }}, stride=2, train=train)  # (batch, 28, 28, channels) -> (batch, 14, 14, channels)
+        x = self._stage(x, block, 512, blocks={{ stage4Blocks }}, stride=2, train=train)  # (batch, 14, 14, channels) -> (batch, 7, 7, channels)
 
         # Pool final features and classify.
         x = jnp.mean(x, axis=(1, 2))  # (batch, 7, 7, channels) -> (batch, channels)
@@ -89,3 +109,45 @@ class ResNet18(nn.Module):
         for _ in range(1, blocks):
             x = block(channels)(x, train=train)  # (batch, out_height, out_width, channels)
         return x
+
+
+# %% [notebook-only]
+# Create and run a sample image batch: (2, 224, 224, 3) -> (2, 1000).
+model = {{ className }}(num_classes=1000)
+test_input = jnp.ones((2, 224, 224, 3))  # -> (2, 224, 224, 3)
+params = model.init(jax.random.PRNGKey(0), test_input, train=False)
+logits = model.apply(params, test_input, train=False)  # (2, 224, 224, 3) -> (2, 1000)
+
+
+# %% [notebook-only]
+# Train on a tiny synthetic image batch.
+model = {{ className }}(num_classes=2)
+train_images = jnp.zeros((2, 224, 224, 3))  # -> (2, 224, 224, 3)
+train_images = train_images.at[0, 32:96, 32:96, :].set(1.0)  # (2, 224, 224, 3)
+train_images = train_images.at[1, 128:192, 128:192, :].set(1.0)  # (2, 224, 224, 3)
+train_targets = jnp.array([0, 1])  # -> (2)
+variables = model.init(jax.random.PRNGKey(1), train_images, train=False)
+params = variables["params"]
+batch_stats = variables["batch_stats"]
+
+
+def train_step(params, batch_stats, inputs, targets, learning_rate=0.01):
+    def loss_fn(current_params):
+        current_variables = {"params": current_params, "batch_stats": batch_stats}
+        logits = model.apply(current_variables, inputs, train=False)  # (batch, 224, 224, 3) -> (batch, num_classes)
+        one_hot_targets = jax.nn.one_hot(targets, logits.shape[-1])  # (batch) -> (batch, classes)
+        log_probs = jax.nn.log_softmax(logits, axis=-1)  # (batch, classes)
+        loss = -jnp.mean(jnp.sum(one_hot_targets * log_probs, axis=-1))  # (batch, classes) -> scalar
+        return loss
+
+    loss, grads = jax.value_and_grad(loss_fn)(params)
+    params = jax.tree_util.tree_map(lambda p, g: p - learning_rate * g, params, grads)
+    return params, loss
+
+
+# Fit the model for a few steps on the tiny dataset.
+for step in range(3):
+    params, loss = train_step(params, batch_stats, train_images, train_targets)
+
+# Keep the final scalar loss for inspection.
+final_loss = loss

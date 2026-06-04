@@ -1,0 +1,52 @@
+[
+  {
+    "id": "resnet18",
+    "label": "ResNet-18",
+    "className": "ResNet18",
+    "depth": 18,
+    "blockClass": "BasicBlock",
+    "blockLabel": "BasicBlock",
+    "stageBlocks": [2, 2, 2, 2],
+    "expansion": 1
+  },
+  {
+    "id": "resnet34",
+    "label": "ResNet-34",
+    "className": "ResNet34",
+    "depth": 34,
+    "blockClass": "BasicBlock",
+    "blockLabel": "BasicBlock",
+    "stageBlocks": [3, 4, 6, 3],
+    "expansion": 1
+  },
+  {
+    "id": "resnet50",
+    "label": "ResNet-50",
+    "className": "ResNet50",
+    "depth": 50,
+    "blockClass": "Bottleneck",
+    "blockLabel": "Bottleneck",
+    "stageBlocks": [3, 4, 6, 3],
+    "expansion": 4
+  },
+  {
+    "id": "resnet101",
+    "label": "ResNet-101",
+    "className": "ResNet101",
+    "depth": 101,
+    "blockClass": "Bottleneck",
+    "blockLabel": "Bottleneck",
+    "stageBlocks": [3, 4, 23, 3],
+    "expansion": 4
+  },
+  {
+    "id": "resnet152",
+    "label": "ResNet-152",
+    "className": "ResNet152",
+    "depth": 152,
+    "blockClass": "Bottleneck",
+    "blockLabel": "Bottleneck",
+    "stageBlocks": [3, 8, 36, 3],
+    "expansion": 4
+  }
+]

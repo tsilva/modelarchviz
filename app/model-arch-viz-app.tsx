@@ -1,6 +1,15 @@
 "use client";
 
-import { Fragment, useEffect, useRef, useState, type Dispatch, type ReactNode, type SetStateAction } from "react";
+import {
+  Fragment,
+  useEffect,
+  useRef,
+  useState,
+  type Dispatch,
+  type KeyboardEvent,
+  type ReactNode,
+  type SetStateAction,
+} from "react";
 import { usePathname, useRouter } from "next/navigation";
 import mlpPythonSource from "./generated/model-code/mlp.py";
 import mlpJaxPythonSource from "./generated/model-code/mlp_jax.py";
@@ -28,12 +37,21 @@ import vitPythonSource from "./generated/model-code/vit_b16.py";
 import vitJaxPythonSource from "./generated/model-code/vit_b16_jax.py";
 import resnet18PythonSource from "./generated/model-code/resnet18.py";
 import resnet18JaxPythonSource from "./generated/model-code/resnet18_jax.py";
+import resnet34PythonSource from "./generated/model-code/resnet34.py";
+import resnet34JaxPythonSource from "./generated/model-code/resnet34_jax.py";
+import resnet50PythonSource from "./generated/model-code/resnet50.py";
+import resnet50JaxPythonSource from "./generated/model-code/resnet50_jax.py";
+import resnet101PythonSource from "./generated/model-code/resnet101.py";
+import resnet101JaxPythonSource from "./generated/model-code/resnet101_jax.py";
+import resnet152PythonSource from "./generated/model-code/resnet152.py";
+import resnet152JaxPythonSource from "./generated/model-code/resnet152_jax.py";
 import widenetPythonSource from "./generated/model-code/widenet.py";
 import widenetJaxPythonSource from "./generated/model-code/widenet_jax.py";
 import densenetPythonSource from "./generated/model-code/densenet.py";
 import densenetJaxPythonSource from "./generated/model-code/densenet_jax.py";
 import efficientnetPythonSource from "./generated/model-code/efficientnet.py";
 import efficientnetJaxPythonSource from "./generated/model-code/efficientnet_jax.py";
+import resnetTemplateVariants from "./model-templates/resnet.variants.json";
 
 type NodeKind =
   | "input"
@@ -88,6 +106,25 @@ type ModelSpec = {
   nodes: ArchNode[];
   code: string[];
   jaxCode: string[];
+  variants?: ModelVariantSpec[];
+  activeVariantId?: string;
+};
+
+type ModelVariantSpec = {
+  id: string;
+  label: string;
+  depth: number;
+  blockClass: "BasicBlock" | "Bottleneck";
+  blockLabel: string;
+  stageBlocks: [number, number, number, number];
+  expansion: 1 | 4;
+  stats: string;
+  fileName: string;
+  jaxFileName: string;
+  selectedId: string;
+  nodes: ArchNode[];
+  code: string[];
+  jaxCode: string[];
 };
 
 type PaneKey = "architecture" | "paper" | "code" | "chat";
@@ -116,6 +153,13 @@ type PaperSelection = {
   text: string;
   highlightRects: PaperSelectionHighlightRect[];
 } | null;
+type PdfSearchMatch = {
+  pageNumber: number;
+  pageMatchIndex: number;
+};
+type PdfSearchHighlightRect = PaperSelectionHighlightRect & {
+  active: boolean;
+};
 
 const defaultVisibleColumns: Record<PaneKey, boolean> = {
   architecture: true,
@@ -161,6 +205,356 @@ function notebookFileName(fileName: string) {
 function colabUrl(notebookName: string) {
   return `https://colab.research.google.com/github/${githubRepository}/blob/${githubBranch}/public/notebooks/${notebookName}`;
 }
+
+type ResNetTemplateVariant = {
+  id: string;
+  label: string;
+  depth: number;
+  blockClass: "BasicBlock" | "Bottleneck";
+  blockLabel: string;
+  stageBlocks: [number, number, number, number];
+  expansion: 1 | 4;
+};
+
+const resnetGeneratedSources: Record<string, { code: string[]; jaxCode: string[] }> = {
+  resnet18: {
+    code: codeLines(resnet18PythonSource),
+    jaxCode: codeLines(resnet18JaxPythonSource),
+  },
+  resnet34: {
+    code: codeLines(resnet34PythonSource),
+    jaxCode: codeLines(resnet34JaxPythonSource),
+  },
+  resnet50: {
+    code: codeLines(resnet50PythonSource),
+    jaxCode: codeLines(resnet50JaxPythonSource),
+  },
+  resnet101: {
+    code: codeLines(resnet101PythonSource),
+    jaxCode: codeLines(resnet101JaxPythonSource),
+  },
+  resnet152: {
+    code: codeLines(resnet152PythonSource),
+    jaxCode: codeLines(resnet152JaxPythonSource),
+  },
+};
+
+function resnetVariantStats(variant: ResNetTemplateVariant) {
+  const blockCount = variant.stageBlocks.reduce((total, blocks) => total + blocks, 0);
+  const stageSummary = variant.stageBlocks.join("-");
+
+  return `${variant.depth} layers · ${blockCount} ${variant.blockLabel}s · stages ${stageSummary}`;
+}
+
+function makeResNetBlockNode(
+  variant: ResNetTemplateVariant,
+  stageIndex: number,
+  blockIndex: number,
+  defaultExpanded = false,
+): ArchNode {
+  const stageChannels = [64, 128, 256, 512] as const;
+  const stageSpatial = [56, 28, 14, 7] as const;
+  const stageName = `layer${stageIndex + 1}`;
+  const stageBaseChannels = stageChannels[stageIndex];
+  const previousStageBaseChannels = stageIndex === 0 ? 64 : stageChannels[stageIndex - 1];
+  const inputChannels = blockIndex === 0 ? previousStageBaseChannels * variant.expansion : stageBaseChannels * variant.expansion;
+  const outputChannels = stageBaseChannels * variant.expansion;
+  const stride = blockIndex === 0 && stageIndex > 0 ? 2 : 1;
+  const needsProjection = stride !== 1 || inputChannels !== outputChannels;
+  const blockCodeLines = variant.blockClass === "BasicBlock" ? [4, 17, 25, 27, 28, 36, 37, 38, 39, 40, 45, 46] : [49, 63, 65, 74, 75, 84, 85, 86, 87, 88, 89, 90, 91, 96, 97];
+  const blockNode: ArchNode = {
+    id: `${stageName}.${blockIndex}`,
+    label: `block.${blockIndex}`,
+    type: variant.blockClass,
+    kind: "residual",
+    summary: needsProjection ? `stride ${stride} + projection` : "identity skip",
+    defaultExpanded,
+    codeLines: [...blockCodeLines, 134, 137],
+  };
+
+  if (variant.blockClass === "BasicBlock") {
+    const children: ArchNode[] = [
+      {
+        id: `${stageName}.${blockIndex}.conv1`,
+        label: "conv1",
+        type: "Conv2d",
+        kind: "conv",
+        badges: [`${inputChannels}->${stageBaseChannels}`, "k=3", ...(stride > 1 ? [`s=${stride}`] : [])],
+        codeLines: [17, 36, 134, 137],
+      },
+      {
+        id: `${stageName}.${blockIndex}.bn1`,
+        label: "bn1",
+        type: "BatchNorm2d",
+        kind: "norm",
+        badges: [`${stageBaseChannels}`],
+        codeLines: [25, 37],
+      },
+      {
+        id: `${stageName}.${blockIndex}.relu1`,
+        label: "relu",
+        type: "ReLU",
+        kind: "activation",
+        codeLines: [26, 38],
+      },
+      {
+        id: `${stageName}.${blockIndex}.conv2`,
+        label: "conv2",
+        type: "Conv2d",
+        kind: "conv",
+        badges: [`${stageBaseChannels}->${outputChannels}`, "k=3"],
+        codeLines: [27, 39],
+      },
+      {
+        id: `${stageName}.${blockIndex}.bn2`,
+        label: "bn2",
+        type: "BatchNorm2d",
+        kind: "norm",
+        badges: [`${outputChannels}`],
+        codeLines: [28, 40],
+      },
+    ];
+
+    if (needsProjection) {
+      children.push({
+        id: `${stageName}.${blockIndex}.downsample`,
+        label: "downsample",
+        type: "ProjectionSkip",
+        kind: "group",
+        summary: `1x1 stride ${stride}`,
+        codeLines: [127, 128, 129, 130, 134, 41, 42],
+        children: [
+          {
+            id: `${stageName}.${blockIndex}.downsample.conv`,
+            label: "conv1x1",
+            type: "Conv2d",
+            kind: "conv",
+            badges: [`${inputChannels}->${outputChannels}`, `s=${stride}`],
+            codeLines: [129, 42],
+          },
+          {
+            id: `${stageName}.${blockIndex}.downsample.bn`,
+            label: "bn",
+            type: "BatchNorm2d",
+            kind: "norm",
+            badges: [`${outputChannels}`],
+            codeLines: [130, 42],
+          },
+        ],
+      });
+    }
+
+    children.push({
+      id: `${stageName}.${blockIndex}.add`,
+      label: "add",
+      type: "ResidualAdd",
+      kind: "residual",
+      codeLines: [45],
+    });
+
+    return {
+      ...blockNode,
+      children,
+    };
+  }
+
+  const bottleneckChildren: ArchNode[] = [
+    {
+      id: `${stageName}.${blockIndex}.conv1`,
+      label: "conv1",
+      type: "Conv2d",
+      kind: "conv",
+      badges: [`${inputChannels}->${stageBaseChannels}`, "k=1"],
+      codeLines: [63, 84],
+    },
+    {
+      id: `${stageName}.${blockIndex}.conv2`,
+      label: "conv2",
+      type: "Conv2d",
+      kind: "conv",
+      badges: [`${stageBaseChannels}->${stageBaseChannels}`, "k=3", ...(stride > 1 ? [`s=${stride}`] : [])],
+      codeLines: [65, 87],
+    },
+    {
+      id: `${stageName}.${blockIndex}.conv3`,
+      label: "conv3",
+      type: "Conv2d",
+      kind: "conv",
+      badges: [`${stageBaseChannels}->${outputChannels}`, "k=1"],
+      codeLines: [74, 90],
+    },
+  ];
+
+  if (needsProjection) {
+    bottleneckChildren.push({
+      id: `${stageName}.${blockIndex}.downsample`,
+      label: "downsample",
+      type: "ProjectionSkip",
+      kind: "group",
+      summary: `1x1 stride ${stride}`,
+      codeLines: [127, 128, 129, 130, 134, 92, 93],
+      children: [
+        {
+          id: `${stageName}.${blockIndex}.downsample.conv`,
+          label: "conv1x1",
+          type: "Conv2d",
+          kind: "conv",
+          badges: [`${inputChannels}->${outputChannels}`, `s=${stride}`],
+          codeLines: [129, 93],
+        },
+        {
+          id: `${stageName}.${blockIndex}.downsample.bn`,
+          label: "bn",
+          type: "BatchNorm2d",
+          kind: "norm",
+          badges: [`${outputChannels}`],
+          codeLines: [130, 93],
+        },
+      ],
+    });
+  }
+
+  bottleneckChildren.push({
+    id: `${stageName}.${blockIndex}.add`,
+    label: "add",
+    type: "ResidualAdd",
+    kind: "residual",
+    codeLines: [96],
+  });
+
+  return {
+    ...blockNode,
+    children: bottleneckChildren,
+  };
+}
+
+function makeResNetNodes(variant: ResNetTemplateVariant): ArchNode[] {
+  const stageChannels = [64, 128, 256, 512] as const;
+  const stageSpatial = [56, 28, 14, 7] as const;
+
+  return [
+    {
+      id: "input",
+      label: "input",
+      type: "Input",
+      kind: "input",
+      badges: ["3 x 224 x 224"],
+      codeLines: [144],
+    },
+    {
+      id: "stem",
+      label: "stem",
+      type: "Conv-BN-ReLU",
+      kind: "group",
+      summary: "7x7 stride 2",
+      defaultExpanded: true,
+      codeLines: [110, 111, 112, 113, 114, 144],
+      children: [
+        {
+          id: "stem.conv",
+          label: "conv",
+          type: "Conv2d",
+          kind: "conv",
+          badges: ["3->64", "k=7", "s=2"],
+          codeLines: [111, 144],
+        },
+        {
+          id: "stem.bn",
+          label: "bn",
+          type: "BatchNorm2d",
+          kind: "norm",
+          badges: ["64"],
+          codeLines: [112, 144],
+        },
+        {
+          id: "stem.relu",
+          label: "relu",
+          type: "ReLU",
+          kind: "activation",
+          codeLines: [113, 144],
+        },
+      ],
+    },
+    {
+      id: "maxpool",
+      label: "maxpool",
+      type: "MaxPool2d",
+      kind: "pool",
+      badges: ["k=3", "s=2"],
+      codeLines: [115, 145],
+    },
+    ...variant.stageBlocks.map((blockCount, stageIndex) => {
+      const stageName = `layer${stageIndex + 1}`;
+      const stageChannelsLabel = stageChannels[stageIndex] * variant.expansion;
+      const stageCodeLine = 116 + stageIndex;
+
+      return {
+        id: stageName,
+        label: stageName,
+        type: "ResidualStage",
+        kind: "group",
+        summary: `${blockCount} ${variant.blockLabel}s`,
+        badges: [`${stageChannelsLabel} ch`, `${stageSpatial[stageIndex]}x${stageSpatial[stageIndex]}`],
+        defaultExpanded: stageIndex === 1,
+        codeLines: [stageCodeLine, 123, 134, 136, 137, 148 + stageIndex],
+        children: Array.from({ length: blockCount }, (_, blockIndex) =>
+          makeResNetBlockNode(variant, stageIndex, blockIndex, stageIndex === 1 && blockIndex === 0),
+        ),
+      } satisfies ArchNode;
+    }),
+    {
+      id: "pool-flatten",
+      label: "pool + flatten",
+      type: "ClassifierPrep",
+      kind: "group",
+      summary: "global avg",
+      codeLines: [120, 154, 155],
+      children: [
+        {
+          id: "avgpool",
+          label: "avgpool",
+          type: "AdaptiveAvgPool2d",
+          kind: "pool",
+          badges: ["1x1"],
+          codeLines: [120, 154],
+        },
+        {
+          id: "flatten",
+          label: "flatten",
+          type: "Flatten",
+          kind: "reshape",
+          badges: [`${512 * variant.expansion}`],
+          codeLines: [155],
+        },
+      ],
+    },
+    {
+      id: "fc",
+      label: "fc",
+      type: "Linear",
+      kind: "linear",
+      badges: [`${512 * variant.expansion}->1000`],
+      codeLines: [121, 156],
+    },
+  ];
+}
+
+const resnetVariantDefinitions = resnetTemplateVariants as unknown as ResNetTemplateVariant[];
+
+const resnetVariants: ModelVariantSpec[] = resnetVariantDefinitions.map((variant) => {
+  const sources = resnetGeneratedSources[variant.id];
+
+  return {
+    ...variant,
+    stats: resnetVariantStats(variant),
+    fileName: `${variant.id}.py`,
+    jaxFileName: `${variant.id}_jax.py`,
+    selectedId: "layer2.0.conv1",
+    nodes: makeResNetNodes(variant),
+    code: sources.code,
+    jaxCode: sources.jaxCode,
+  };
+});
 
 const completedPdfPrefetches = new Set<string>();
 const pendingPdfPrefetches = new Map<string, Promise<void>>();
@@ -2493,11 +2887,12 @@ const models: ModelSpec[] = [
   },
   {
     id: "resnet18",
-    label: "ResNet-18",
-    breadcrumb: "ResNet-18 / layer2 / block.0 / conv1",
-    stats: "4 residual stages · 8 BasicBlocks · 18 conv layers",
+    label: "ResNet",
+    breadcrumb: "ResNet / layer2 / block.0 / conv1",
+    stats: resnetVariants[0].stats,
     fileName: "resnet18.py",
     jaxFileName: "resnet18_jax.py",
+    variants: resnetVariants,
     paper: {
       title: "Deep Residual Learning for Image Recognition",
       authors: "Kaiming He, Xiangyu Zhang, Shaoqing Ren, Jian Sun",
@@ -3806,6 +4201,28 @@ function ArrowIcon({ direction }: { direction: "left" | "right" }) {
   );
 }
 
+function SearchIcon() {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 16 16" className="icon">
+      <path
+        d="M7 12a5 5 0 1 1 4-2l2.5 2.5"
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeWidth="1.6"
+      />
+    </svg>
+  );
+}
+
+function ClearIcon() {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 16 16" className="icon">
+      <path d="M4.5 4.5 11.5 11.5M11.5 4.5 4.5 11.5" fill="none" stroke="currentColor" strokeLinecap="round" strokeWidth="1.8" />
+    </svg>
+  );
+}
+
 function DownloadIcon() {
   return (
     <svg aria-hidden="true" viewBox="0 0 16 16" className="icon">
@@ -3901,6 +4318,31 @@ function getCodeForLanguage(model: ModelSpec, language: CodeLanguage) {
   return {
     fileName: model.fileName,
     code: model.code,
+  };
+}
+
+function modelStateKey(model: ModelSpec) {
+  return model.activeVariantId ? `${model.id}:${model.activeVariantId}` : model.id;
+}
+
+function resolveModelVariant(model: ModelSpec, variantId: string | undefined) {
+  const variant = model.variants?.find((entry) => entry.id === variantId) ?? model.variants?.[0];
+
+  if (!variant) {
+    return model;
+  }
+
+  return {
+    ...model,
+    label: variant.label,
+    stats: variant.stats,
+    fileName: variant.fileName,
+    jaxFileName: variant.jaxFileName,
+    selectedId: variant.selectedId,
+    nodes: variant.nodes,
+    code: variant.code,
+    jaxCode: variant.jaxCode,
+    activeVariantId: variant.id,
   };
 }
 
@@ -4815,15 +5257,62 @@ function PdfViewer({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const viewerRef = useRef<HTMLDivElement>(null);
   const textLayerRef = useRef<HTMLDivElement>(null);
+  const [pdfDocument, setPdfDocument] = useState<any>(null);
   const [pageNumber, setPageNumber] = useState(1);
   const [pageCount, setPageCount] = useState(0);
   const [viewerSize, setViewerSize] = useState({ width: 0, height: 0 });
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchMatches, setSearchMatches] = useState<PdfSearchMatch[]>([]);
+  const [activeSearchIndex, setActiveSearchIndex] = useState(-1);
+  const [isSearchPending, setIsSearchPending] = useState(false);
+  const [searchHighlightRects, setSearchHighlightRects] = useState<PdfSearchHighlightRect[]>([]);
 
   useEffect(() => {
     setPageNumber(1);
     setPageCount(0);
+    setPdfDocument(null);
+    setSearchQuery("");
+    setSearchMatches([]);
+    setActiveSearchIndex(-1);
+    setSearchHighlightRects([]);
+    setStatus("loading");
+  }, [model.paper.pdfUrl]);
+
+  useEffect(() => {
+    let cancelled = false;
+    let loadingTask: any;
+
+    const loadDocument = async () => {
+      setStatus("loading");
+
+      try {
+        const pdfjs = await import("pdfjs-dist");
+        pdfjs.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
+        loadingTask = pdfjs.getDocument(model.paper.pdfUrl);
+        const pdf = await loadingTask.promise;
+        if (cancelled) {
+          void pdf.destroy();
+          return;
+        }
+
+        setPdfDocument(pdf);
+        setPageCount(pdf.numPages);
+      } catch (error) {
+        if (!cancelled) {
+          console.error("PDF load failed", error);
+          setStatus("error");
+        }
+      }
+    };
+
+    loadDocument();
+
+    return () => {
+      cancelled = true;
+      void loadingTask?.destroy();
+    };
   }, [model.paper.pdfUrl]);
 
   useEffect(() => {
@@ -4862,7 +5351,6 @@ function PdfViewer({
 
   useEffect(() => {
     let cancelled = false;
-    let loadingTask: any;
     let renderTask: any;
     let textLayerTask: any;
 
@@ -4870,7 +5358,7 @@ function PdfViewer({
       const canvas = canvasRef.current;
       const viewer = viewerRef.current;
       const textLayer = textLayerRef.current;
-      if (!canvas || !viewer || !textLayer) {
+      if (!canvas || !viewer || !textLayer || !pdfDocument) {
         return;
       }
 
@@ -4879,15 +5367,7 @@ function PdfViewer({
 
       try {
         const pdfjs = await import("pdfjs-dist");
-        pdfjs.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
-        loadingTask = pdfjs.getDocument(model.paper.pdfUrl);
-        const pdf = await loadingTask.promise;
-        if (cancelled) {
-          return;
-        }
-
-        setPageCount(pdf.numPages);
-        const page = await pdf.getPage(Math.min(pageNumber, pdf.numPages));
+        const page = await pdfDocument.getPage(Math.min(pageNumber, pdfDocument.numPages));
         const baseViewport = page.getViewport({ scale: 1 });
         const availableWidth = Math.max(viewerSize.width || viewer.clientWidth, 240);
         const availableHeight = Math.max(viewerSize.height || viewer.clientHeight, 240);
@@ -4940,9 +5420,131 @@ function PdfViewer({
       cancelled = true;
       renderTask?.cancel();
       textLayerTask?.cancel();
-      void loadingTask?.destroy();
     };
-  }, [model.paper.pdfUrl, pageNumber, viewerSize.height, viewerSize.width]);
+  }, [pageNumber, pdfDocument, viewerSize.height, viewerSize.width]);
+
+  useEffect(() => {
+    const trimmedQuery = searchQuery.trim();
+    if (!pdfDocument || trimmedQuery.length === 0) {
+      setIsSearchPending(false);
+      setSearchMatches([]);
+      setActiveSearchIndex(-1);
+      return;
+    }
+
+    let cancelled = false;
+    const searchDelay = window.setTimeout(async () => {
+      setIsSearchPending(true);
+      const nextMatches: PdfSearchMatch[] = [];
+      const normalizedQuery = trimmedQuery.toLocaleLowerCase();
+
+      try {
+        for (let currentPageNumber = 1; currentPageNumber <= pdfDocument.numPages; currentPageNumber += 1) {
+          if (cancelled) {
+            return;
+          }
+
+          const page = await pdfDocument.getPage(currentPageNumber);
+          const textContent = await page.getTextContent();
+          let pageMatchIndex = 0;
+
+          for (const item of textContent.items) {
+            const itemText = "str" in item ? String(item.str) : "";
+            const normalizedItemText = itemText.toLocaleLowerCase();
+            let matchIndex = normalizedItemText.indexOf(normalizedQuery);
+
+            while (matchIndex !== -1) {
+              nextMatches.push({ pageNumber: currentPageNumber, pageMatchIndex });
+              pageMatchIndex += 1;
+              matchIndex = normalizedItemText.indexOf(normalizedQuery, matchIndex + normalizedQuery.length);
+            }
+          }
+        }
+
+        if (!cancelled) {
+          setSearchMatches(nextMatches);
+          setActiveSearchIndex(nextMatches.length > 0 ? 0 : -1);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          console.error("PDF search failed", error);
+          setSearchMatches([]);
+          setActiveSearchIndex(-1);
+        }
+      } finally {
+        if (!cancelled) {
+          setIsSearchPending(false);
+        }
+      }
+    }, 160);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(searchDelay);
+    };
+  }, [pdfDocument, searchQuery]);
+
+  const activeSearchMatch = activeSearchIndex >= 0 ? searchMatches[activeSearchIndex] : undefined;
+
+  useEffect(() => {
+    if (!activeSearchMatch || activeSearchMatch.pageNumber === pageNumber) {
+      return;
+    }
+
+    setPageNumber(activeSearchMatch.pageNumber);
+  }, [activeSearchMatch, pageNumber]);
+
+  useEffect(() => {
+    const textLayer = textLayerRef.current;
+    const trimmedQuery = searchQuery.trim();
+    if (!textLayer || status !== "ready" || trimmedQuery.length === 0) {
+      setSearchHighlightRects([]);
+      return;
+    }
+
+    const textLayerRect = textLayer.getBoundingClientRect();
+    const normalizedQuery = trimmedQuery.toLocaleLowerCase();
+    const nextRects: PdfSearchHighlightRect[] = [];
+    const walker = document.createTreeWalker(textLayer, NodeFilter.SHOW_TEXT);
+    let pageMatchIndex = 0;
+
+    while (walker.nextNode()) {
+      const textNode = walker.currentNode;
+      const nodeText = textNode.textContent ?? "";
+      const normalizedNodeText = nodeText.toLocaleLowerCase();
+      let matchIndex = normalizedNodeText.indexOf(normalizedQuery);
+
+      while (matchIndex !== -1) {
+        const range = document.createRange();
+        range.setStart(textNode, matchIndex);
+        range.setEnd(textNode, matchIndex + trimmedQuery.length);
+
+        const isActive =
+          activeSearchMatch?.pageNumber === pageNumber && activeSearchMatch.pageMatchIndex === pageMatchIndex;
+
+        for (const rect of Array.from(range.getClientRects())) {
+          const left = Math.max(rect.left, textLayerRect.left) - textLayerRect.left;
+          const top = Math.max(rect.top, textLayerRect.top) - textLayerRect.top;
+          const right = Math.min(rect.right, textLayerRect.right) - textLayerRect.left;
+          const bottom = Math.min(rect.bottom, textLayerRect.bottom) - textLayerRect.top;
+
+          nextRects.push({
+            left,
+            top,
+            width: Math.max(right - left, 0),
+            height: Math.max(bottom - top, 0),
+            active: isActive,
+          });
+        }
+
+        range.detach();
+        pageMatchIndex += 1;
+        matchIndex = normalizedNodeText.indexOf(normalizedQuery, matchIndex + normalizedQuery.length);
+      }
+    }
+
+    setSearchHighlightRects(nextRects.filter((rect) => rect.width > 0 && rect.height > 0));
+  }, [activeSearchMatch, pageNumber, searchQuery, status]);
 
   const capturePaperSelection = () => {
     const selection = window.getSelection();
@@ -5006,6 +5608,36 @@ function PdfViewer({
     }
   };
 
+  const goToSearchMatch = (direction: -1 | 1) => {
+    setActiveSearchIndex((current) => {
+      if (searchMatches.length === 0) {
+        return -1;
+      }
+
+      const normalizedIndex = current >= 0 ? current : 0;
+      return (normalizedIndex + direction + searchMatches.length) % searchMatches.length;
+    });
+  };
+
+  const handleSearchKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (event.key !== "Enter") {
+      return;
+    }
+
+    event.preventDefault();
+    goToSearchMatch(event.shiftKey ? -1 : 1);
+  };
+
+  const trimmedSearchQuery = searchQuery.trim();
+  const searchCountLabel =
+    trimmedSearchQuery.length === 0
+      ? ""
+      : isSearchPending
+        ? "..."
+        : searchMatches.length > 0
+          ? `${Math.max(activeSearchIndex + 1, 1)} / ${searchMatches.length}`
+          : "0 / 0";
+  const searchControlsDisabled = trimmedSearchQuery.length === 0 || searchMatches.length === 0 || isSearchPending;
   const fullscreenSupported = typeof document !== "undefined" && document.fullscreenEnabled;
 
   return (
@@ -5033,6 +5665,22 @@ function PdfViewer({
               ))}
             </div>
           ) : null}
+          {searchHighlightRects.length > 0 ? (
+            <div className="pdf-search-highlight" aria-hidden="true">
+              {searchHighlightRects.map((rect, index) => (
+                <span
+                  className={rect.active ? "active" : ""}
+                  key={`${index}-${rect.left}-${rect.top}-${rect.active}`}
+                  style={{
+                    left: `${rect.left}px`,
+                    top: `${rect.top}px`,
+                    width: `${rect.width}px`,
+                    height: `${rect.height}px`,
+                  }}
+                />
+              ))}
+            </div>
+          ) : null}
           <div
             className="pdf-text-layer"
             ref={textLayerRef}
@@ -5046,6 +5694,52 @@ function PdfViewer({
       </div>
       <div className="pdf-controls-dock">
         <div className="pdf-controls">
+          <label className="pdf-search-field">
+            <SearchIcon />
+            <input
+              aria-label={`Search ${model.paper.title}`}
+              value={searchQuery}
+              disabled={!pdfDocument || status === "error"}
+              onChange={(event) => setSearchQuery(event.currentTarget.value)}
+              onKeyDown={handleSearchKeyDown}
+              placeholder="Search paper"
+            />
+            {searchCountLabel ? (
+              <span className={`pdf-search-count ${searchMatches.length === 0 && !isSearchPending ? "empty" : ""}`}>
+                {searchCountLabel}
+              </span>
+            ) : null}
+          </label>
+          <button
+            className="pdf-control-button"
+            type="button"
+            aria-label="Previous search match"
+            title="Previous match"
+            disabled={searchControlsDisabled}
+            onClick={() => goToSearchMatch(-1)}
+          >
+            <ArrowIcon direction="left" />
+          </button>
+          <button
+            className="pdf-control-button"
+            type="button"
+            aria-label="Next search match"
+            title="Next match"
+            disabled={searchControlsDisabled}
+            onClick={() => goToSearchMatch(1)}
+          >
+            <ArrowIcon direction="right" />
+          </button>
+          <button
+            className="pdf-control-button"
+            type="button"
+            aria-label="Clear paper search"
+            title="Clear search"
+            disabled={searchQuery.length === 0}
+            onClick={() => setSearchQuery("")}
+          >
+            <ClearIcon />
+          </button>
           <button
             className="pdf-control-button"
             type="button"
@@ -5094,6 +5788,64 @@ function PdfViewer({
   );
 }
 
+function VariantSlider({
+  model,
+  onVariantChange,
+}: {
+  model: ModelSpec;
+  onVariantChange: (variantId: string) => void;
+}) {
+  if (!model.variants || model.variants.length <= 1) {
+    return null;
+  }
+
+  const activeVariantId = model.activeVariantId ?? model.variants[0].id;
+  const activeIndex = Math.max(
+    0,
+    model.variants.findIndex((variant) => variant.id === activeVariantId),
+  );
+  const activeVariant = model.variants[activeIndex];
+  const updateFromSlider = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const nextIndex = Number(event.currentTarget.value);
+    const nextVariant = model.variants?.[nextIndex];
+    if (nextVariant) {
+      onVariantChange(nextVariant.id);
+    }
+  };
+
+  return (
+    <div className="variant-slider">
+      <div className="variant-slider-label">
+        <span>Variant</span>
+        <strong>{activeVariant.label}</strong>
+      </div>
+      <input
+        type="range"
+        min={0}
+        max={model.variants.length - 1}
+        step={1}
+        value={activeIndex}
+        aria-label="Select ResNet depth"
+        onChange={updateFromSlider}
+        onInput={updateFromSlider}
+      />
+      <div className="variant-ticks" aria-label="ResNet depth options">
+        {model.variants.map((variant, index) => (
+          <button
+            type="button"
+            key={variant.id}
+            aria-label={`Select ${variant.label}`}
+            aria-pressed={index === activeIndex}
+            onClick={() => onVariantChange(variant.id)}
+          >
+            {variant.depth}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 type ModelArchVizAppProps = {
   initialModelId?: string;
 };
@@ -5103,7 +5855,11 @@ export default function ModelArchVizApp({ initialModelId }: ModelArchVizAppProps
   const router = useRouter();
   const pathname = usePathname();
   const [modelId, setModelId] = useState(initialModel.id);
-  const model = models.find((entry) => entry.id === modelId) ?? modelsByPublicationDate[0];
+  const [variantByModel, setVariantByModel] = useState<Record<string, string>>({});
+  const baseModel = models.find((entry) => entry.id === modelId) ?? modelsByPublicationDate[0];
+  const activeVariantId = variantByModel[baseModel.id];
+  const model = resolveModelVariant(baseModel, activeVariantId);
+  const currentModelKey = modelStateKey(model);
   const [expandedByModel, setExpandedByModel] = useState<Record<string, Set<string>>>({});
   const [selectedByModel, setSelectedByModel] = useState<Record<string, ArchNode | null>>({});
   const [visibleColumns, setVisibleColumns] = useState<Record<PaneKey, boolean>>(() => activeVisibleColumns);
@@ -5125,8 +5881,8 @@ export default function ModelArchVizApp({ initialModelId }: ModelArchVizAppProps
         gridTemplateColumns: resizedPaneWidths.map((width) => `${Math.round(width)}px`).join(" 8px "),
       } as React.CSSProperties)
     : undefined;
-  const expanded = expandedByModel[model.id] ?? new Set<string>();
-  const selected = selectedByModel[model.id] ?? findNodeById(model.nodes, model.selectedId);
+  const expanded = expandedByModel[currentModelKey] ?? new Set<string>();
+  const selected = selectedByModel[currentModelKey] ?? findNodeById(model.nodes, model.selectedId);
 
   useEffect(() => {
     setModelId(initialModel.id);
@@ -5156,6 +5912,15 @@ export default function ModelArchVizApp({ initialModelId }: ModelArchVizAppProps
     if (pathname !== nextPath) {
       router.push(nextPath);
     }
+  };
+
+  const updateVariant = (nextVariantId: string) => {
+    setVariantByModel((current) => ({
+      ...current,
+      [baseModel.id]: nextVariantId,
+    }));
+    setAgentCodeSelection(null);
+    setPaperSelection(null);
   };
 
   const updateAgentCodeSelection = (selection: AgentCodeSelection | null) => {
@@ -5290,6 +6055,7 @@ export default function ModelArchVizApp({ initialModelId }: ModelArchVizAppProps
               <h1>Architecture</h1>
               <p>{model.stats}</p>
             </div>
+            <VariantSlider model={model} onVariantChange={updateVariant} />
           </div>
           <div className="tree-scroll">
             <ArchitectureTree
@@ -5299,14 +6065,14 @@ export default function ModelArchVizApp({ initialModelId }: ModelArchVizAppProps
                 setAgentCodeSelection(null);
                 setSelectedByModel((current) => ({
                   ...current,
-                  [model.id]: node,
+                  [currentModelKey]: node,
                 }));
               }}
               expanded={expanded}
               setExpanded={(next) =>
                 setExpandedByModel((current) => ({
                   ...current,
-                  [model.id]: next,
+                  [currentModelKey]: next,
                 }))
               }
               query={query}
@@ -5358,7 +6124,7 @@ export default function ModelArchVizApp({ initialModelId }: ModelArchVizAppProps
         <select
           className="model-select"
           aria-label="Select model"
-          value={model.id}
+          value={baseModel.id}
           onChange={(event) => updateModel(event.currentTarget.value)}
         >
           {modelsByPublicationDate.map((entry) => (
