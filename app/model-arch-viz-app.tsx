@@ -112,6 +112,15 @@ type PdfTextSpan = {
   transform: string;
 };
 
+const defaultVisibleColumns: Record<PaneKey, boolean> = {
+  architecture: true,
+  paper: false,
+  code: true,
+  chat: false,
+};
+
+let activeVisibleColumns = defaultVisibleColumns;
+
 const languageLabels: Record<CodeLanguage, string> = {
   pytorch: "PyTorch",
   jax: "JAX",
@@ -4644,7 +4653,7 @@ function PdfViewer({
   const textLayerRef = useRef<HTMLDivElement>(null);
   const [pageNumber, setPageNumber] = useState(1);
   const [pageCount, setPageCount] = useState(0);
-  const [viewerWidth, setViewerWidth] = useState(0);
+  const [viewerSize, setViewerSize] = useState({ width: 0, height: 0 });
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [textSpans, setTextSpans] = useState<PdfTextSpan[]>([]);
@@ -4659,9 +4668,19 @@ function PdfViewer({
       return;
     }
 
-    const updateWidth = () => setViewerWidth(viewerRef.current?.clientWidth ?? 0);
-    updateWidth();
-    const observer = new ResizeObserver(updateWidth);
+    const updateSize = () => {
+      const nextWidth = viewerRef.current?.clientWidth ?? 0;
+      const nextHeight = viewerRef.current?.clientHeight ?? 0;
+      setViewerSize((current) => {
+        if (current.width === nextWidth && current.height === nextHeight) {
+          return current;
+        }
+
+        return { width: nextWidth, height: nextHeight };
+      });
+    };
+    updateSize();
+    const observer = new ResizeObserver(updateSize);
     observer.observe(viewerRef.current);
 
     return () => observer.disconnect();
@@ -4705,8 +4724,11 @@ function PdfViewer({
         setPageCount(pdf.numPages);
         const page = await pdf.getPage(Math.min(pageNumber, pdf.numPages));
         const baseViewport = page.getViewport({ scale: 1 });
-        const maxWidth = Math.max((viewerWidth || viewer.clientWidth) - 28, 240);
-        const scale = Math.min(Math.max(maxWidth / baseViewport.width, 0.45), 1.8);
+        const availableWidth = Math.max(viewerSize.width || viewer.clientWidth, 240);
+        const availableHeight = Math.max(viewerSize.height || viewer.clientHeight, 240);
+        const fitWidthScale = availableWidth / baseViewport.width;
+        const fitHeightScale = availableHeight / baseViewport.height;
+        const scale = Math.min(Math.max(Math.min(fitWidthScale, fitHeightScale), 0.45), 2.4);
         const viewport = page.getViewport({ scale });
         const context = canvas.getContext("2d");
 
@@ -4784,7 +4806,7 @@ function PdfViewer({
       renderTask?.cancel();
       void loadingTask?.destroy();
     };
-  }, [model.paper.pdfUrl, pageNumber, viewerWidth]);
+  }, [model.paper.pdfUrl, pageNumber, viewerSize.height, viewerSize.width]);
 
   const capturePaperSelection = () => {
     const selection = window.getSelection();
@@ -4930,12 +4952,7 @@ export default function ModelArchVizApp({ initialModelId }: ModelArchVizAppProps
   const model = models.find((entry) => entry.id === modelId) ?? modelsByPublicationDate[0];
   const [expandedByModel, setExpandedByModel] = useState<Record<string, Set<string>>>({});
   const [selectedByModel, setSelectedByModel] = useState<Record<string, ArchNode | null>>({});
-  const [visibleColumns, setVisibleColumns] = useState<Record<PaneKey, boolean>>({
-    architecture: true,
-    paper: false,
-    code: true,
-    chat: true,
-  });
+  const [visibleColumns, setVisibleColumns] = useState<Record<PaneKey, boolean>>(() => activeVisibleColumns);
   const [query, setQuery] = useState("");
   const [codeLanguage, setCodeLanguage] = useState<CodeLanguage>("pytorch");
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
@@ -4981,10 +4998,13 @@ export default function ModelArchVizApp({ initialModelId }: ModelArchVizAppProps
         return current;
       }
 
-      return {
+      const next = {
         ...current,
         [pane]: !current[pane],
       };
+      activeVisibleColumns = next;
+
+      return next;
     });
   };
 

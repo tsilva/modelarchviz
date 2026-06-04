@@ -646,10 +646,9 @@ select {
   position: relative;
   display: flex;
   min-height: 100%;
-  align-items: flex-start;
+  align-items: center;
   justify-content: center;
   overflow: visible;
-  padding: 26px 14px 106px;
 }
 
 .pdf-page-shell {
@@ -660,9 +659,8 @@ select {
 .pdf-canvas {
   display: block;
   max-width: 100%;
-  border: 1px solid #c9d2dc;
+  border: 0;
   background: #ffffff;
-  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.14);
 }
 
 .pdf-text-layer {
