@@ -4563,6 +4563,10 @@ function codeSelectionFromBrowserRange(
   } satisfies UserCodeSelection;
 }
 
+function clearBrowserSelection() {
+  window.getSelection()?.removeAllRanges();
+}
+
 function previewText(text: string, maxLength = 180) {
   if (text.length <= maxLength) {
     return text;
@@ -4876,6 +4880,7 @@ function CodeEditor({
 
     onAgentCodeSelectionChange(null);
     onUserCodeSelectionChange(nextSelection);
+    clearBrowserSelection();
   };
 
   const captureClickedCodeLine = (event: React.MouseEvent<HTMLDivElement>) => {
@@ -4897,6 +4902,7 @@ function CodeEditor({
       lines: [lineNumber],
       text: lineText.trim().length > 0 ? lineText.trim() : `line ${lineNumber}`,
     });
+    clearBrowserSelection();
   };
 
   return (

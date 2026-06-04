@@ -1,5 +1,5 @@
 const paperPdfUrls: Record<string, string> = {
-  mlp: "https://www-edlab.cs.umass.edu/cs697l/readings/Learning%20representations%20by%20back-propagating%20errors.pdf",
+  mlp: "https://www.cs.toronto.edu/~bonner/courses/2016s/csc321/readings/Learning%20representations%20by%20back-propagating%20errors.pdf",
   rnn: "https://gwern.net/doc/ai/nn/rnn/1990-elman.pdf",
   lstm: "https://gwern.net/doc/ai/nn/rnn/1997-hochreiter.pdf",
   gru: "https://arxiv.org/pdf/1406.1078",
