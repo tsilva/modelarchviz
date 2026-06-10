@@ -56,6 +56,7 @@ cell_input = jnp.ones((2, 32))  # -> (2, 32)
 previous_state = jnp.zeros((2, 64))  # -> (2, 64)
 cell_params = cell.init(jax.random.PRNGKey(0), cell_input, previous_state)
 next_state = cell.apply(cell_params, cell_input, previous_state)  # (2, 32), (2, 64) -> (2, 64)
+print("next_state shape:", next_state.shape)
 
 
 # %%
@@ -94,6 +95,7 @@ example_params = example_model.init(jax.random.PRNGKey(1), sequence)
 outputs = example_model.apply(example_params, sequence)
 logits = outputs[0]  # (2, 10)
 states = outputs[1]  # (2, 8, 64)
+print("logits shape:", logits.shape, "states shape:", states.shape)
 
 
 # %%

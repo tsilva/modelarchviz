@@ -1737,7 +1737,7 @@ const models: ModelSpec[] = [
     id: "lstm",
     label: "LSTM",
     breadcrumb: "LSTM / recurrent loop / step.0 / forget gate",
-    stats: "8 time steps · input/forget/output gates · cell state",
+    stats: "Sequence classifier · (batch, 8, 32) input · logits + state trace · PyTorch/JAX notebooks",
     fileName: "lstm.py",
     jaxFileName: "lstm_jax.py",
     paper: {
@@ -1911,6 +1911,8 @@ const models: ModelSpec[] = [
     ],
     code: codeLines(lstmPythonSource),
     jaxCode: codeLines(lstmJaxPythonSource),
+    defaultCodeLines: [61, 62, 63, 64, 65, 66, 72, 73, 75, 77, 79, 80, 84, 85, 86, 88, 89, 90, 94, 95, 96, 97],
+    jaxDefaultCodeLines: [48, 49, 50, 53, 55, 57, 58, 63, 64, 65, 67, 68, 69, 73, 74, 75, 76],
   },
   {
     id: "lenet5",

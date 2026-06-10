@@ -66,6 +66,7 @@ cell = GRUCell(input_size=32, hidden_size=64)
 cell_input = torch.randn(2, 32)  # -> (2, 32)
 previous_state = torch.zeros(2, 64)  # -> (2, 64)
 next_state = cell(cell_input, previous_state)  # (2, 32), (2, 64) -> (2, 64)
+print("next_state shape:", next_state.shape)
 
 
 # %%
@@ -111,6 +112,7 @@ sequence = torch.randn(2, 8, 32)  # -> (2, 8, 32)
 outputs = example_model(sequence)
 logits = outputs[0]  # (2, 10)
 states = outputs[1]  # (2, 8, 64)
+print("logits shape:", logits.shape, "states shape:", states.shape)
 
 
 # %%

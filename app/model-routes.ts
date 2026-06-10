@@ -26,7 +26,7 @@ export const modelRouteSummaries = [
     label: "LSTM",
     publishedDate: "1997-11-01",
     title: "LSTM Architecture",
-    description: "Trace LSTM gates and recurrent state flow with visual blocks, implementation code, and source-paper context.",
+    description: "Use the LSTM architecture card to trace sequence inputs, input/forget/output gates, cell-state updates, PyTorch and JAX code, notebooks, and the original paper.",
   },
   {
     id: "lenet5",
