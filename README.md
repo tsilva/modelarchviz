@@ -29,6 +29,10 @@ pnpm start                     # serve the production build after pnpm build
 pnpm typecheck                 # generate artifacts and run TypeScript checks
 ```
 
+## Model Cards
+
+- [LSTM Sequence Classifier Architecture](./model-cards/lstm.md)
+
 ## Notes
 
 - The app is client-side and uses static model data embedded in `app/page.tsx`.
