@@ -82,6 +82,7 @@ type ArchNode = {
   lazyChildren?: () => ArchNode[];
   defaultExpanded?: boolean;
   codeLines: number[];
+  jaxCodeLines?: number[];
 };
 
 type ModelSpec = {
@@ -1366,7 +1367,8 @@ const models: ModelSpec[] = [
         type: "SequenceInput",
         kind: "input",
         badges: ["8 steps", "32 features"],
-        codeLines: [62, 64, 70, 72, 85, 86],
+        codeLines: [72],
+        jaxCodeLines: [53, 66, 68],
       },
       {
         id: "cell_params",
@@ -1438,7 +1440,7 @@ const models: ModelSpec[] = [
         type: "Logits + StateTrace",
         kind: "head",
         badges: ["classes", "all states"],
-        codeLines: [77, 78, 79, 80, 86, 87, 88, 90],
+        codeLines: [77, 78, 79, 80],
       },
     ],
     code: codeLines(gruPythonSource),
@@ -4401,7 +4403,9 @@ function selectedLineNumbers(model: ModelSpec, selected: ArchNode | null, langua
   const className = classNameForNode(selected);
   const classLines = className ? classLineRange(currentFile.code, className) : [];
 
-  return classLines.length > 0 ? classLines : selected.codeLines;
+  const nodeLines = language === "jax" && selected.jaxCodeLines ? selected.jaxCodeLines : selected.codeLines;
+
+  return classLines.length > 0 ? classLines : nodeLines;
 }
 
 function selectedCodeContext(model: ModelSpec, selected: ArchNode | null, language: CodeLanguage) {

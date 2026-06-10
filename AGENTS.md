@@ -48,6 +48,14 @@ When adding, renaming, or removing a model in `app/model-arch-viz-app.tsx`, upda
 
 Each model route entry must include the canonical model id, label, published date, route title, and route description. Do not add model-specific URLs directly to `app/sitemap.ts`; keep sitemap coverage derived from `modelRouteSummaries`.
 
+## Architecture Code Highlights
+
+When editing architecture node `codeLines` in `app/model-arch-viz-app.tsx`, keep highlights tightly scoped to the code that directly implements or consumes the selected concept.
+
+For input nodes such as sequence/image/token inputs, highlight concrete tensor ingress or consumption lines, such as example tensor construction, model invocation, embedding lookup, or timestep/patch/token slicing. Do not include broad container scaffolding such as `forward` declarations, batch-size extraction, loop setup, or state initialization unless that scaffolding is the selected architecture concept.
+
+Use language-specific line mappings such as `jaxCodeLines` when PyTorch and JAX preview sources do not align.
+
 ## Skill Retrospective
 
 Whenever a skill is used for a task:

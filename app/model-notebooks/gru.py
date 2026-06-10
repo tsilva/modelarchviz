@@ -94,6 +94,7 @@ class GRUSequence(nn.Module):
         return outputs
 
 
+# %% [notebook-only]
 # Create and run a sample sequence: (2, 8, 32) -> logits and states.
 model = GRUSequence(input_size=32, hidden_size=64, output_size=10)
 sequence = torch.randn(2, 8, 32)  # -> (2, 8, 32)
@@ -102,6 +103,7 @@ logits = outputs[0]  # (2, 10)
 states = outputs[1]  # (2, 8, 64)
 
 
+# %% [notebook-only]
 # Train on two synthetic sequences with opposite labels.
 model = GRUSequence(input_size=3, hidden_size=8, output_size=2)
 train_sequences = torch.tensor(
