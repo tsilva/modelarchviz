@@ -86,6 +86,16 @@ class GRUSequence(nn.Module):
         return outputs
 
 
+# %% [notebook-only]
+# Create and run a sample sequence: (2, 8, 32) -> logits and states.
+example_model = GRUSequence(hidden_size=64, output_size=10)
+sequence = jnp.ones((2, 8, 32))  # -> (2, 8, 32)
+example_params = example_model.init(jax.random.PRNGKey(1), sequence)
+outputs = example_model.apply(example_params, sequence)
+logits = outputs[0]  # (2, 10)
+states = outputs[1]  # (2, 8, 64)
+
+
 # %%
 # Train the same model on two synthetic sequences with opposite labels.
 model = GRUSequence(hidden_size=64, output_size=10)
