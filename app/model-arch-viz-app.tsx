@@ -109,6 +109,8 @@ type ModelSpec = {
   nodes: ArchNode[];
   code: string[];
   jaxCode: string[];
+  defaultCodeLines?: number[];
+  jaxDefaultCodeLines?: number[];
   variants?: ModelVariantSpec[];
   activeVariantId?: string;
 };
@@ -1438,7 +1440,7 @@ const models: ModelSpec[] = [
   {
     id: "gru",
     label: "GRU",
-    breadcrumb: "GRU / training example / optimizer step",
+    breadcrumb: "GRU / recurrent loop / step.0 / update gate",
     stats: "8 time steps · update/reset gates · 64 hidden units",
     fileName: "gru.py",
     jaxFileName: "gru_jax.py",
@@ -1453,7 +1455,7 @@ const models: ModelSpec[] = [
       pdfUrl: paperPdfUrl("gru"),
       focus: ["update gate", "reset gate", "encoder-decoder sequence modeling"],
     },
-    selectedId: "training_example",
+    selectedId: "",
     nodes: [
       {
         id: "sequence",
@@ -1544,18 +1546,11 @@ const models: ModelSpec[] = [
         codeLines: [75, 76, 77, 78],
         jaxCodeLines: [56, 57, 58, 59],
       },
-      {
-        id: "training_example",
-        label: "training example",
-        type: "Tiny supervised fit",
-        kind: "head",
-        badges: ["2 sequences", "3 steps"],
-        codeLines: [80, 81, 82, 85, 86, 87, 89, 90, 91, 92, 93, 94, 95, 96, 98, 99],
-        jaxCodeLines: [61, 62, 63, 68, 69, 72, 73, 74, 75, 76, 77, 78, 81, 82, 86, 87, 88, 90, 91],
-      },
     ],
     code: codeLines(gruPythonSource),
     jaxCode: codeLines(gruJaxPythonSource),
+    defaultCodeLines: [80, 81, 82, 85, 86, 87, 89, 90, 91, 92, 93, 94, 95, 96, 98, 99],
+    jaxDefaultCodeLines: [61, 62, 63, 68, 69, 72, 73, 74, 75, 76, 77, 78, 81, 82, 86, 87, 88, 90, 91],
   },
   {
     id: "seq2seq",
@@ -5182,6 +5177,8 @@ function CodeEditor({
   const filesForLanguage = codeFiles[language];
   const currentFile = filesForLanguage[0];
   const selectedLineNumbersForLanguage = selectedLineNumbers(model, selected, language);
+  const defaultLineNumbersForLanguage =
+    language === "jax" && model.jaxDefaultCodeLines ? model.jaxDefaultCodeLines : (model.defaultCodeLines ?? []);
   const activeAgentSelection =
     agentCodeSelection &&
     agentCodeSelection.modelId === model.id &&
@@ -5196,7 +5193,11 @@ function CodeEditor({
     userCodeSelection.fileName === currentFile.fileName
       ? userCodeSelection
       : null;
-  const highlightedLineNumbers = activeAgentSelection ? activeAgentSelection.lines : selectedLineNumbersForLanguage;
+  const highlightedLineNumbers = activeAgentSelection
+    ? activeAgentSelection.lines
+    : selectedLineNumbersForLanguage.length > 0
+      ? selectedLineNumbersForLanguage
+      : defaultLineNumbersForLanguage;
   const selectedLines = new Set(
     highlightedLineNumbers.filter((lineNumber) => {
       const line = currentFile.code[lineNumber - 1];
