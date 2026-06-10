@@ -64,17 +64,17 @@ class LSTMCell(nn.Module):
 
 # %% [notebook-only]
 # Create and run one LSTM cell step: (2, 32), state -> next state.
-cell = LSTMCell(hidden_size=64)
-cell_input = jnp.ones((2, 32))  # -> (2, 32)
-previous_state = (
+example_cell = LSTMCell(hidden_size=64)
+example_input = jnp.ones((2, 32))  # -> (2, 32)
+example_previous_state = (
     jnp.zeros((2, 64)),
     jnp.zeros((2, 64)),
 )
-params = cell.init(jax.random.PRNGKey(0), cell_input, previous_state)
-next_state = cell.apply(params, cell_input, previous_state)
-next_hidden = next_state[0]  # tuple -> (2, 64)
-next_cell = next_state[1]  # tuple -> (2, 64)
-print("next hidden shape:", next_hidden.shape, "next cell shape:", next_cell.shape)
+example_params = example_cell.init(jax.random.PRNGKey(0), example_input, example_previous_state)
+example_next_state = example_cell.apply(example_params, example_input, example_previous_state)
+example_hidden = example_next_state[0]  # tuple -> (2, 64)
+example_cell_state = example_next_state[1]  # tuple -> (2, 64)
+print("next hidden shape:", example_hidden.shape, "next cell shape:", example_cell_state.shape)
 
 
 # %%
@@ -112,12 +112,12 @@ class LSTMSequence(nn.Module):
 # %% [notebook-only]
 # Create and run a sample sequence: (2, 8, 32) -> logits and states.
 example_model = LSTMSequence(hidden_size=64, output_size=10)
-sequence = jnp.ones((2, 8, 32))  # -> (2, 8, 32)
-example_params = example_model.init(jax.random.PRNGKey(0), sequence)
-outputs = example_model.apply(example_params, sequence)
-logits = outputs[0]  # (2, 10)
-states = outputs[1]  # (2, 8, 64)
-print("logits shape:", logits.shape, "states shape:", states.shape)
+example_sequence = jnp.ones((2, 8, 32))  # -> (2, 8, 32)
+example_params = example_model.init(jax.random.PRNGKey(0), example_sequence)
+example_outputs = example_model.apply(example_params, example_sequence)
+example_logits = example_outputs[0]  # (2, 10)
+example_states = example_outputs[1]  # (2, 8, 64)
+print("logits shape:", example_logits.shape, "states shape:", example_states.shape)
 
 
 # %%

@@ -77,16 +77,16 @@ class LSTMCell(nn.Module):
 
 # %% [notebook-only]
 # Create and run one LSTM cell step: (2, 32), state -> next state.
-cell = LSTMCell(input_size=32, hidden_size=64)
-cell_input = torch.randn(2, 32)  # -> (2, 32)
-previous_state = (
+example_cell = LSTMCell(input_size=32, hidden_size=64)
+example_input = torch.randn(2, 32)  # -> (2, 32)
+example_previous_state = (
     torch.zeros(2, 64),
     torch.zeros(2, 64),
 )
-next_state = cell(cell_input, previous_state)
-next_hidden = next_state[0]  # tuple -> (2, 64)
-next_cell = next_state[1]  # tuple -> (2, 64)
-print("next hidden shape:", next_hidden.shape, "next cell shape:", next_cell.shape)
+example_next_state = example_cell(example_input, example_previous_state)
+example_hidden = example_next_state[0]  # tuple -> (2, 64)
+example_cell_state = example_next_state[1]  # tuple -> (2, 64)
+print("next hidden shape:", example_hidden.shape, "next cell shape:", example_cell_state.shape)
 
 
 # %%
@@ -132,11 +132,11 @@ class LSTMSequence(nn.Module):
 # %% [notebook-only]
 # Create and run a sample sequence: (2, 8, 32) -> logits and states.
 example_model = LSTMSequence(input_size=32, hidden_size=64, output_size=10)
-sequence = torch.randn(2, 8, 32)  # -> (2, 8, 32)
-outputs = example_model(sequence)
-logits = outputs[0]  # (2, 10)
-states = outputs[1]  # (2, 8, 64)
-print("logits shape:", logits.shape, "states shape:", states.shape)
+example_sequence = torch.randn(2, 8, 32)  # -> (2, 8, 32)
+example_outputs = example_model(example_sequence)
+example_logits = example_outputs[0]  # (2, 10)
+example_states = example_outputs[1]  # (2, 8, 64)
+print("logits shape:", example_logits.shape, "states shape:", example_states.shape)
 
 
 # %%
