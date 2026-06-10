@@ -11,39 +11,11 @@
 #     language: python
 #     name: python3
 # ---
+
 # %%
 import jax
 import jax.numpy as jnp
 from flax import linen as nn
-
-
-# %%
-class GPT2Small(nn.Module):
-    vocab_size: int
-    n_ctx: int = 1024
-    n_embd: int = 768
-    n_head: int = 12
-    n_layer: int = 12
-
-    @nn.compact
-    def __call__(self, input_ids, mask):
-        # Combine token and position embeddings: (batch, steps) -> (batch, steps, n_embd).
-        batch_size, step_count = input_ids.shape  # (batch, steps) -> scalar, scalar
-        positions = jnp.arange(step_count)  # -> (steps)
-        token_embeddings = nn.Embed(self.vocab_size, self.n_embd, name='wte')(input_ids)  # (batch, steps) -> (batch, steps, n_embd)
-        position_embeddings = nn.Embed(self.n_ctx, self.n_embd, name='wpe')(positions)  # (steps) -> (steps, n_embd)
-        position_embeddings = position_embeddings[None, :, :]  # (steps, n_embd) -> (1, steps, n_embd)
-        x = token_embeddings + position_embeddings  # (batch, steps, n_embd)
-        x = nn.Dropout(0.1, deterministic=True, name='drop')(x)  # (batch, steps, n_embd)
-
-        # Run the transformer block stack while preserving sequence shape.
-        for _ in range(self.n_layer):
-            x = Block()(x, mask)  # (batch, steps, n_embd)
-
-        # Normalize final states and project to vocabulary logits.
-        x = nn.LayerNorm(name='ln_f')(x)  # (batch, steps, n_embd)
-        logits = nn.Dense(self.vocab_size, name='lm_head')(x)  # (batch, steps, n_embd) -> (batch, steps, vocab_size)
-        return logits  # (batch, steps, vocab_size)
 
 
 # %%
@@ -87,12 +59,12 @@ class CausalSelfAttention(nn.Module):
 
 # %% [notebook-only]
 # Create and run causal self-attention: (2, 4, 24) -> (2, 4, 24).
-attention = CausalSelfAttention(n_embd=24, n_head=4)
-hidden_states = jnp.ones((2, 4, 24))  # -> (2, 4, 24)
-mask = jnp.tril(jnp.ones((4, 4))).reshape(1, 1, 4, 4)  # -> (1, 1, 4, 4)
-params = attention.init(jax.random.PRNGKey(0), hidden_states, mask)
-attended = attention.apply(params, hidden_states, mask)  # (2, 4, 24), (1, 1, 4, 4) -> (2, 4, 24)
-
+example_attention = CausalSelfAttention(n_embd=24, n_head=4)
+example_hidden_states = jnp.ones((2, 4, 24))  # -> (2, 4, 24)
+example_mask = jnp.tril(jnp.ones((4, 4))).reshape(1, 1, 4, 4)  # -> (1, 1, 4, 4)
+example_params = example_attention.init(jax.random.PRNGKey(0), example_hidden_states, example_mask)
+example_attended = example_attention.apply(example_params, example_hidden_states, example_mask)  # (2, 4, 24), (1, 1, 4, 4) -> (2, 4, 24)
+print("attended shape:", example_attended.shape)
 
 # %%
 class MLP(nn.Module):
@@ -110,11 +82,11 @@ class MLP(nn.Module):
 
 # %% [notebook-only]
 # Create and run the GPT feed-forward block: (2, 4, 24) -> (2, 4, 24).
-mlp = MLP(n_embd=24, hidden_dim=48)
-hidden_states = jnp.ones((2, 4, 24))  # -> (2, 4, 24)
-params = mlp.init(jax.random.PRNGKey(1), hidden_states)
-mlp_output = mlp.apply(params, hidden_states)  # (2, 4, 24) -> (2, 4, 24)
-
+example_mlp = MLP(n_embd=24, hidden_dim=48)
+example_hidden_states = jnp.ones((2, 4, 24))  # -> (2, 4, 24)
+example_params = example_mlp.init(jax.random.PRNGKey(1), example_hidden_states)
+example_mlp_output = example_mlp.apply(example_params, example_hidden_states)  # (2, 4, 24) -> (2, 4, 24)
+print("mlp_output shape:", example_mlp_output.shape)
 
 # %%
 class Block(nn.Module):
@@ -133,18 +105,59 @@ class Block(nn.Module):
 
 
 # %% [notebook-only]
+# Create and run one GPT block: (2, 4, 768) -> (2, 4, 768).
+example_block = Block()
+example_hidden_states = jnp.ones((2, 4, 768))  # -> (2, 4, 768)
+example_mask_values = jnp.ones((4, 4))  # -> (4, 4)
+example_mask = jnp.tril(example_mask_values)  # (4, 4)
+example_mask = example_mask.reshape(1, 1, 4, 4)  # (4, 4) -> (1, 1, 4, 4)
+example_params = example_block.init(jax.random.PRNGKey(2), example_hidden_states, example_mask)
+example_block_output = example_block.apply(example_params, example_hidden_states, example_mask)  # (2, 4, 768), (1, 1, 4, 4) -> (2, 4, 768)
+print("block output shape:", example_block_output.shape)
+
+# %%
+class GPT2Small(nn.Module):
+    vocab_size: int
+    n_ctx: int = 1024
+    n_embd: int = 768
+    n_head: int = 12
+    n_layer: int = 12
+
+    @nn.compact
+    def __call__(self, input_ids, mask):
+        # Combine token and position embeddings: (batch, steps) -> (batch, steps, n_embd).
+        batch_size, step_count = input_ids.shape  # (batch, steps) -> scalar, scalar
+        positions = jnp.arange(step_count)  # -> (steps)
+        token_embeddings = nn.Embed(self.vocab_size, self.n_embd, name='wte')(input_ids)  # (batch, steps) -> (batch, steps, n_embd)
+        position_embeddings = nn.Embed(self.n_ctx, self.n_embd, name='wpe')(positions)  # (steps) -> (steps, n_embd)
+        position_embeddings = position_embeddings[None, :, :]  # (steps, n_embd) -> (1, steps, n_embd)
+        x = token_embeddings + position_embeddings  # (batch, steps, n_embd)
+        x = nn.Dropout(0.1, deterministic=True, name='drop')(x)  # (batch, steps, n_embd)
+
+        # Run the transformer block stack while preserving sequence shape.
+        for _ in range(self.n_layer):
+            x = Block()(x, mask)  # (batch, steps, n_embd)
+
+        # Normalize final states and project to vocabulary logits.
+        x = nn.LayerNorm(name='ln_f')(x)  # (batch, steps, n_embd)
+        logits = nn.Dense(self.vocab_size, name='lm_head')(x)  # (batch, steps, n_embd) -> (batch, steps, vocab_size)
+        return logits  # (batch, steps, vocab_size)
+
+
+# %% [notebook-only]
 # Create and run a sample token batch.
-model = GPT2Small(vocab_size=50257)
-test_input = jnp.ones((2, 16), dtype=jnp.int32)  # -> (2, 16)
+example_model = GPT2Small(vocab_size=50257)
+example_test_input = jnp.ones((2, 16), dtype=jnp.int32)  # -> (2, 16)
 
 # Build a causal attention mask: (1, 1, 16, 16).
 mask_values = jnp.ones((16, 16))  # -> (16, 16)
-mask = jnp.tril(mask_values)  # (16, 16)
-mask = mask.reshape(1, 1, 16, 16)  # (16, 16) -> (1, 1, 16, 16)
-params = model.init(jax.random.PRNGKey(0), test_input, mask)
-logits = model.apply(params, test_input, mask)  # (2, 16), (1, 1, 16, 16) -> (2, 16, 50257)
+example_mask = jnp.tril(mask_values)  # (16, 16)
+example_mask = example_mask.reshape(1, 1, 16, 16)  # (16, 16) -> (1, 1, 16, 16)
+example_params = example_model.init(jax.random.PRNGKey(0), example_test_input, example_mask)
+example_logits = example_model.apply(example_params, example_test_input, example_mask)  # (2, 16), (1, 1, 16, 16) -> (2, 16, 50257)
+print("logits shape:", example_logits.shape)
 
-
+# %%
 # Train on a tiny next-token prediction batch.
 model = GPT2Small(vocab_size=20, n_layer=1)
 input_ids = jnp.array([[1, 2, 3, 4], [4, 3, 2, 1]], dtype=jnp.int32)  # -> (2, 4)

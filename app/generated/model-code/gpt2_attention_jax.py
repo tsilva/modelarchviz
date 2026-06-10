@@ -2,33 +2,6 @@ import jax
 import jax.numpy as jnp
 from flax import linen as nn
 
-class GPT2Small(nn.Module):
-    vocab_size: int
-    n_ctx: int = 1024
-    n_embd: int = 768
-    n_head: int = 12
-    n_layer: int = 12
-
-    @nn.compact
-    def __call__(self, input_ids, mask):
-        # Combine token and position embeddings: (batch, steps) -> (batch, steps, n_embd).
-        batch_size, step_count = input_ids.shape  # (batch, steps) -> scalar, scalar
-        positions = jnp.arange(step_count)  # -> (steps)
-        token_embeddings = nn.Embed(self.vocab_size, self.n_embd, name='wte')(input_ids)  # (batch, steps) -> (batch, steps, n_embd)
-        position_embeddings = nn.Embed(self.n_ctx, self.n_embd, name='wpe')(positions)  # (steps) -> (steps, n_embd)
-        position_embeddings = position_embeddings[None, :, :]  # (steps, n_embd) -> (1, steps, n_embd)
-        x = token_embeddings + position_embeddings  # (batch, steps, n_embd)
-        x = nn.Dropout(0.1, deterministic=True, name='drop')(x)  # (batch, steps, n_embd)
-
-        # Run the transformer block stack while preserving sequence shape.
-        for _ in range(self.n_layer):
-            x = Block()(x, mask)  # (batch, steps, n_embd)
-
-        # Normalize final states and project to vocabulary logits.
-        x = nn.LayerNorm(name='ln_f')(x)  # (batch, steps, n_embd)
-        logits = nn.Dense(self.vocab_size, name='lm_head')(x)  # (batch, steps, n_embd) -> (batch, steps, vocab_size)
-        return logits  # (batch, steps, vocab_size)
-
 class CausalSelfAttention(nn.Module):
     n_embd: int = 768
     n_head: int = 12
@@ -91,3 +64,60 @@ class Block(nn.Module):
         mlp_out = MLP()(mlp_input)  # (batch, steps, 768)
         x = x + mlp_out  # (batch, steps, 768)
         return x  # (batch, steps, 768)
+
+class GPT2Small(nn.Module):
+    vocab_size: int
+    n_ctx: int = 1024
+    n_embd: int = 768
+    n_head: int = 12
+    n_layer: int = 12
+
+    @nn.compact
+    def __call__(self, input_ids, mask):
+        # Combine token and position embeddings: (batch, steps) -> (batch, steps, n_embd).
+        batch_size, step_count = input_ids.shape  # (batch, steps) -> scalar, scalar
+        positions = jnp.arange(step_count)  # -> (steps)
+        token_embeddings = nn.Embed(self.vocab_size, self.n_embd, name='wte')(input_ids)  # (batch, steps) -> (batch, steps, n_embd)
+        position_embeddings = nn.Embed(self.n_ctx, self.n_embd, name='wpe')(positions)  # (steps) -> (steps, n_embd)
+        position_embeddings = position_embeddings[None, :, :]  # (steps, n_embd) -> (1, steps, n_embd)
+        x = token_embeddings + position_embeddings  # (batch, steps, n_embd)
+        x = nn.Dropout(0.1, deterministic=True, name='drop')(x)  # (batch, steps, n_embd)
+
+        # Run the transformer block stack while preserving sequence shape.
+        for _ in range(self.n_layer):
+            x = Block()(x, mask)  # (batch, steps, n_embd)
+
+        # Normalize final states and project to vocabulary logits.
+        x = nn.LayerNorm(name='ln_f')(x)  # (batch, steps, n_embd)
+        logits = nn.Dense(self.vocab_size, name='lm_head')(x)  # (batch, steps, n_embd) -> (batch, steps, vocab_size)
+        return logits  # (batch, steps, vocab_size)
+
+# Train on a tiny next-token prediction batch.
+model = GPT2Small(vocab_size=20, n_layer=1)
+input_ids = jnp.array([[1, 2, 3, 4], [4, 3, 2, 1]], dtype=jnp.int32)  # -> (2, 4)
+train_targets = jnp.array([[2, 3, 4, 5], [3, 2, 1, 0]], dtype=jnp.int32)  # -> (2, 4)
+mask_values = jnp.ones((4, 4))  # -> (4, 4)
+mask = jnp.tril(mask_values)  # (4, 4)
+mask = mask.reshape(1, 1, 4, 4)  # (4, 4) -> (1, 1, 4, 4)
+params = model.init(jax.random.PRNGKey(1), input_ids, mask)
+
+
+def train_step(params, inputs, mask, targets, learning_rate=0.01):
+    def loss_fn(current_params):
+        logits = model.apply(current_params, inputs, mask)  # (2, 4), (1, 1, 4, 4) -> (2, 4, 20)
+        one_hot_targets = jax.nn.one_hot(targets, logits.shape[-1])  # (2, 4) -> (2, 4, 20)
+        log_probs = jax.nn.log_softmax(logits, axis=-1)  # (2, 4, 20)
+        loss = -jnp.mean(jnp.sum(one_hot_targets * log_probs, axis=-1))  # (2, 4, 20), (2, 4, 20) -> scalar
+        return loss  # scalar
+
+    loss, grads = jax.value_and_grad(loss_fn)(params)
+    params = jax.tree_util.tree_map(lambda p, g: p - learning_rate * g, params, grads)
+    return params, loss
+
+
+# Fit the model for a few steps on the tiny dataset.
+for step in range(3):
+    params, loss = train_step(params, input_ids, mask, train_targets)
+
+# Keep the final scalar loss for inspection.
+final_loss = loss  # scalar

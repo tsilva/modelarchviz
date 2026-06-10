@@ -11,6 +11,7 @@
 #     language: python
 #     name: python3
 # ---
+
 # %%
 import torch
 import torch.nn as nn
@@ -70,11 +71,12 @@ class AlexNet(nn.Module):
 
 # %% [notebook-only]
 # Create and run a sample image batch: (2, 3, 227, 227) -> (2, 1000).
-model = AlexNet(num_classes=1000)
-test_input = torch.randn(2, 3, 227, 227)  # -> (2, 3, 227, 227)
-logits = model(test_input)  # (2, 3, 227, 227) -> (2, 1000)
+example_model = AlexNet(num_classes=1000)
+example_test_input = torch.randn(2, 3, 227, 227)  # -> (2, 3, 227, 227)
+example_logits = example_model(example_test_input)  # (2, 3, 227, 227) -> (2, 1000)
+print("logits shape:", example_logits.shape)
 
-
+# %%
 # Train on a tiny synthetic image batch.
 model = AlexNet(num_classes=2)
 train_images = torch.zeros(2, 3, 227, 227)  # -> (2, 3, 227, 227)

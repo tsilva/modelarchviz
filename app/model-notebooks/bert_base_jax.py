@@ -11,6 +11,7 @@
 #     language: python
 #     name: python3
 # ---
+
 # %%
 import jax
 import jax.numpy as jnp
@@ -44,11 +45,11 @@ class BertEmbeddings(nn.Module):
 # %% [notebook-only]
 # Create and run the embedding block: (2, 4) -> (2, 4, 12).
 embeddings = BertEmbeddings(vocab_size=20, hidden_size=12, max_position=8)
-input_ids = jnp.array([[1, 2, 3, 4], [4, 3, 2, 1]], dtype=jnp.int32)  # -> (2, 4)
-token_type_ids = jnp.zeros((2, 4), dtype=jnp.int32)  # -> (2, 4)
-params = embeddings.init(jax.random.PRNGKey(0), input_ids, token_type_ids, train=False)
-embedded = embeddings.apply(params, input_ids, token_type_ids, train=False)  # (2, 4), (2, 4) -> (2, 4, 12)
-
+example_input_ids = jnp.array([[1, 2, 3, 4], [4, 3, 2, 1]], dtype=jnp.int32)  # -> (2, 4)
+example_token_type_ids = jnp.zeros((2, 4), dtype=jnp.int32)  # -> (2, 4)
+example_params = embeddings.init(jax.random.PRNGKey(0), example_input_ids, example_token_type_ids, train=False)
+example_embedded = embeddings.apply(example_params, example_input_ids, example_token_type_ids, train=False)  # (2, 4), (2, 4) -> (2, 4, 12)
+print("embedded shape:", example_embedded.shape)
 
 # %%
 class BertSelfAttention(nn.Module):
@@ -94,12 +95,12 @@ class BertSelfAttention(nn.Module):
 
 # %% [notebook-only]
 # Create and run one BERT self-attention block: (2, 4, 12) -> (2, 4, 12).
-attention = BertSelfAttention(hidden_size=12, num_heads=3)
-hidden_states = jnp.ones((2, 4, 12))  # -> (2, 4, 12)
+example_attention = BertSelfAttention(hidden_size=12, num_heads=3)
+example_hidden_states = jnp.ones((2, 4, 12))  # -> (2, 4, 12)
 attention_mask = jnp.ones((2, 1, 1, 4), dtype=jnp.bool_)  # -> (2, 1, 1, 4)
-params = attention.init(jax.random.PRNGKey(1), hidden_states, attention_mask)
-attended = attention.apply(params, hidden_states, attention_mask)  # (2, 4, 12), (2, 1, 1, 4) -> (2, 4, 12)
-
+example_params = example_attention.init(jax.random.PRNGKey(1), example_hidden_states, attention_mask)
+example_attended = example_attention.apply(example_params, example_hidden_states, attention_mask)  # (2, 4, 12), (2, 1, 1, 4) -> (2, 4, 12)
+print("attended shape:", example_attended.shape)
 
 # %%
 class BertLayer(nn.Module):
@@ -128,11 +129,11 @@ class BertLayer(nn.Module):
 # %% [notebook-only]
 # Create and run one encoder layer: (2, 4, 12) -> (2, 4, 12).
 layer = BertLayer(hidden_size=12, num_heads=3, intermediate_size=24)
-hidden_states = jnp.ones((2, 4, 12))  # -> (2, 4, 12)
+example_hidden_states = jnp.ones((2, 4, 12))  # -> (2, 4, 12)
 attention_mask = jnp.ones((2, 1, 1, 4), dtype=jnp.bool_)  # -> (2, 1, 1, 4)
-params = layer.init(jax.random.PRNGKey(2), hidden_states, attention_mask, train=False)
-layer_output = layer.apply(params, hidden_states, attention_mask, train=False)  # (2, 4, 12), (2, 1, 1, 4) -> (2, 4, 12)
-
+example_params = layer.init(jax.random.PRNGKey(2), example_hidden_states, attention_mask, train=False)
+example_layer_output = layer.apply(example_params, example_hidden_states, attention_mask, train=False)  # (2, 4, 12), (2, 1, 1, 4) -> (2, 4, 12)
+print("layer_output shape:", example_layer_output.shape)
 
 # %%
 class BERTBase(nn.Module):
@@ -158,16 +159,17 @@ class BERTBase(nn.Module):
 
 # %% [notebook-only]
 # Create and run a sample token batch.
-model = BERTBase(vocab_size=30522)
-input_ids = jnp.ones((2, 16), dtype=jnp.int32)  # -> (2, 16)
-token_type_ids = jnp.zeros((2, 16), dtype=jnp.int32)  # -> (2, 16)
+example_model = BERTBase(vocab_size=30522)
+example_input_ids = jnp.ones((2, 16), dtype=jnp.int32)  # -> (2, 16)
+example_token_type_ids = jnp.zeros((2, 16), dtype=jnp.int32)  # -> (2, 16)
 attention_mask = jnp.ones((2, 1, 1, 16), dtype=jnp.bool_)  # -> (2, 1, 1, 16)
-params = model.init(jax.random.PRNGKey(0), input_ids, token_type_ids, attention_mask)
-outputs = model.apply(params, input_ids, token_type_ids, attention_mask)
-mlm_logits = outputs[0]  # tuple -> (2, 16, 30522)
-pooled = outputs[1]  # tuple -> (2, 768)
+example_params = example_model.init(jax.random.PRNGKey(0), example_input_ids, example_token_type_ids, attention_mask)
+example_outputs = example_model.apply(example_params, example_input_ids, example_token_type_ids, attention_mask)
+mlm_logits = example_outputs[0]  # tuple -> (2, 16, 30522)
+pooled = example_outputs[1]  # tuple -> (2, 768)
+print("mlm logits shape:", mlm_logits.shape, "pooled shape:", pooled.shape)
 
-
+# %%
 # Train on a tiny masked-token prediction batch.
 model = BERTBase(vocab_size=20, hidden_size=12, num_layers=1)
 input_ids = jnp.array([[1, 2, 3, 4], [4, 3, 2, 1]], dtype=jnp.int32)  # -> (2, 4)

@@ -184,3 +184,28 @@ class Transformer(nn.Module):
         # Project decoder states to vocabulary logits.
         logits = self.generator(x)  # (batch, target_steps, d_model) -> (batch, target_steps, vocab_size)
         return logits  # (batch, target_steps, vocab_size)
+
+# Train on a tiny copy-style token batch.
+model = Transformer(vocab_size=20, d_model=16, nhead=4, num_layers=1)
+src_ids = torch.tensor([[1, 2, 3, 4], [4, 3, 2, 1]])  # -> (2, 4)
+tgt_ids = torch.tensor([[0, 1, 2, 3], [0, 4, 3, 2]])  # -> (2, 4)
+train_targets = torch.tensor([[1, 2, 3, 4], [4, 3, 2, 1]])  # -> (2, 4)
+mask_values = torch.ones(4, 4)  # -> (4, 4)
+mask_values = mask_values * float('-inf')  # (4, 4)
+tgt_mask = torch.triu(mask_values, diagonal=1)  # (4, 4)
+criterion = nn.CrossEntropyLoss()
+optimizer = torch.optim.SGD(model.parameters(), lr=0.1)
+
+# Fit the model for a few steps on the tiny dataset.
+for step in range(3):
+    optimizer.zero_grad()
+    logits = model(src_ids, tgt_ids, tgt_mask)  # (2, 4), (2, 4), (4, 4) -> (2, 4, 20)
+    vocab_size = logits.size(-1)  # (2, 4, 20) -> scalar
+    flat_logits = logits.reshape(-1, vocab_size)  # (2, 4, 20) -> (8, 20)
+    flat_targets = train_targets.reshape(-1)  # (2, 4) -> (8)
+    loss = criterion(flat_logits, flat_targets)  # (8, 20), (8) -> scalar
+    loss.backward()
+    optimizer.step()
+
+# Keep the final scalar loss for inspection.
+final_loss = loss.item()  # scalar

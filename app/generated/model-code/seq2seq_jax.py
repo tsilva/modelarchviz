@@ -143,3 +143,48 @@ class Seq2Seq(nn.Module):
         decoder_trace = decoder_outputs[1]  # (batch, target_steps, hidden_size)
         outputs = (logits, encoder_trace, decoder_trace)
         return outputs
+
+# Train on two tiny symbolic transductions with teacher forcing.
+model = Seq2Seq(source_vocab_size=12, target_vocab_size=12, embedding_size=16, hidden_size=32)
+source_ids = jnp.array(
+    [
+        [3, 4, 5, 0],
+        [6, 7, 8, 0],
+    ]
+)  # -> (2, 4)
+decoder_input_ids = jnp.array(
+    [
+        [1, 5, 4],
+        [1, 8, 7],
+    ]
+)  # -> (2, 3)
+target_ids = jnp.array(
+    [
+        [5, 4, 2],
+        [8, 7, 2],
+    ]
+)  # -> (2, 3)
+params = model.init(jax.random.PRNGKey(4), source_ids, decoder_input_ids)
+
+
+def train_step(params, inputs, decoder_inputs, targets, learning_rate=0.1):
+    def loss_fn(current_params):
+        outputs = model.apply(current_params, inputs, decoder_inputs)
+        logits = outputs[0]  # (batch, target_steps, target_vocab_size)
+        one_hot_targets = jax.nn.one_hot(targets, logits.shape[-1])  # (batch, target_steps, target_vocab_size)
+        log_probs = jax.nn.log_softmax(logits, axis=-1)  # (batch, target_steps, target_vocab_size)
+        token_losses = jnp.sum(one_hot_targets * log_probs, axis=-1)  # (batch, target_steps)
+        loss = -jnp.mean(token_losses)  # (batch, target_steps) -> scalar
+        return loss
+
+    loss, grads = jax.value_and_grad(loss_fn)(params)
+    params = jax.tree_util.tree_map(lambda p, g: p - learning_rate * g, params, grads)
+    return params, loss
+
+
+# Fit the model for a few steps on the tiny sequence pairs.
+for step in range(3):
+    params, loss = train_step(params, source_ids, decoder_input_ids, target_ids)
+
+# Keep the final scalar loss for inspection.
+final_loss = loss  # scalar

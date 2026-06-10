@@ -138,3 +138,23 @@ class VisionTransformer(nn.Module):
         cls_output = x[:, 0]  # (batch, tokens, embed_dim) -> (batch, embed_dim)
         logits = self.head(cls_output)  # (batch, embed_dim) -> (batch, num_classes)
         return logits  # (batch, num_classes)
+
+# Train on a tiny synthetic image batch.
+model = VisionTransformer(num_classes=2, embed_dim=48, depth=1, num_heads=4)
+train_images = torch.zeros(2, 3, 224, 224)  # -> (2, 3, 224, 224)
+train_images[0, :, 32:96, 32:96] = 1.0  # (2, 3, 224, 224)
+train_images[1, :, 128:192, 128:192] = 1.0  # (2, 3, 224, 224)
+train_targets = torch.tensor([0, 1])  # -> (2)
+criterion = nn.CrossEntropyLoss()
+optimizer = torch.optim.SGD(model.parameters(), lr=0.01)
+
+# Fit the model for a few steps on the tiny dataset.
+for step in range(3):
+    optimizer.zero_grad()
+    logits = model(train_images)  # (2, 3, 224, 224) -> (2, 2)
+    loss = criterion(logits, train_targets)  # (2, 2), (2) -> scalar
+    loss.backward()
+    optimizer.step()
+
+# Keep the final scalar loss for inspection.
+final_loss = loss.item()  # scalar

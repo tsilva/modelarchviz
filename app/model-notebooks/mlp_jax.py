@@ -11,6 +11,7 @@
 #     language: python
 #     name: python3
 # ---
+
 # %%
 import jax
 import jax.numpy as jnp
@@ -43,12 +44,13 @@ class MLP(nn.Module):
 
 # %% [notebook-only]
 # Create and run a sample batch: (2, 784) -> (2, 10).
-model = MLP(hidden_dim=128, output_dim=10)
+example_model = MLP(hidden_dim=128, output_dim=10)
 inputs = jnp.ones((2, 784))  # -> (2, 784)
-params = model.init(jax.random.PRNGKey(0), inputs)
-logits = model.apply(params, inputs)  # (2, 784) -> (2, 10)
+example_params = example_model.init(jax.random.PRNGKey(0), inputs)
+example_logits = example_model.apply(example_params, inputs)  # (2, 784) -> (2, 10)
+print("logits shape:", example_logits.shape)
 
-
+# %%
 # Train on a tiny synthetic classification batch.
 model = MLP(hidden_dim=8, output_dim=2)
 train_inputs = jnp.array(

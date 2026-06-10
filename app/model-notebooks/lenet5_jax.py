@@ -11,6 +11,7 @@
 #     language: python
 #     name: python3
 # ---
+
 # %%
 import jax
 import jax.numpy as jnp
@@ -45,12 +46,13 @@ class LeNet5(nn.Module):
 
 # %% [notebook-only]
 # Create and run a sample image batch: (2, 32, 32, 1) -> (2, 10).
-model = LeNet5()
-test_input = jnp.ones((2, 32, 32, 1))  # -> (2, 32, 32, 1)
-params = model.init(jax.random.PRNGKey(0), test_input)
-logits = model.apply(params, test_input)  # (2, 32, 32, 1) -> (2, 10)
+example_model = LeNet5()
+example_test_input = jnp.ones((2, 32, 32, 1))  # -> (2, 32, 32, 1)
+example_params = example_model.init(jax.random.PRNGKey(0), example_test_input)
+example_logits = example_model.apply(example_params, example_test_input)  # (2, 32, 32, 1) -> (2, 10)
+print("logits shape:", example_logits.shape)
 
-
+# %%
 # Train on a tiny synthetic image batch.
 model = LeNet5()
 train_images = jnp.zeros((2, 32, 32, 1))  # -> (2, 32, 32, 1)

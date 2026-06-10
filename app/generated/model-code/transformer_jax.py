@@ -130,3 +130,33 @@ class Transformer(nn.Module):
         # Project decoder states to vocabulary logits.
         logits = nn.Dense(self.vocab_size)(x)  # (batch, target_steps, d_model) -> (batch, target_steps, vocab_size)
         return logits  # (batch, target_steps, vocab_size)
+
+# Train on a tiny copy-style token batch.
+model = Transformer(vocab_size=20, d_model=16, nhead=4, num_layers=1)
+src_ids = jnp.array([[1, 2, 3, 4], [4, 3, 2, 1]], dtype=jnp.int32)  # -> (2, 4)
+tgt_ids = jnp.array([[0, 1, 2, 3], [0, 4, 3, 2]], dtype=jnp.int32)  # -> (2, 4)
+train_targets = jnp.array([[1, 2, 3, 4], [4, 3, 2, 1]], dtype=jnp.int32)  # -> (2, 4)
+mask_values = jnp.ones((1, 1, 4, 4))  # -> (1, 1, 4, 4)
+tgt_mask = jnp.tril(mask_values)  # (1, 1, 4, 4)
+params = model.init(jax.random.PRNGKey(1), src_ids, tgt_ids, tgt_mask)  # inputs -> parameter tree
+
+
+def train_step(params, src_ids, tgt_ids, targets, mask, learning_rate=0.1):
+    def loss_fn(current_params):
+        logits = model.apply(current_params, src_ids, tgt_ids, mask)  # (2, 4), (2, 4), (1, 1, 4, 4) -> (2, 4, 20)
+        one_hot_targets = jax.nn.one_hot(targets, logits.shape[-1])  # (2, 4) -> (2, 4, 20)
+        log_probs = jax.nn.log_softmax(logits, axis=-1)  # (2, 4, 20)
+        loss = -jnp.mean(jnp.sum(one_hot_targets * log_probs, axis=-1))  # (2, 4, 20), (2, 4, 20) -> scalar
+        return loss  # scalar
+
+    loss, grads = jax.value_and_grad(loss_fn)(params)  # parameter tree -> scalar, gradient tree
+    params = jax.tree_util.tree_map(lambda p, g: p - learning_rate * g, params, grads)  # parameter tree
+    return params, loss
+
+
+# Fit the model for a few steps on the tiny dataset.
+for step in range(3):
+    params, loss = train_step(params, src_ids, tgt_ids, train_targets, tgt_mask)  # parameter tree -> parameter tree, scalar
+
+# Keep the final scalar loss for inspection.
+final_loss = loss  # scalar

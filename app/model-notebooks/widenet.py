@@ -11,6 +11,7 @@
 #     language: python
 #     name: python3
 # ---
+
 # %%
 import torch
 import torch.nn as nn
@@ -82,10 +83,10 @@ class WideBasicBlock(nn.Module):
 
 # %% [notebook-only]
 # Create and run one widened residual block: (2, 16, 32, 32) -> (2, 32, 16, 16).
-block = WideBasicBlock(in_channels=16, out_channels=32, stride=2, dropout_rate=0.0)
+example_block = WideBasicBlock(in_channels=16, out_channels=32, stride=2, dropout_rate=0.0)
 block_input = torch.randn(2, 16, 32, 32)  # -> (2, 16, 32, 32)
-block_output = block(block_input)  # (2, 16, 32, 32) -> (2, 32, 16, 16)
-
+example_block_output = example_block(block_input)  # (2, 16, 32, 32) -> (2, 32, 16, 16)
+print("block_output shape:", example_block_output.shape)
 
 # %%
 class WideNet(nn.Module):
@@ -184,11 +185,12 @@ class WideNet(nn.Module):
 
 # %% [notebook-only]
 # Create and run a sample CIFAR-size image batch: (2, 3, 32, 32) -> (2, 10).
-model = WideNet(depth=28, widen_factor=10, dropout_rate=0.0, num_classes=10)
-test_input = torch.randn(2, 3, 32, 32)  # -> (2, 3, 32, 32)
-logits = model(test_input)  # (2, 3, 32, 32) -> (2, 10)
+example_model = WideNet(depth=28, widen_factor=10, dropout_rate=0.0, num_classes=10)
+example_test_input = torch.randn(2, 3, 32, 32)  # -> (2, 3, 32, 32)
+example_logits = example_model(example_test_input)  # (2, 3, 32, 32) -> (2, 10)
+print("logits shape:", example_logits.shape)
 
-
+# %%
 # Train on a tiny synthetic CIFAR-size batch.
 model = WideNet(depth=10, widen_factor=1, dropout_rate=0.0, num_classes=2)
 train_images = torch.zeros(2, 3, 32, 32)  # -> (2, 3, 32, 32)

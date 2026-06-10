@@ -11,6 +11,7 @@
 #     language: python
 #     name: python3
 # ---
+
 # %%
 import torch
 import torch.nn as nn
@@ -47,7 +48,7 @@ class PatchEmbed(nn.Module):
 patch_embed = PatchEmbed(in_channels=3, embed_dim=24, patch_size=16, image_size=32)
 images = torch.randn(2, 3, 32, 32)  # -> (2, 3, 32, 32)
 patch_tokens = patch_embed(images)  # (2, 3, 32, 32) -> (2, 4, 24)
-
+print("patch_tokens shape:", patch_tokens.shape)
 
 # %%
 class MultiHeadSelfAttention(nn.Module):
@@ -100,10 +101,10 @@ class MultiHeadSelfAttention(nn.Module):
 
 # %% [notebook-only]
 # Create and run vision self-attention: (2, 5, 24) -> (2, 5, 24).
-attention = MultiHeadSelfAttention(embed_dim=24, num_heads=4)
+example_attention = MultiHeadSelfAttention(embed_dim=24, num_heads=4)
 tokens = torch.randn(2, 5, 24)  # -> (2, 5, 24)
-attended = attention(tokens)  # (2, 5, 24) -> (2, 5, 24)
-
+example_attended = example_attention(tokens)  # (2, 5, 24) -> (2, 5, 24)
+print("attended shape:", example_attended.shape)
 
 # %%
 class EncoderBlock(nn.Module):
@@ -140,10 +141,10 @@ class EncoderBlock(nn.Module):
 
 # %% [notebook-only]
 # Create and run one ViT encoder block: (2, 5, 24) -> (2, 5, 24).
-block = EncoderBlock(embed_dim=24, num_heads=4, mlp_dim=48)
+example_block = EncoderBlock(embed_dim=24, num_heads=4, mlp_dim=48)
 tokens = torch.randn(2, 5, 24)  # -> (2, 5, 24)
-encoded_tokens = block(tokens)  # (2, 5, 24) -> (2, 5, 24)
-
+encoded_tokens = example_block(tokens)  # (2, 5, 24) -> (2, 5, 24)
+print("encoded_tokens shape:", encoded_tokens.shape)
 
 # %%
 class VisionTransformer(nn.Module):
@@ -185,11 +186,12 @@ class VisionTransformer(nn.Module):
 
 # %% [notebook-only]
 # Create and run a sample image batch: (2, 3, 224, 224) -> (2, 1000).
-model = VisionTransformer(num_classes=1000)
-test_input = torch.randn(2, 3, 224, 224)  # -> (2, 3, 224, 224)
-logits = model(test_input)  # (2, 3, 224, 224) -> (2, 1000)
+example_model = VisionTransformer(num_classes=1000)
+example_test_input = torch.randn(2, 3, 224, 224)  # -> (2, 3, 224, 224)
+example_logits = example_model(example_test_input)  # (2, 3, 224, 224) -> (2, 1000)
+print("logits shape:", example_logits.shape)
 
-
+# %%
 # Train on a tiny synthetic image batch.
 model = VisionTransformer(num_classes=2, embed_dim=48, depth=1, num_heads=4)
 train_images = torch.zeros(2, 3, 224, 224)  # -> (2, 3, 224, 224)

@@ -11,48 +11,11 @@
 #     language: python
 #     name: python3
 # ---
+
 # %%
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-
-
-# %%
-class GPT2Small(nn.Module):
-    def __init__(
-        self,
-        vocab_size,  # Number of token ids.
-        n_ctx=1024,  # Maximum context length.
-        n_embd=768  # Embedding width.
-    ):
-        super().__init__()
-
-        # Register embeddings, transformer blocks, final norm, and language-model head.
-        self.wte = nn.Embedding(vocab_size, n_embd)
-        self.wpe = nn.Embedding(n_ctx, n_embd)
-        self.drop = nn.Dropout(0.1)
-        self.blocks = nn.ModuleList([Block() for _ in range(12)])
-        self.ln_f = nn.LayerNorm(n_embd)
-        self.lm_head = nn.Linear(n_embd, vocab_size, bias=False)
-
-    def forward(self, input_ids, mask):
-        # Combine token and position embeddings: (batch, steps) -> (batch, steps, n_embd).
-        batch_size, step_count = input_ids.shape  # (batch, steps) -> scalar, scalar
-        positions = torch.arange(step_count, device=input_ids.device)  # -> (steps)
-        token_embeddings = self.wte(input_ids)  # (batch, steps) -> (batch, steps, n_embd)
-        position_embeddings = self.wpe(positions)  # (steps) -> (steps, n_embd)
-        position_embeddings = position_embeddings[None, :, :]  # (steps, n_embd) -> (1, steps, n_embd)
-        x = token_embeddings + position_embeddings  # (batch, steps, n_embd)
-        x = self.drop(x)  # (batch, steps, n_embd)
-
-        # Run the transformer block stack while preserving sequence shape.
-        for block in self.blocks:
-            x = block(x, mask)  # (batch, steps, n_embd)
-
-        # Normalize final states and project to vocabulary logits.
-        x = self.ln_f(x)  # (batch, steps, n_embd)
-        logits = self.lm_head(x)  # (batch, steps, n_embd) -> (batch, steps, vocab_size)
-        return logits  # (batch, steps, vocab_size)
 
 
 # %%
@@ -104,11 +67,11 @@ class CausalSelfAttention(nn.Module):
 
 # %% [notebook-only]
 # Create and run causal self-attention: (2, 4, 24) -> (2, 4, 24).
-attention = CausalSelfAttention(n_embd=24, n_head=4)
-hidden_states = torch.randn(2, 4, 24)  # -> (2, 4, 24)
-mask = torch.tril(torch.ones(4, 4)).view(1, 1, 4, 4)  # -> (1, 1, 4, 4)
-attended = attention(hidden_states, mask)  # (2, 4, 24), (1, 1, 4, 4) -> (2, 4, 24)
-
+example_attention = CausalSelfAttention(n_embd=24, n_head=4)
+example_hidden_states = torch.randn(2, 4, 24)  # -> (2, 4, 24)
+example_mask = torch.tril(torch.ones(4, 4)).view(1, 1, 4, 4)  # -> (1, 1, 4, 4)
+example_attended = example_attention(example_hidden_states, example_mask)  # (2, 4, 24), (1, 1, 4, 4) -> (2, 4, 24)
+print("attended shape:", example_attended.shape)
 
 # %%
 class Block(nn.Module):
@@ -139,17 +102,66 @@ class Block(nn.Module):
 
 
 # %% [notebook-only]
+# Create and run one GPT block: (2, 4, 768) -> (2, 4, 768).
+example_block = Block()
+example_hidden_states = torch.randn(2, 4, 768)  # -> (2, 4, 768)
+example_mask_values = torch.ones(4, 4)  # -> (4, 4)
+example_mask = torch.tril(example_mask_values)  # (4, 4)
+example_mask = example_mask.view(1, 1, 4, 4)  # (4, 4) -> (1, 1, 4, 4)
+example_block_output = example_block(example_hidden_states, example_mask)  # (2, 4, 768), (1, 1, 4, 4) -> (2, 4, 768)
+print("block output shape:", example_block_output.shape)
+
+# %%
+class GPT2Small(nn.Module):
+    def __init__(
+        self,
+        vocab_size,  # Number of token ids.
+        n_ctx=1024,  # Maximum context length.
+        n_embd=768  # Embedding width.
+    ):
+        super().__init__()
+
+        # Register embeddings, transformer blocks, final norm, and language-model head.
+        self.wte = nn.Embedding(vocab_size, n_embd)
+        self.wpe = nn.Embedding(n_ctx, n_embd)
+        self.drop = nn.Dropout(0.1)
+        self.blocks = nn.ModuleList([Block() for _ in range(12)])
+        self.ln_f = nn.LayerNorm(n_embd)
+        self.lm_head = nn.Linear(n_embd, vocab_size, bias=False)
+
+    def forward(self, input_ids, mask):
+        # Combine token and position embeddings: (batch, steps) -> (batch, steps, n_embd).
+        batch_size, step_count = input_ids.shape  # (batch, steps) -> scalar, scalar
+        positions = torch.arange(step_count, device=input_ids.device)  # -> (steps)
+        token_embeddings = self.wte(input_ids)  # (batch, steps) -> (batch, steps, n_embd)
+        position_embeddings = self.wpe(positions)  # (steps) -> (steps, n_embd)
+        position_embeddings = position_embeddings[None, :, :]  # (steps, n_embd) -> (1, steps, n_embd)
+        x = token_embeddings + position_embeddings  # (batch, steps, n_embd)
+        x = self.drop(x)  # (batch, steps, n_embd)
+
+        # Run the transformer block stack while preserving sequence shape.
+        for block in self.blocks:
+            x = block(x, mask)  # (batch, steps, n_embd)
+
+        # Normalize final states and project to vocabulary logits.
+        x = self.ln_f(x)  # (batch, steps, n_embd)
+        logits = self.lm_head(x)  # (batch, steps, n_embd) -> (batch, steps, vocab_size)
+        return logits  # (batch, steps, vocab_size)
+
+
+# %% [notebook-only]
 # Create and run a sample token batch.
-model = GPT2Small(vocab_size=50257)
-test_input = torch.randint(0, 50257, (2, 16))  # -> (2, 16)
+example_model = GPT2Small(vocab_size=50257)
+example_test_input = torch.randint(0, 50257, (2, 16))  # -> (2, 16)
 
 # Build a causal attention mask: (1, 1, 16, 16).
 mask_values = torch.ones(16, 16)  # -> (16, 16)
-mask = torch.tril(mask_values)  # (16, 16)
-mask = mask.view(1, 1, 16, 16)  # (16, 16) -> (1, 1, 16, 16)
-logits = model(test_input, mask)  # (2, 16), (1, 1, 16, 16) -> (2, 16, 50257)
+example_mask = torch.tril(mask_values)  # (16, 16)
+example_mask = example_mask.view(1, 1, 16, 16)  # (16, 16) -> (1, 1, 16, 16)
+example_logits = example_model(example_test_input, example_mask)  # (2, 16), (1, 1, 16, 16) -> (2, 16, 50257)
+print("logits shape:", example_logits.shape)
 
-
+# %%
 # Train on a tiny next-token prediction batch.
 model = GPT2Small(vocab_size=20)
 input_ids = torch.tensor([[1, 2, 3, 4], [4, 3, 2, 1]])  # -> (2, 4)

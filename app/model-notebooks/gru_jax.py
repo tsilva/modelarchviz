@@ -11,6 +11,7 @@
 #     language: python
 #     name: python3
 # ---
+
 # %%
 import jax
 import jax.numpy as jnp
@@ -51,12 +52,12 @@ class GRUCell(nn.Module):
 
 # %% [notebook-only]
 # Create and run one GRU cell step: (2, 32), (2, 64) -> (2, 64).
-cell = GRUCell(hidden_size=64)
-cell_input = jnp.ones((2, 32))  # -> (2, 32)
-previous_state = jnp.zeros((2, 64))  # -> (2, 64)
-cell_params = cell.init(jax.random.PRNGKey(0), cell_input, previous_state)
-next_state = cell.apply(cell_params, cell_input, previous_state)  # (2, 32), (2, 64) -> (2, 64)
-print("next_state shape:", next_state.shape)
+example_cell = GRUCell(hidden_size=64)
+example_cell_input = jnp.ones((2, 32))  # -> (2, 32)
+example_previous_state = jnp.zeros((2, 64))  # -> (2, 64)
+cell_params = example_cell.init(jax.random.PRNGKey(0), example_cell_input, example_previous_state)
+example_next_state = example_cell.apply(cell_params, example_cell_input, example_previous_state)  # (2, 32), (2, 64) -> (2, 64)
+print("example_next_state shape:", example_next_state.shape)
 
 
 # %%
@@ -90,12 +91,12 @@ class GRUSequence(nn.Module):
 # %% [notebook-only]
 # Create and run a sample sequence: (2, 8, 32) -> logits and states.
 example_model = GRUSequence(hidden_size=64, output_size=10)
-sequence = jnp.ones((2, 8, 32))  # -> (2, 8, 32)
-example_params = example_model.init(jax.random.PRNGKey(1), sequence)
-outputs = example_model.apply(example_params, sequence)
-logits = outputs[0]  # (2, 10)
-states = outputs[1]  # (2, 8, 64)
-print("logits shape:", logits.shape, "states shape:", states.shape)
+example_sequence = jnp.ones((2, 8, 32))  # -> (2, 8, 32)
+example_params = example_model.init(jax.random.PRNGKey(1), example_sequence)
+example_outputs = example_model.apply(example_params, example_sequence)
+example_logits = example_outputs[0]  # (2, 10)
+example_states = example_outputs[1]  # (2, 8, 64)
+print("example_logits shape:", example_logits.shape, "example_states shape:", example_states.shape)
 
 
 # %%

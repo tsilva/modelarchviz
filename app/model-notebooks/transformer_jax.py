@@ -11,6 +11,7 @@
 #     language: python
 #     name: python3
 # ---
+
 # %%
 import jax
 import jax.numpy as jnp
@@ -47,7 +48,7 @@ class PositionalEncoding(nn.Module):
 positioner = PositionalEncoding(d_model=8)
 embeddings = jnp.ones((2, 4, 8))  # -> (2, 4, 8)
 encoded = positioner.init_with_output(jax.random.PRNGKey(0), embeddings)[0]  # (2, 4, 8)
-
+print("encoded shape:", encoded.shape)
 
 # %%
 class MultiHeadAttention(nn.Module):
@@ -92,14 +93,14 @@ class MultiHeadAttention(nn.Module):
 
 # %% [notebook-only]
 # Create and run multi-head attention: query and memory -> (2, 3, 8).
-attention = MultiHeadAttention(d_model=8, nhead=2)
-query = jnp.ones((2, 3, 8))  # -> (2, 3, 8)
+example_attention = MultiHeadAttention(d_model=8, nhead=2)
+example_query = jnp.ones((2, 3, 8))  # -> (2, 3, 8)
 key = jnp.ones((2, 4, 8))  # -> (2, 4, 8)
 value = jnp.ones((2, 4, 8))  # -> (2, 4, 8)
-mask = jnp.ones((1, 1, 3, 4))  # -> (1, 1, 3, 4)
-params = attention.init(jax.random.PRNGKey(1), query, key, value, mask)
-attended = attention.apply(params, query, key, value, mask)  # inputs -> (2, 3, 8)
-
+example_mask = jnp.ones((1, 1, 3, 4))  # -> (1, 1, 3, 4)
+example_params = example_attention.init(jax.random.PRNGKey(1), example_query, key, value, example_mask)
+example_attended = example_attention.apply(example_params, example_query, key, value, example_mask)  # inputs -> (2, 3, 8)
+print("attended shape:", example_attended.shape)
 
 # %%
 class EncoderLayer(nn.Module):
@@ -124,11 +125,11 @@ class EncoderLayer(nn.Module):
 
 # %% [notebook-only]
 # Create and run one encoder layer: (2, 4, 8) -> (2, 4, 8).
-encoder_layer = EncoderLayer(d_model=8, nhead=2, d_ff=16)
+example_encoder_layer = EncoderLayer(d_model=8, nhead=2, d_ff=16)
 encoder_input = jnp.ones((2, 4, 8))  # -> (2, 4, 8)
-params = encoder_layer.init(jax.random.PRNGKey(2), encoder_input)
-encoder_output = encoder_layer.apply(params, encoder_input)  # (2, 4, 8) -> (2, 4, 8)
-
+example_params = example_encoder_layer.init(jax.random.PRNGKey(2), encoder_input)
+example_encoder_output = example_encoder_layer.apply(example_params, encoder_input)  # (2, 4, 8) -> (2, 4, 8)
+print("encoder_output shape:", example_encoder_output.shape)
 
 # %%
 class DecoderLayer(nn.Module):
@@ -161,10 +162,10 @@ class DecoderLayer(nn.Module):
 decoder_layer = DecoderLayer(d_model=8, nhead=2, d_ff=16)
 decoder_input = jnp.ones((2, 4, 8))  # -> (2, 4, 8)
 encoder_memory = jnp.ones((2, 5, 8))  # -> (2, 5, 8)
-mask = jnp.ones((1, 1, 4, 4))  # -> (1, 1, 4, 4)
-params = decoder_layer.init(jax.random.PRNGKey(3), decoder_input, encoder_memory, mask)
-decoder_output = decoder_layer.apply(params, decoder_input, encoder_memory, mask)  # inputs -> (2, 4, 8)
-
+example_mask = jnp.ones((1, 1, 4, 4))  # -> (1, 1, 4, 4)
+example_params = decoder_layer.init(jax.random.PRNGKey(3), decoder_input, encoder_memory, example_mask)
+example_decoder_output = decoder_layer.apply(example_params, decoder_input, encoder_memory, example_mask)  # inputs -> (2, 4, 8)
+print("decoder_output shape:", example_decoder_output.shape)
 
 # %%
 class Transformer(nn.Module):
@@ -194,16 +195,18 @@ class Transformer(nn.Module):
 
 # %% [notebook-only]
 # Create and run a sample translation batch.
-model = Transformer(vocab_size=37000)
+example_model = Transformer(vocab_size=37000)
 src_ids = jnp.ones((2, 16), dtype=jnp.int32)  # -> (2, 16)
 tgt_ids = jnp.ones((2, 16), dtype=jnp.int32)  # -> (2, 16)
 
 # Build a causal target mask: (1, 1, 16, 16).
 mask_values = jnp.ones((1, 1, 16, 16))  # -> (1, 1, 16, 16)
 tgt_mask = jnp.tril(mask_values)  # (1, 1, 16, 16)
-params = model.init(jax.random.PRNGKey(0), src_ids, tgt_ids, tgt_mask)  # inputs -> parameter tree
-logits = model.apply(params, src_ids, tgt_ids, tgt_mask)  # (2, 16), (2, 16), (1, 1, 16, 16) -> (2, 16, 37000)
+example_params = example_model.init(jax.random.PRNGKey(0), src_ids, tgt_ids, tgt_mask)  # inputs -> parameter tree
+example_logits = example_model.apply(example_params, src_ids, tgt_ids, tgt_mask)  # (2, 16), (2, 16), (1, 1, 16, 16) -> (2, 16, 37000)
+print("logits shape:", example_logits.shape)
 
+# %%
 # Train on a tiny copy-style token batch.
 model = Transformer(vocab_size=20, d_model=16, nhead=4, num_layers=1)
 src_ids = jnp.array([[1, 2, 3, 4], [4, 3, 2, 1]], dtype=jnp.int32)  # -> (2, 4)

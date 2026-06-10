@@ -2,42 +2,6 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-class GPT2Small(nn.Module):
-    def __init__(
-        self,
-        vocab_size,  # Number of token ids.
-        n_ctx=1024,  # Maximum context length.
-        n_embd=768  # Embedding width.
-    ):
-        super().__init__()
-
-        # Register embeddings, transformer blocks, final norm, and language-model head.
-        self.wte = nn.Embedding(vocab_size, n_embd)
-        self.wpe = nn.Embedding(n_ctx, n_embd)
-        self.drop = nn.Dropout(0.1)
-        self.blocks = nn.ModuleList([Block() for _ in range(12)])
-        self.ln_f = nn.LayerNorm(n_embd)
-        self.lm_head = nn.Linear(n_embd, vocab_size, bias=False)
-
-    def forward(self, input_ids, mask):
-        # Combine token and position embeddings: (batch, steps) -> (batch, steps, n_embd).
-        batch_size, step_count = input_ids.shape  # (batch, steps) -> scalar, scalar
-        positions = torch.arange(step_count, device=input_ids.device)  # -> (steps)
-        token_embeddings = self.wte(input_ids)  # (batch, steps) -> (batch, steps, n_embd)
-        position_embeddings = self.wpe(positions)  # (steps) -> (steps, n_embd)
-        position_embeddings = position_embeddings[None, :, :]  # (steps, n_embd) -> (1, steps, n_embd)
-        x = token_embeddings + position_embeddings  # (batch, steps, n_embd)
-        x = self.drop(x)  # (batch, steps, n_embd)
-
-        # Run the transformer block stack while preserving sequence shape.
-        for block in self.blocks:
-            x = block(x, mask)  # (batch, steps, n_embd)
-
-        # Normalize final states and project to vocabulary logits.
-        x = self.ln_f(x)  # (batch, steps, n_embd)
-        logits = self.lm_head(x)  # (batch, steps, n_embd) -> (batch, steps, vocab_size)
-        return logits  # (batch, steps, vocab_size)
-
 class CausalSelfAttention(nn.Module):
     def __init__(
         self,
@@ -108,3 +72,62 @@ class Block(nn.Module):
         mlp_out = self.mlp(mlp_input)  # (batch, steps, 768)
         x = x + mlp_out  # (batch, steps, 768)
         return x  # (batch, steps, 768)
+
+class GPT2Small(nn.Module):
+    def __init__(
+        self,
+        vocab_size,  # Number of token ids.
+        n_ctx=1024,  # Maximum context length.
+        n_embd=768  # Embedding width.
+    ):
+        super().__init__()
+
+        # Register embeddings, transformer blocks, final norm, and language-model head.
+        self.wte = nn.Embedding(vocab_size, n_embd)
+        self.wpe = nn.Embedding(n_ctx, n_embd)
+        self.drop = nn.Dropout(0.1)
+        self.blocks = nn.ModuleList([Block() for _ in range(12)])
+        self.ln_f = nn.LayerNorm(n_embd)
+        self.lm_head = nn.Linear(n_embd, vocab_size, bias=False)
+
+    def forward(self, input_ids, mask):
+        # Combine token and position embeddings: (batch, steps) -> (batch, steps, n_embd).
+        batch_size, step_count = input_ids.shape  # (batch, steps) -> scalar, scalar
+        positions = torch.arange(step_count, device=input_ids.device)  # -> (steps)
+        token_embeddings = self.wte(input_ids)  # (batch, steps) -> (batch, steps, n_embd)
+        position_embeddings = self.wpe(positions)  # (steps) -> (steps, n_embd)
+        position_embeddings = position_embeddings[None, :, :]  # (steps, n_embd) -> (1, steps, n_embd)
+        x = token_embeddings + position_embeddings  # (batch, steps, n_embd)
+        x = self.drop(x)  # (batch, steps, n_embd)
+
+        # Run the transformer block stack while preserving sequence shape.
+        for block in self.blocks:
+            x = block(x, mask)  # (batch, steps, n_embd)
+
+        # Normalize final states and project to vocabulary logits.
+        x = self.ln_f(x)  # (batch, steps, n_embd)
+        logits = self.lm_head(x)  # (batch, steps, n_embd) -> (batch, steps, vocab_size)
+        return logits  # (batch, steps, vocab_size)
+
+# Train on a tiny next-token prediction batch.
+model = GPT2Small(vocab_size=20)
+input_ids = torch.tensor([[1, 2, 3, 4], [4, 3, 2, 1]])  # -> (2, 4)
+train_targets = torch.tensor([[2, 3, 4, 5], [3, 2, 1, 0]])  # -> (2, 4)
+mask_values = torch.ones(4, 4)  # -> (4, 4)
+mask = torch.tril(mask_values)  # (4, 4)
+mask = mask.view(1, 1, 4, 4)  # (4, 4) -> (1, 1, 4, 4)
+criterion = nn.CrossEntropyLoss()
+optimizer = torch.optim.SGD(model.parameters(), lr=0.01)
+
+# Fit the model for a few steps on the tiny dataset.
+for step in range(3):
+    optimizer.zero_grad()
+    logits = model(input_ids, mask)  # (2, 4), (1, 1, 4, 4) -> (2, 4, 20)
+    flat_logits = logits.reshape(-1, logits.size(-1))  # (2, 4, 20) -> (8, 20)
+    flat_targets = train_targets.reshape(-1)  # (2, 4) -> (8)
+    loss = criterion(flat_logits, flat_targets)  # (8, 20), (8) -> scalar
+    loss.backward()
+    optimizer.step()
+
+# Keep the final scalar loss for inspection.
+final_loss = loss.item()  # scalar

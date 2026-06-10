@@ -562,7 +562,7 @@ const resnetVariants: ModelVariantSpec[] = resnetVariantDefinitions.map((variant
     stats: resnetVariantStats(variant),
     fileName: `${variant.id}.py`,
     jaxFileName: `${variant.id}_jax.py`,
-    selectedId: "layer2.0.conv1",
+    selectedId: "",
     nodes: makeResNetNodes(variant),
     code: sources.code,
     jaxCode: sources.jaxCode,
@@ -992,7 +992,8 @@ function makeGpt2Block(index: number, defaultExpanded = false): ArchNode {
     kind: "group",
     summary: "ln + attn + mlp",
     defaultExpanded,
-    codeLines: [89, 90, 91, 94, 95, 96, 97, 98, 99, 100, 101, 103, 105, 106, 107, 110, 111, 112, 113, 34, 35],
+    codeLines: [...lineRange(50, 74), 89, 104, 105],
+    jaxCodeLines: [...lineRange(54, 66), 87, 88],
     lazyChildren: () => [
       {
         id: `block.${index}.ln1`,
@@ -1000,7 +1001,8 @@ function makeGpt2Block(index: number, defaultExpanded = false): ArchNode {
         type: "LayerNorm",
         kind: "norm",
         badges: ["768"],
-        codeLines: [94, 105],
+        codeLines: [55, 66],
+        jaxCodeLines: [58],
       },
       {
         id: `block.${index}.attn`,
@@ -1008,7 +1010,8 @@ function makeGpt2Block(index: number, defaultExpanded = false): ArchNode {
         type: "CausalSelfAttention",
         kind: "attention",
         summary: "12 heads",
-        codeLines: [43, 44, 49, 52, 53, 54, 56, 57, 59, 60, 61, 62, 65, 66, 67, 68, 69, 72, 73, 74, 75, 76, 77, 78, 81, 82, 83, 84, 85, 86, 106],
+        codeLines: [...lineRange(5, 48), 56, 67],
+        jaxCodeLines: [...lineRange(5, 40), 59],
         lazyChildren: () => [
           {
             id: `block.${index}.attn.c_attn`,
@@ -1016,7 +1019,8 @@ function makeGpt2Block(index: number, defaultExpanded = false): ArchNode {
             type: "QKV Projection",
             kind: "attention",
             badges: ["768->2304"],
-            codeLines: [53, 59, 60],
+            codeLines: [15, 21, 22],
+            jaxCodeLines: [14, 15],
           },
           {
             id: `block.${index}.attn.heads`,
@@ -1024,7 +1028,8 @@ function makeGpt2Block(index: number, defaultExpanded = false): ArchNode {
             type: "Head grid",
             kind: "group",
             summary: "12 x dim 64",
-            codeLines: [61, 62, 65, 66, 67, 68, 69, 72, 73, 74, 75, 76, 77, 78, 81],
+            codeLines: [20, 23, ...lineRange(26, 31), ...lineRange(34, 40), 43],
+            jaxCodeLines: [12, 16, ...lineRange(19, 24), ...lineRange(27, 33), 36],
             lazyChildren: () =>
               Array.from({ length: 12 }, (_, headIndex) => ({
                 id: `block.${index}.attn.head.${headIndex}`,
@@ -1032,7 +1037,8 @@ function makeGpt2Block(index: number, defaultExpanded = false): ArchNode {
                 type: "AttentionHead",
                 kind: "head" as NodeKind,
                 badges: ["q,k,v", "dim 64"],
-                codeLines: [61, 62, 65, 66, 67, 68, 69, 72, 73, 74, 75, 76, 77, 78, 81],
+                codeLines: [20, 23, ...lineRange(26, 31), ...lineRange(34, 40), 43],
+                jaxCodeLines: [12, 16, ...lineRange(19, 24), ...lineRange(27, 33), 36],
               })),
           },
           {
@@ -1041,7 +1047,8 @@ function makeGpt2Block(index: number, defaultExpanded = false): ArchNode {
             type: "Concat heads",
             kind: "attention",
             badges: ["12 x 64 -> 768"],
-            codeLines: [82, 83, 84],
+            codeLines: [...lineRange(43, 47)],
+            jaxCodeLines: [...lineRange(36, 39)],
           },
           {
             id: `block.${index}.attn.c_proj`,
@@ -1049,7 +1056,8 @@ function makeGpt2Block(index: number, defaultExpanded = false): ArchNode {
             type: "Output Projection",
             kind: "attention",
             badges: ["768->768"],
-            codeLines: [54, 85, 86],
+            codeLines: [16, 47],
+            jaxCodeLines: [39],
           },
         ],
       },
@@ -1058,14 +1066,16 @@ function makeGpt2Block(index: number, defaultExpanded = false): ArchNode {
         label: "resid_1",
         type: "Add",
         kind: "residual",
-        codeLines: [107],
+        codeLines: [68],
+        jaxCodeLines: [60],
       },
       {
         id: `block.${index}.ln2`,
         label: "ln_2",
         type: "LayerNorm",
         kind: "norm",
-        codeLines: [96, 110],
+        codeLines: [57, 71],
+        jaxCodeLines: [63],
       },
       {
         id: `block.${index}.mlp`,
@@ -1073,14 +1083,16 @@ function makeGpt2Block(index: number, defaultExpanded = false): ArchNode {
         type: "FeedForward",
         kind: "mlp",
         summary: "3072 hidden",
-        codeLines: [97, 98, 99, 100, 101, 111],
+        codeLines: [...lineRange(58, 62), 72],
+        jaxCodeLines: [...lineRange(42, 52), 64],
       },
       {
         id: `block.${index}.resid2`,
         label: "resid_2",
         type: "Add",
         kind: "residual",
-        codeLines: [112, 113],
+        codeLines: [73],
+        jaxCodeLines: [65],
       },
     ],
   };
@@ -1282,7 +1294,7 @@ const models: ModelSpec[] = [
       pdfUrl: paperPdfUrl("mlp"),
       focus: ["backpropagation", "hidden representations", "multilayer perceptrons"],
     },
-    selectedId: "hidden.1.dense",
+    selectedId: "",
     nodes: [
       {
         id: "input",
@@ -1385,7 +1397,7 @@ const models: ModelSpec[] = [
       pdfUrl: paperPdfUrl("rnn"),
       focus: ["recurrent hidden state", "dynamic memory", "sequence structure"],
     },
-    selectedId: "step.0.hidden_to_hidden",
+    selectedId: "",
     nodes: [
       {
         id: "sequence",
@@ -1570,7 +1582,7 @@ const models: ModelSpec[] = [
       pdfUrl: paperPdfUrl("seq2seq"),
       focus: ["encoder-decoder LSTMs", "fixed-length context", "sequence transduction"],
     },
-    selectedId: "decoder.step.0.projection",
+    selectedId: "",
     nodes: [
       {
         id: "source.input",
@@ -1751,7 +1763,7 @@ const models: ModelSpec[] = [
       pdfUrl: paperPdfUrl("lstm"),
       focus: ["cell state memory", "input/forget/output gates", "long-range dependencies"],
     },
-    selectedId: "step.0.forget_gate",
+    selectedId: "",
     nodes: [
       {
         id: "sequence",
@@ -1932,7 +1944,7 @@ const models: ModelSpec[] = [
       pdfUrl: paperPdfUrl("lenet5"),
       focus: ["convolutional feature maps", "subsampling", "document recognition"],
     },
-    selectedId: "features.conv1",
+    selectedId: "",
     nodes: [
       {
         id: "input",
@@ -2072,7 +2084,7 @@ const models: ModelSpec[] = [
       pdfUrl: paperPdfUrl("alexnet"),
       focus: ["large-scale CNNs", "ReLU activations", "GPU training"],
     },
-    selectedId: "features.conv1",
+    selectedId: "",
     nodes: [
       {
         id: "input",
@@ -2304,7 +2316,7 @@ const models: ModelSpec[] = [
       pdfUrl: paperPdfUrl("googlenet"),
       focus: ["Inception modules", "parallel convolutions", "channel concatenation"],
     },
-    selectedId: "inception3a.concat",
+    selectedId: "",
     nodes: [
       {
         id: "input",
@@ -2598,7 +2610,7 @@ const models: ModelSpec[] = [
       pdfUrl: paperPdfUrl("unet"),
       focus: ["encoder-decoder segmentation", "skip concatenations", "biomedical images"],
     },
-    selectedId: "expansive.up4.skip",
+    selectedId: "",
     nodes: [
       {
         id: "input",
@@ -2829,7 +2841,7 @@ const models: ModelSpec[] = [
       pdfUrl: paperPdfUrl("transformer"),
       focus: ["scaled dot-product attention", "encoder-decoder stacks", "positional encoding"],
     },
-    selectedId: "decoder.0.cross_attn",
+    selectedId: "",
     nodes: [
       {
         id: "src.input",
@@ -2936,7 +2948,7 @@ const models: ModelSpec[] = [
       pdfUrl: paperPdfUrl("bert"),
       focus: ["masked language modeling", "bidirectional encoders", "fine-tuning"],
     },
-    selectedId: "encoder.layer.3.self_attn",
+    selectedId: "",
     nodes: [
       {
         id: "input_ids",
@@ -3055,7 +3067,7 @@ const models: ModelSpec[] = [
       pdfUrl: paperPdfUrl("gpt2"),
       focus: ["decoder-only transformers", "causal language modeling", "zero-shot transfer"],
     },
-    selectedId: "block.3.attn.head.2",
+    selectedId: "",
     nodes: [
       {
         id: "wte",
@@ -3063,7 +3075,8 @@ const models: ModelSpec[] = [
         type: "TokenEmbedding",
         kind: "embedding",
         badges: ["vocab", "768"],
-        codeLines: [16],
+        codeLines: [86, 97],
+        jaxCodeLines: [80],
       },
       {
         id: "wpe",
@@ -3071,14 +3084,16 @@ const models: ModelSpec[] = [
         type: "PositionEmbedding",
         kind: "embedding",
         badges: ["1024", "768"],
-        codeLines: [17],
+        codeLines: [87, 96, 98, 99],
+        jaxCodeLines: [79, 81, 82],
       },
       {
         id: "drop",
         label: "drop",
         type: "Dropout",
         kind: "dropout",
-        codeLines: [18],
+        codeLines: [88, 101],
+        jaxCodeLines: [84],
       },
       ...Array.from({ length: 12 }, (_, index) => makeGpt2Block(index, index === 3)),
     ],
@@ -3103,7 +3118,7 @@ const models: ModelSpec[] = [
       pdfUrl: paperPdfUrl("vit"),
       focus: ["image patches as tokens", "class token", "Transformer encoders for vision"],
     },
-    selectedId: "encoder.block.3.attn",
+    selectedId: "",
     nodes: [
       {
         id: "input",
@@ -3217,7 +3232,7 @@ const models: ModelSpec[] = [
       pdfUrl: paperPdfUrl("resnet18"),
       focus: ["identity shortcuts", "residual blocks", "very deep CNNs"],
     },
-    selectedId: "layer2.0.conv1",
+    selectedId: "",
     nodes: [
       {
         id: "input",
@@ -3755,7 +3770,7 @@ const models: ModelSpec[] = [
       pdfUrl: paperPdfUrl("widenet"),
       focus: ["widened residual blocks", "feature reuse", "CIFAR image classification"],
     },
-    selectedId: "layer2.0.conv1",
+    selectedId: "",
     nodes: [
       {
         id: "input",
@@ -3980,7 +3995,7 @@ const models: ModelSpec[] = [
       pdfUrl: paperPdfUrl("densenet"),
       focus: ["dense connectivity", "feature reuse", "vanishing-gradient mitigation"],
     },
-    selectedId: "denseblock2.layer1.concat",
+    selectedId: "",
     nodes: [
       {
         id: "input",
@@ -4248,7 +4263,7 @@ const models: ModelSpec[] = [
       pdfUrl: paperPdfUrl("efficientnet"),
       focus: ["compound scaling", "mobile inverted bottlenecks", "squeeze-and-excitation"],
     },
-    selectedId: "stage2.mbconv0.depthwise",
+    selectedId: "",
     nodes: [
       {
         id: "input",

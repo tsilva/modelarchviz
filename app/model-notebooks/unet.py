@@ -11,6 +11,7 @@
 #     language: python
 #     name: python3
 # ---
+
 # %%
 import torch
 import torch.nn as nn
@@ -37,10 +38,10 @@ class DoubleConv(nn.Module):
 
 # %% [notebook-only]
 # Create and run one double convolution: (2, 1, 32, 32) -> (2, 8, 32, 32).
-block = DoubleConv(in_channels=1, out_channels=8)
+example_block = DoubleConv(in_channels=1, out_channels=8)
 block_input = torch.randn(2, 1, 32, 32)  # -> (2, 1, 32, 32)
-block_output = block(block_input)  # (2, 1, 32, 32) -> (2, 8, 32, 32)
-
+example_block_output = example_block(block_input)  # (2, 1, 32, 32) -> (2, 8, 32, 32)
+print("block_output shape:", example_block_output.shape)
 
 # %%
 class UNet(nn.Module):
@@ -105,11 +106,12 @@ class UNet(nn.Module):
 
 # %% [notebook-only]
 # Create and run a sample image batch: (2, 1, 572, 572) -> (2, 2, 572, 572).
-model = UNet(num_classes=2)
-test_input = torch.randn(2, 1, 572, 572)  # -> (2, 1, 572, 572)
-logits = model(test_input)  # (2, 1, 572, 572) -> (2, 2, 572, 572)
+example_model = UNet(num_classes=2)
+example_test_input = torch.randn(2, 1, 572, 572)  # -> (2, 1, 572, 572)
+example_logits = example_model(example_test_input)  # (2, 1, 572, 572) -> (2, 2, 572, 572)
+print("logits shape:", example_logits.shape)
 
-
+# %%
 # Train on two synthetic segmentation masks.
 model = UNet(num_classes=2)
 train_images = torch.zeros(2, 1, 64, 64)  # -> (2, 1, 64, 64)

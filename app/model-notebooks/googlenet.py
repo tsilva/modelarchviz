@@ -11,6 +11,7 @@
 #     language: python
 #     name: python3
 # ---
+
 # %%
 import torch
 import torch.nn as nn
@@ -69,10 +70,10 @@ class InceptionBlock(nn.Module):
 
 # %% [notebook-only]
 # Create and run one Inception block: (2, 8, 16, 16) -> (2, 16, 16, 16).
-block = InceptionBlock(8, 4, 4, 4, 4, 4, 4)
+example_block = InceptionBlock(8, 4, 4, 4, 4, 4, 4)
 block_input = torch.randn(2, 8, 16, 16)  # -> (2, 8, 16, 16)
-block_output = block(block_input)  # (2, 8, 16, 16) -> (2, 16, 16, 16)
-
+example_block_output = example_block(block_input)  # (2, 8, 16, 16) -> (2, 16, 16, 16)
+print("block_output shape:", example_block_output.shape)
 
 # %%
 class GoogLeNet(nn.Module):
@@ -137,11 +138,12 @@ class GoogLeNet(nn.Module):
 
 # %% [notebook-only]
 # Create and run a sample image batch: (2, 3, 224, 224) -> (2, 1000).
-model = GoogLeNet(num_classes=1000)
-test_input = torch.randn(2, 3, 224, 224)  # -> (2, 3, 224, 224)
-logits = model(test_input)  # (2, 3, 224, 224) -> (2, 1000)
+example_model = GoogLeNet(num_classes=1000)
+example_test_input = torch.randn(2, 3, 224, 224)  # -> (2, 3, 224, 224)
+example_logits = example_model(example_test_input)  # (2, 3, 224, 224) -> (2, 1000)
+print("logits shape:", example_logits.shape)
 
-
+# %%
 # Train on a tiny synthetic image batch.
 model = GoogLeNet(num_classes=2)
 train_images = torch.zeros(2, 3, 224, 224)  # -> (2, 3, 224, 224)

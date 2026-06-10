@@ -11,6 +11,7 @@
 #     language: python
 #     name: python3
 # ---
+
 # %%
 import jax
 import jax.numpy as jnp
@@ -33,10 +34,19 @@ class DoubleConv(nn.Module):
 
 # %% [notebook-only]
 # Create and run one double convolution: (2, 32, 32, 1) -> (2, 32, 32, 8).
-block = DoubleConv(out_channels=8)
+example_block = DoubleConv(out_channels=8)
 block_input = jnp.ones((2, 32, 32, 1))  # -> (2, 32, 32, 1)
-params = block.init(jax.random.PRNGKey(0), block_input)
-block_output = block.apply(params, block_input)  # (2, 32, 32, 1) -> (2, 32, 32, 8)
+example_params = example_block.init(jax.random.PRNGKey(0), block_input)
+example_block_output = example_block.apply(example_params, block_input)  # (2, 32, 32, 1) -> (2, 32, 32, 8)
+print("block_output shape:", example_block_output.shape)
+
+
+# %%
+def resize_like(x, skip):
+    # Resize decoder features to the skip tensor spatial size.
+    resize_shape = (x.shape[0], skip.shape[1], skip.shape[2], x.shape[-1])  # (batch, height, width, channels)
+    resized = jax.image.resize(x, resize_shape, method='nearest')  # (batch, in_h, in_w, channels) -> (batch, skip_h, skip_w, channels)
+    return resized
 
 
 # %%
@@ -77,21 +87,15 @@ class UNet(nn.Module):
         return logits
 
 
-def resize_like(x, skip):
-    # Resize decoder features to the skip tensor spatial size.
-    resize_shape = (x.shape[0], skip.shape[1], skip.shape[2], x.shape[-1])  # (batch, height, width, channels)
-    resized = jax.image.resize(x, resize_shape, method='nearest')  # (batch, in_h, in_w, channels) -> (batch, skip_h, skip_w, channels)
-    return resized
-
-
 # %% [notebook-only]
 # Create and run a sample image batch: (2, 572, 572, 1) -> (2, 572, 572, 2).
-model = UNet(num_classes=2)
-test_input = jnp.ones((2, 572, 572, 1))  # -> (2, 572, 572, 1)
-params = model.init(jax.random.PRNGKey(0), test_input)
-logits = model.apply(params, test_input)  # (2, 572, 572, 1) -> (2, 572, 572, 2)
+example_model = UNet(num_classes=2)
+example_test_input = jnp.ones((2, 572, 572, 1))  # -> (2, 572, 572, 1)
+example_params = example_model.init(jax.random.PRNGKey(0), example_test_input)
+example_logits = example_model.apply(example_params, example_test_input)  # (2, 572, 572, 1) -> (2, 572, 572, 2)
+print("logits shape:", example_logits.shape)
 
-
+# %%
 # Train on two synthetic segmentation masks.
 model = UNet(num_classes=2)
 train_images = jnp.zeros((2, 64, 64, 1))  # -> (2, 64, 64, 1)

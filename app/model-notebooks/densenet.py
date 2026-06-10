@@ -11,6 +11,7 @@
 #     language: python
 #     name: python3
 # ---
+
 # %%
 import torch
 import torch.nn as nn
@@ -69,10 +70,10 @@ class DenseLayer(nn.Module):
 
 
 # %% [notebook-only]
-dense_layer = DenseLayer(in_channels=6, growth_rate=4)
-dense_input = torch.randn(2, 6, 8, 8)  # -> (2, 6, 8, 8)
-dense_output = dense_layer(dense_input)  # (2, 6, 8, 8) -> (2, 10, 8, 8)
-print(dense_output.shape)
+example_dense_layer = DenseLayer(in_channels=6, growth_rate=4)
+example_dense_input = torch.randn(2, 6, 8, 8)  # -> (2, 6, 8, 8)
+example_dense_output = example_dense_layer(example_dense_input)  # (2, 6, 8, 8) -> (2, 10, 8, 8)
+print(example_dense_output.shape)
 
 
 # %%
@@ -111,8 +112,8 @@ class DenseBlock(nn.Module):
 # %% [notebook-only]
 dense_block = DenseBlock(layer_count=3, in_channels=6, growth_rate=4)
 block_input = torch.randn(2, 6, 8, 8)  # -> (2, 6, 8, 8)
-block_output = dense_block(block_input)  # (2, 6, 8, 8) -> (2, 18, 8, 8)
-print(block_output.shape)
+example_block_output = dense_block(block_input)  # (2, 6, 8, 8) -> (2, 18, 8, 8)
+print(example_block_output.shape)
 
 
 # %%
@@ -145,10 +146,10 @@ class Transition(nn.Module):
 
 
 # %% [notebook-only]
-transition = Transition(in_channels=18, out_channels=9)
+example_transition = Transition(in_channels=18, out_channels=9)
 transition_input = torch.randn(2, 18, 8, 8)  # -> (2, 18, 8, 8)
-transition_output = transition(transition_input)  # (2, 18, 8, 8) -> (2, 9, 4, 4)
-print(transition_output.shape)
+example_transition_output = example_transition(transition_input)  # (2, 18, 8, 8) -> (2, 9, 4, 4)
+print(example_transition_output.shape)
 
 
 # %%
@@ -219,18 +220,18 @@ class DenseNet(nn.Module):
 
 # %% [notebook-only]
 # Create and run a compact image batch: (2, 3, 64, 64) -> (2, 10).
-model = DenseNet(
+example_model = DenseNet(
     growth_rate=4,
     block_config=(1, 1, 1, 1),
     num_init_features=8,
     num_classes=10,
 )
-test_input = torch.randn(2, 3, 64, 64)  # -> (2, 3, 64, 64)
-logits = model(test_input)  # (2, 3, 64, 64) -> (2, 10)
-print(logits.shape)
+example_test_input = torch.randn(2, 3, 64, 64)  # -> (2, 3, 64, 64)
+example_logits = example_model(example_test_input)  # (2, 3, 64, 64) -> (2, 10)
+print(example_logits.shape)
 
 
-# %% [notebook-only]
+# %%
 # Train on a tiny synthetic image batch.
 model = DenseNet(
     growth_rate=4,

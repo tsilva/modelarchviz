@@ -11,6 +11,7 @@
 #     language: python
 #     name: python3
 # ---
+
 # %%
 import jax
 import jax.numpy as jnp
@@ -74,7 +75,7 @@ example_params = example_cell.init(jax.random.PRNGKey(0), example_input, example
 example_next_state = example_cell.apply(example_params, example_input, example_previous_state)
 example_hidden = example_next_state[0]  # tuple -> (2, 64)
 example_cell_state = example_next_state[1]  # tuple -> (2, 64)
-print("next hidden shape:", example_hidden.shape, "next cell shape:", example_cell_state.shape)
+print("next hidden shape:", example_hidden.shape, "next example_cell shape:", example_cell_state.shape)
 
 
 # %%
@@ -117,7 +118,7 @@ example_params = example_model.init(jax.random.PRNGKey(0), example_sequence)
 example_outputs = example_model.apply(example_params, example_sequence)
 example_logits = example_outputs[0]  # (2, 10)
 example_states = example_outputs[1]  # (2, 8, 64)
-print("logits shape:", example_logits.shape, "states shape:", example_states.shape)
+print("example_logits shape:", example_logits.shape, "example_states shape:", example_states.shape)
 
 
 # %%

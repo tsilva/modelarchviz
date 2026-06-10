@@ -11,6 +11,7 @@
 #     language: python
 #     name: python3
 # ---
+
 # %%
 import jax
 import jax.numpy as jnp
@@ -64,17 +65,17 @@ class LSTMCell(nn.Module):
 
 # %% [notebook-only]
 # Create and run one LSTM cell step: (2, 128), two (2, 256) states -> two (2, 256) states.
-cell = LSTMCell(hidden_size=256)
-cell_input = jnp.ones((2, 128))  # -> (2, 128)
-previous_state = (
+example_cell = LSTMCell(hidden_size=256)
+example_cell_input = jnp.ones((2, 128))  # -> (2, 128)
+example_previous_state = (
     jnp.zeros((2, 256)),
     jnp.zeros((2, 256)),
 )
-cell_params = cell.init(jax.random.PRNGKey(0), cell_input, previous_state)
-next_state = cell.apply(cell_params, cell_input, previous_state)
-next_h = next_state[0]  # (2, 256)
-next_c = next_state[1]  # (2, 256)
-
+cell_params = example_cell.init(jax.random.PRNGKey(0), example_cell_input, example_previous_state)
+example_next_state = example_cell.apply(cell_params, example_cell_input, example_previous_state)
+next_h = example_next_state[0]  # (2, 256)
+next_c = example_next_state[1]  # (2, 256)
+print("next_state shape:", example_next_state.shape)
 
 # %%
 class Seq2SeqEncoder(nn.Module):
@@ -121,7 +122,7 @@ encoder_params = encoder.init(jax.random.PRNGKey(1), source_ids)
 encoder_outputs = encoder.apply(encoder_params, source_ids)
 context = encoder_outputs[0]
 encoder_trace = encoder_outputs[1]  # (2, 7, 256)
-
+print("encoder_trace shape:", encoder_trace.shape)
 
 # %%
 class Seq2SeqDecoder(nn.Module):
@@ -165,7 +166,7 @@ decoder_params = decoder.init(jax.random.PRNGKey(2), decoder_input_ids, context)
 decoder_outputs = decoder.apply(decoder_params, decoder_input_ids, context)
 decoder_logits = decoder_outputs[0]  # (2, 6, 32000)
 decoder_trace = decoder_outputs[1]  # (2, 6, 256)
-
+print("decoder_trace shape:", decoder_trace.shape)
 
 # %%
 class Seq2Seq(nn.Module):
@@ -203,17 +204,17 @@ class Seq2Seq(nn.Module):
 
 # %% [notebook-only]
 # Create and run a toy source-to-target batch.
-model = Seq2Seq(source_vocab_size=32000, target_vocab_size=32000)
+example_model = Seq2Seq(source_vocab_size=32000, target_vocab_size=32000)
 source_ids = jnp.ones((2, 7), dtype=jnp.int32)  # -> (2, 7)
 decoder_input_ids = jnp.ones((2, 6), dtype=jnp.int32)  # -> (2, 6)
-params = model.init(jax.random.PRNGKey(3), source_ids, decoder_input_ids)
-outputs = model.apply(params, source_ids, decoder_input_ids)
-logits = outputs[0]  # (2, 6, 32000)
-encoder_trace = outputs[1]  # (2, 7, 256)
-decoder_trace = outputs[2]  # (2, 6, 256)
+example_params = example_model.init(jax.random.PRNGKey(3), source_ids, decoder_input_ids)
+example_outputs = example_model.apply(example_params, source_ids, decoder_input_ids)
+example_logits = example_outputs[0]  # (2, 6, 32000)
+encoder_trace = example_outputs[1]  # (2, 7, 256)
+decoder_trace = example_outputs[2]  # (2, 6, 256)
+print("logits shape:", example_logits.shape)
 
-
-# %% [notebook-only]
+# %%
 # Train on two tiny symbolic transductions with teacher forcing.
 model = Seq2Seq(source_vocab_size=12, target_vocab_size=12, embedding_size=16, hidden_size=32)
 source_ids = jnp.array(

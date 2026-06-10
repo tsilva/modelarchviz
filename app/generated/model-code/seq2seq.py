@@ -164,3 +164,40 @@ class Seq2Seq(nn.Module):
         decoder_trace = decoder_outputs[1]  # (batch, target_steps, hidden_size)
         outputs = (logits, encoder_trace, decoder_trace)
         return outputs
+
+# Train on two tiny symbolic transductions with teacher forcing.
+model = Seq2Seq(source_vocab_size=12, target_vocab_size=12, embedding_size=16, hidden_size=32)
+source_ids = torch.tensor(
+    [
+        [3, 4, 5, 0],
+        [6, 7, 8, 0],
+    ]
+)  # -> (2, 4)
+decoder_input_ids = torch.tensor(
+    [
+        [1, 5, 4],
+        [1, 8, 7],
+    ]
+)  # -> (2, 3)
+target_ids = torch.tensor(
+    [
+        [5, 4, 2],
+        [8, 7, 2],
+    ]
+)  # -> (2, 3)
+criterion = nn.CrossEntropyLoss()
+optimizer = torch.optim.SGD(model.parameters(), lr=0.1)
+
+# Fit the model for a few steps on the tiny sequence pairs.
+for step in range(3):
+    optimizer.zero_grad()
+    outputs = model(source_ids, decoder_input_ids)
+    logits = outputs[0]  # (2, 3, 12)
+    flat_logits = logits.reshape(-1, logits.size(-1))  # (2, 3, 12) -> (6, 12)
+    flat_targets = target_ids.reshape(-1)  # (2, 3) -> (6)
+    loss = criterion(flat_logits, flat_targets)
+    loss.backward()
+    optimizer.step()
+
+# Keep the final scalar loss for inspection.
+final_loss = loss.item()  # scalar

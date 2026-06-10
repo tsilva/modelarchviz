@@ -11,6 +11,7 @@
 #     language: python
 #     name: python3
 # ---
+
 # %%
 import torch
 import torch.nn as nn
@@ -53,11 +54,12 @@ class LeNet5(nn.Module):
 
 # %% [notebook-only]
 # Create and run a sample image batch: (2, 1, 32, 32) -> (2, 10).
-model = LeNet5()
-test_input = torch.randn(2, 1, 32, 32)  # -> (2, 1, 32, 32)
-logits = model(test_input)  # (2, 1, 32, 32) -> (2, 10)
+example_model = LeNet5()
+example_test_input = torch.randn(2, 1, 32, 32)  # -> (2, 1, 32, 32)
+example_logits = example_model(example_test_input)  # (2, 1, 32, 32) -> (2, 10)
+print("logits shape:", example_logits.shape)
 
-
+# %%
 # Train on a tiny synthetic image batch.
 model = LeNet5()
 train_images = torch.zeros(2, 1, 32, 32)  # -> (2, 1, 32, 32)

@@ -11,6 +11,7 @@
 #     language: python
 #     name: python3
 # ---
+
 # %%
 import torch
 import torch.nn as nn
@@ -51,10 +52,10 @@ class BertEmbeddings(nn.Module):
 # %% [notebook-only]
 # Create and run the embedding block: (2, 4) -> (2, 4, 12).
 embeddings = BertEmbeddings(vocab_size=20, hidden_size=12, max_position=8)
-input_ids = torch.tensor([[1, 2, 3, 4], [4, 3, 2, 1]])  # -> (2, 4)
-token_type_ids = torch.zeros((2, 4), dtype=torch.long)  # -> (2, 4)
-embedded = embeddings(input_ids, token_type_ids)  # (2, 4), (2, 4) -> (2, 4, 12)
-
+example_input_ids = torch.tensor([[1, 2, 3, 4], [4, 3, 2, 1]])  # -> (2, 4)
+example_token_type_ids = torch.zeros((2, 4), dtype=torch.long)  # -> (2, 4)
+example_embedded = embeddings(example_input_ids, example_token_type_ids)  # (2, 4), (2, 4) -> (2, 4, 12)
+print("embedded shape:", example_embedded.shape)
 
 # %%
 class BertSelfAttention(nn.Module):
@@ -110,11 +111,11 @@ class BertSelfAttention(nn.Module):
 
 # %% [notebook-only]
 # Create and run one BERT self-attention block: (2, 4, 12) -> (2, 4, 12).
-attention = BertSelfAttention(hidden_size=12, num_heads=3)
-hidden_states = torch.randn(2, 4, 12)  # -> (2, 4, 12)
+example_attention = BertSelfAttention(hidden_size=12, num_heads=3)
+example_hidden_states = torch.randn(2, 4, 12)  # -> (2, 4, 12)
 attention_mask = torch.zeros((2, 4), dtype=torch.bool)  # -> (2, 4)
-attended = attention(hidden_states, attention_mask)  # (2, 4, 12), (2, 4) -> (2, 4, 12)
-
+example_attended = example_attention(example_hidden_states, attention_mask)  # (2, 4, 12), (2, 4) -> (2, 4, 12)
+print("attended shape:", example_attended.shape)
 
 # %%
 class BertLayer(nn.Module):
@@ -155,10 +156,10 @@ class BertLayer(nn.Module):
 # %% [notebook-only]
 # Create and run one encoder layer: (2, 4, 12) -> (2, 4, 12).
 layer = BertLayer(hidden_size=12, num_heads=3, intermediate_size=24)
-hidden_states = torch.randn(2, 4, 12)  # -> (2, 4, 12)
+example_hidden_states = torch.randn(2, 4, 12)  # -> (2, 4, 12)
 attention_mask = torch.zeros((2, 4), dtype=torch.bool)  # -> (2, 4)
-layer_output = layer(hidden_states, attention_mask)  # (2, 4, 12), (2, 4) -> (2, 4, 12)
-
+example_layer_output = layer(example_hidden_states, attention_mask)  # (2, 4, 12), (2, 4) -> (2, 4, 12)
+print("layer_output shape:", example_layer_output.shape)
 
 # %%
 class BERTBase(nn.Module):
@@ -193,15 +194,16 @@ class BERTBase(nn.Module):
 
 # %% [notebook-only]
 # Create and run a sample token batch.
-model = BERTBase(vocab_size=30522)
-input_ids = torch.randint(0, 30522, (2, 16))  # -> (2, 16)
-token_type_ids = torch.zeros((2, 16), dtype=torch.long)  # -> (2, 16)
+example_model = BERTBase(vocab_size=30522)
+example_input_ids = torch.randint(0, 30522, (2, 16))  # -> (2, 16)
+example_token_type_ids = torch.zeros((2, 16), dtype=torch.long)  # -> (2, 16)
 attention_mask = torch.zeros((2, 16), dtype=torch.bool)  # -> (2, 16)
-outputs = model(input_ids, token_type_ids, attention_mask)  # (2, 16), (2, 16), (2, 16) -> tuple
-mlm_logits = outputs[0]  # tuple -> (2, 16, 30522)
-pooled = outputs[1]  # tuple -> (2, 768)
+example_outputs = example_model(example_input_ids, example_token_type_ids, attention_mask)  # (2, 16), (2, 16), (2, 16) -> tuple
+mlm_logits = example_outputs[0]  # tuple -> (2, 16, 30522)
+pooled = example_outputs[1]  # tuple -> (2, 768)
+print("mlm logits shape:", mlm_logits.shape, "pooled shape:", pooled.shape)
 
-
+# %%
 # Train on a tiny masked-token prediction batch.
 model = BERTBase(vocab_size=20, hidden_size=12, num_layers=1)
 input_ids = torch.tensor([[1, 2, 3, 4], [4, 3, 2, 1]])  # -> (2, 4)

@@ -11,6 +11,7 @@
 #     language: python
 #     name: python3
 # ---
+
 # %%
 import jax
 import jax.numpy as jnp
@@ -70,11 +71,11 @@ class WideBasicBlock(nn.Module):
 
 # %% [notebook-only]
 # Create and run one widened residual block: (2, 32, 32, 16) -> (2, 16, 16, 32).
-block = WideBasicBlock(out_channels=32, stride=2, dropout_rate=0.0)
+example_block = WideBasicBlock(out_channels=32, stride=2, dropout_rate=0.0)
 block_input = jnp.ones((2, 32, 32, 16))  # -> (2, 32, 32, 16)
-variables = block.init(jax.random.PRNGKey(0), block_input, train=False)
-block_output = block.apply(variables, block_input, train=False)  # (2, 32, 32, 16) -> (2, 16, 16, 32)
-
+variables = example_block.init(jax.random.PRNGKey(0), block_input, train=False)
+example_block_output = example_block.apply(variables, block_input, train=False)  # (2, 32, 32, 16) -> (2, 16, 16, 32)
+print("block_output shape:", example_block_output.shape)
 
 # %%
 class WideNet(nn.Module):
@@ -156,12 +157,13 @@ class WideNet(nn.Module):
 
 # %% [notebook-only]
 # Create and run a sample CIFAR-size image batch: (2, 32, 32, 3) -> (2, 10).
-model = WideNet(depth=28, widen_factor=10, dropout_rate=0.0, num_classes=10)
-test_input = jnp.ones((2, 32, 32, 3))  # -> (2, 32, 32, 3)
-params = model.init(jax.random.PRNGKey(0), test_input, train=False)
-logits = model.apply(params, test_input, train=False)  # (2, 32, 32, 3) -> (2, 10)
+example_model = WideNet(depth=28, widen_factor=10, dropout_rate=0.0, num_classes=10)
+example_test_input = jnp.ones((2, 32, 32, 3))  # -> (2, 32, 32, 3)
+example_params = example_model.init(jax.random.PRNGKey(0), example_test_input, train=False)
+example_logits = example_model.apply(example_params, example_test_input, train=False)  # (2, 32, 32, 3) -> (2, 10)
+print("logits shape:", example_logits.shape)
 
-
+# %%
 # Train on a tiny synthetic CIFAR-size batch.
 model = WideNet(depth=10, widen_factor=1, dropout_rate=0.0, num_classes=2)
 train_images = jnp.zeros((2, 32, 32, 3))  # -> (2, 32, 32, 3)

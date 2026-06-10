@@ -11,6 +11,7 @@
 #     language: python
 #     name: python3
 # ---
+
 # %%
 import torch
 import torch.nn as nn
@@ -62,11 +63,11 @@ class GRUCell(nn.Module):
 
 # %% [notebook-only]
 # Create and run one GRU cell step: (2, 32), (2, 64) -> (2, 64).
-cell = GRUCell(input_size=32, hidden_size=64)
-cell_input = torch.randn(2, 32)  # -> (2, 32)
-previous_state = torch.zeros(2, 64)  # -> (2, 64)
-next_state = cell(cell_input, previous_state)  # (2, 32), (2, 64) -> (2, 64)
-print("next_state shape:", next_state.shape)
+example_cell = GRUCell(input_size=32, hidden_size=64)
+example_cell_input = torch.randn(2, 32)  # -> (2, 32)
+example_previous_state = torch.zeros(2, 64)  # -> (2, 64)
+example_next_state = example_cell(example_cell_input, example_previous_state)  # (2, 32), (2, 64) -> (2, 64)
+print("example_next_state shape:", example_next_state.shape)
 
 
 # %%
@@ -108,11 +109,11 @@ class GRUSequence(nn.Module):
 # %% [notebook-only]
 # Create and run a sample sequence: (2, 8, 32) -> logits and states.
 example_model = GRUSequence(input_size=32, hidden_size=64, output_size=10)
-sequence = torch.randn(2, 8, 32)  # -> (2, 8, 32)
-outputs = example_model(sequence)
-logits = outputs[0]  # (2, 10)
-states = outputs[1]  # (2, 8, 64)
-print("logits shape:", logits.shape, "states shape:", states.shape)
+example_sequence = torch.randn(2, 8, 32)  # -> (2, 8, 32)
+example_outputs = example_model(example_sequence)
+example_logits = example_outputs[0]  # (2, 10)
+example_states = example_outputs[1]  # (2, 8, 64)
+print("example_logits shape:", example_logits.shape, "example_states shape:", example_states.shape)
 
 
 # %%

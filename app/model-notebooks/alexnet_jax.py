@@ -11,10 +11,30 @@
 #     language: python
 #     name: python3
 # ---
+
 # %%
 import jax
 import jax.numpy as jnp
 from flax import linen as nn
+
+
+# %%
+def local_response_norm(x, size=5, alpha=1e-4, beta=0.75, k=2.0):
+    # Build the local channel window used for response normalization.
+    half = size // 2
+    squared = jnp.square(x)  # (batch, height, width, channels)
+    padded = jnp.pad(squared, ((0, 0), (0, 0), (0, 0), (half, half)))  # (batch, height, width, channels) -> (batch, height, width, channels + 2 * half)
+
+    # Accumulate neighboring channel energy and normalize activations.
+    scale = k
+    for offset in range(size):
+        channel_end = offset + x.shape[-1]  # (batch, height, width, channels) -> scalar
+        window = padded[..., offset:channel_end]  # (batch, height, width, channels + 2 * half) -> (batch, height, width, channels)
+        scale_step = (alpha / size) * window  # (batch, height, width, channels)
+        scale = scale + scale_step  # (batch, height, width, channels)
+    denominator = jnp.power(scale, beta)  # (batch, height, width, channels)
+    normalized = x / denominator  # (batch, height, width, channels)
+    return normalized
 
 
 # %%
@@ -58,32 +78,15 @@ class AlexNet(nn.Module):
         return logits
 
 
-def local_response_norm(x, size=5, alpha=1e-4, beta=0.75, k=2.0):
-    # Build the local channel window used for response normalization.
-    half = size // 2
-    squared = jnp.square(x)  # (batch, height, width, channels)
-    padded = jnp.pad(squared, ((0, 0), (0, 0), (0, 0), (half, half)))  # (batch, height, width, channels) -> (batch, height, width, channels + 2 * half)
-
-    # Accumulate neighboring channel energy and normalize activations.
-    scale = k
-    for offset in range(size):
-        channel_end = offset + x.shape[-1]  # (batch, height, width, channels) -> scalar
-        window = padded[..., offset:channel_end]  # (batch, height, width, channels + 2 * half) -> (batch, height, width, channels)
-        scale_step = (alpha / size) * window  # (batch, height, width, channels)
-        scale = scale + scale_step  # (batch, height, width, channels)
-    denominator = jnp.power(scale, beta)  # (batch, height, width, channels)
-    normalized = x / denominator  # (batch, height, width, channels)
-    return normalized
-
-
 # %% [notebook-only]
 # Create and run a sample image batch: (2, 227, 227, 3) -> (2, 1000).
-model = AlexNet(num_classes=1000)
-test_input = jnp.ones((2, 227, 227, 3))  # -> (2, 227, 227, 3)
-params = model.init(jax.random.PRNGKey(0), test_input, train=False)
-logits = model.apply(params, test_input, train=False)  # (2, 227, 227, 3) -> (2, 1000)
+example_model = AlexNet(num_classes=1000)
+example_test_input = jnp.ones((2, 227, 227, 3))  # -> (2, 227, 227, 3)
+example_params = example_model.init(jax.random.PRNGKey(0), example_test_input, train=False)
+example_logits = example_model.apply(example_params, example_test_input, train=False)  # (2, 227, 227, 3) -> (2, 1000)
+print("logits shape:", example_logits.shape)
 
-
+# %%
 # Train on a tiny synthetic image batch.
 model = AlexNet(num_classes=2)
 train_images = jnp.zeros((2, 227, 227, 3))  # -> (2, 227, 227, 3)

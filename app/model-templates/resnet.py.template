@@ -11,6 +11,7 @@
 #     language: python
 #     name: python3
 # ---
+
 # %%
 import torch
 import torch.nn as nn
@@ -62,6 +63,19 @@ class BasicBlock(nn.Module):
         out = self.relu(out)  # (batch, out_channels, out_height, out_width)
         return out
 
+
+# %% [notebook-only]
+# Create and run residual basic blocks with and without projection.
+example_plain_block = BasicBlock(in_channels=16, out_channels=16)
+example_plain_input = torch.randn(2, 16, 32, 32)  # -> (2, 16, 32, 32)
+example_plain_output = example_plain_block(example_plain_input)  # (2, 16, 32, 32) -> (2, 16, 32, 32)
+example_projection = nn.Sequential(
+    nn.Conv2d(16, 32, kernel_size=1, stride=2, bias=False),
+    nn.BatchNorm2d(32),
+)
+example_projected_block = BasicBlock(16, 32, stride=2, downsample=example_projection)
+example_projected_output = example_projected_block(example_plain_input)  # (2, 16, 32, 32) -> (2, 32, 16, 16)
+print("plain block shape:", example_plain_output.shape, "projected block shape:", example_projected_output.shape)
 
 # %%
 class Bottleneck(nn.Module):
@@ -115,6 +129,19 @@ class Bottleneck(nn.Module):
         out = self.relu(out)  # (batch, expanded_channels, out_height, out_width)
         return out
 
+
+# %% [notebook-only]
+# Create and run bottleneck blocks with and without projection.
+example_plain_block = Bottleneck(in_channels=64, out_channels=16)
+example_plain_input = torch.randn(2, 64, 32, 32)  # -> (2, 64, 32, 32)
+example_plain_output = example_plain_block(example_plain_input)  # (2, 64, 32, 32) -> (2, 64, 32, 32)
+example_projection = nn.Sequential(
+    nn.Conv2d(64, 128, kernel_size=1, stride=2, bias=False),
+    nn.BatchNorm2d(128),
+)
+example_projected_block = Bottleneck(64, 32, stride=2, downsample=example_projection)
+example_projected_output = example_projected_block(example_plain_input)  # (2, 64, 32, 32) -> (2, 128, 16, 16)
+print("plain bottleneck shape:", example_plain_output.shape, "projected bottleneck shape:", example_projected_output.shape)
 
 # %%
 class {{ className }}(nn.Module):
@@ -179,12 +206,12 @@ class {{ className }}(nn.Module):
 
 # %% [notebook-only]
 # Create and run a sample image batch: (2, 3, 224, 224) -> (2, 1000).
-model = {{ className }}(num_classes=1000)
-test_input = torch.randn(2, 3, 224, 224)  # -> (2, 3, 224, 224)
-logits = model(test_input)  # (2, 3, 224, 224) -> (2, 1000)
+example_model = {{ className }}(num_classes=1000)
+example_test_input = torch.randn(2, 3, 224, 224)  # -> (2, 3, 224, 224)
+example_logits = example_model(example_test_input)  # (2, 3, 224, 224) -> (2, 1000)
+print("logits shape:", example_logits.shape)
 
-
-# %% [notebook-only]
+# %%
 # Train on a tiny synthetic image batch.
 model = {{ className }}(num_classes=2)
 train_images = torch.zeros(2, 3, 224, 224)  # -> (2, 3, 224, 224)

@@ -11,6 +11,7 @@
 #     language: python
 #     name: python3
 # ---
+
 # %%
 import torch
 import torch.nn as nn
@@ -48,7 +49,7 @@ class SqueezeExcite(nn.Module):
 gate = SqueezeExcite(channels=8, squeeze_channels=2)
 feature_map = torch.randn(2, 8, 16, 16)  # -> (2, 8, 16, 16)
 gated = gate(feature_map)  # (2, 8, 16, 16) -> (2, 8, 16, 16)
-
+print("gated shape:", gated.shape)
 
 # %%
 class MBConv(nn.Module):
@@ -119,10 +120,10 @@ class MBConv(nn.Module):
 
 # %% [notebook-only]
 # Create and run one mobile inverted bottleneck: (2, 8, 16, 16) -> (2, 8, 16, 16).
-block = MBConv(in_channels=8, out_channels=8, expand_ratio=1, stride=1, kernel_size=3)
+example_block = MBConv(in_channels=8, out_channels=8, expand_ratio=1, stride=1, kernel_size=3)
 block_input = torch.randn(2, 8, 16, 16)  # -> (2, 8, 16, 16)
-block_output = block(block_input)  # (2, 8, 16, 16) -> (2, 8, 16, 16)
-
+example_block_output = example_block(block_input)  # (2, 8, 16, 16) -> (2, 8, 16, 16)
+print("block_output shape:", example_block_output.shape)
 
 # %%
 class EfficientNet(nn.Module):
@@ -204,11 +205,12 @@ class EfficientNet(nn.Module):
 
 # %% [notebook-only]
 # Create and run a sample ImageNet-size batch: (2, 3, 224, 224) -> (2, 1000).
-model = EfficientNet(num_classes=1000)
-test_input = torch.randn(2, 3, 224, 224)  # -> (2, 3, 224, 224)
-logits = model(test_input)  # (2, 3, 224, 224) -> (2, 1000)
+example_model = EfficientNet(num_classes=1000)
+example_test_input = torch.randn(2, 3, 224, 224)  # -> (2, 3, 224, 224)
+example_logits = example_model(example_test_input)  # (2, 3, 224, 224) -> (2, 1000)
+print("logits shape:", example_logits.shape)
 
-
+# %%
 # Train on a tiny synthetic image batch.
 model = EfficientNet(num_classes=2)
 train_images = torch.zeros(2, 3, 224, 224)  # -> (2, 3, 224, 224)

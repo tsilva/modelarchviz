@@ -11,6 +11,7 @@
 #     language: python
 #     name: python3
 # ---
+
 # %%
 import torch
 import torch.nn as nn
@@ -77,16 +78,16 @@ class LSTMCell(nn.Module):
 
 # %% [notebook-only]
 # Create and run one LSTM cell step: (2, 128), two (2, 256) states -> two (2, 256) states.
-cell = LSTMCell(input_size=128, hidden_size=256)
-cell_input = torch.randn(2, 128)  # -> (2, 128)
-previous_state = (
+example_cell = LSTMCell(input_size=128, hidden_size=256)
+example_cell_input = torch.randn(2, 128)  # -> (2, 128)
+example_previous_state = (
     torch.zeros(2, 256),
     torch.zeros(2, 256),
 )
-next_state = cell(cell_input, previous_state)
-next_h = next_state[0]  # (2, 256)
-next_c = next_state[1]  # (2, 256)
-
+example_next_state = example_cell(example_cell_input, example_previous_state)
+next_h = example_next_state[0]  # (2, 256)
+next_c = example_next_state[1]  # (2, 256)
+print("next_state shape:", example_next_state.shape)
 
 # %%
 class Seq2SeqEncoder(nn.Module):
@@ -139,7 +140,7 @@ source_ids = torch.randint(0, 32000, (2, 7))  # -> (2, 7)
 encoder_outputs = encoder(source_ids)
 context = encoder_outputs[0]
 encoder_trace = encoder_outputs[1]  # (2, 7, 256)
-
+print("encoder_trace shape:", encoder_trace.shape)
 
 # %%
 class Seq2SeqDecoder(nn.Module):
@@ -188,7 +189,7 @@ decoder_input_ids = torch.randint(0, 32000, (2, 6))  # -> (2, 6)
 decoder_outputs = decoder(decoder_input_ids, context)
 decoder_logits = decoder_outputs[0]  # (2, 6, 32000)
 decoder_trace = decoder_outputs[1]  # (2, 6, 256)
-
+print("decoder_trace shape:", decoder_trace.shape)
 
 # %%
 class Seq2Seq(nn.Module):
@@ -221,16 +222,16 @@ class Seq2Seq(nn.Module):
 
 # %% [notebook-only]
 # Create and run a toy source-to-target batch.
-model = Seq2Seq(source_vocab_size=32000, target_vocab_size=32000)
+example_model = Seq2Seq(source_vocab_size=32000, target_vocab_size=32000)
 source_ids = torch.randint(0, 32000, (2, 7))  # -> (2, 7)
 decoder_input_ids = torch.randint(0, 32000, (2, 6))  # -> (2, 6)
-outputs = model(source_ids, decoder_input_ids)
-logits = outputs[0]  # (2, 6, 32000)
-encoder_trace = outputs[1]  # (2, 7, 256)
-decoder_trace = outputs[2]  # (2, 6, 256)
+example_outputs = example_model(source_ids, decoder_input_ids)
+example_logits = example_outputs[0]  # (2, 6, 32000)
+encoder_trace = example_outputs[1]  # (2, 7, 256)
+decoder_trace = example_outputs[2]  # (2, 6, 256)
+print("logits shape:", example_logits.shape)
 
-
-# %% [notebook-only]
+# %%
 # Train on two tiny symbolic transductions with teacher forcing.
 model = Seq2Seq(source_vocab_size=12, target_vocab_size=12, embedding_size=16, hidden_size=32)
 source_ids = torch.tensor(

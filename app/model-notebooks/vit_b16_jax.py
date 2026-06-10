@@ -11,6 +11,7 @@
 #     language: python
 #     name: python3
 # ---
+
 # %%
 import jax
 import jax.numpy as jnp
@@ -39,9 +40,9 @@ class PatchEmbed(nn.Module):
 # Create and run patch embedding: (2, 32, 32, 3) -> (2, 4, 24).
 patch_embed = PatchEmbed(embed_dim=24, patch_size=16)
 images = jnp.ones((2, 32, 32, 3))  # -> (2, 32, 32, 3)
-params = patch_embed.init(jax.random.PRNGKey(0), images)
-patch_tokens = patch_embed.apply(params, images)  # (2, 32, 32, 3) -> (2, 4, 24)
-
+example_params = patch_embed.init(jax.random.PRNGKey(0), images)
+patch_tokens = patch_embed.apply(example_params, images)  # (2, 32, 32, 3) -> (2, 4, 24)
+print("patch_tokens shape:", patch_tokens.shape)
 
 # %%
 class MultiHeadSelfAttention(nn.Module):
@@ -85,11 +86,11 @@ class MultiHeadSelfAttention(nn.Module):
 
 # %% [notebook-only]
 # Create and run vision self-attention: (2, 5, 24) -> (2, 5, 24).
-attention = MultiHeadSelfAttention(embed_dim=24, num_heads=4)
+example_attention = MultiHeadSelfAttention(embed_dim=24, num_heads=4)
 tokens = jnp.ones((2, 5, 24))  # -> (2, 5, 24)
-params = attention.init(jax.random.PRNGKey(1), tokens)
-attended = attention.apply(params, tokens)  # (2, 5, 24) -> (2, 5, 24)
-
+example_params = example_attention.init(jax.random.PRNGKey(1), tokens)
+example_attended = example_attention.apply(example_params, tokens)  # (2, 5, 24) -> (2, 5, 24)
+print("attended shape:", example_attended.shape)
 
 # %%
 class EncoderBlock(nn.Module):
@@ -115,11 +116,11 @@ class EncoderBlock(nn.Module):
 
 # %% [notebook-only]
 # Create and run one ViT encoder block: (2, 5, 24) -> (2, 5, 24).
-block = EncoderBlock(embed_dim=24, num_heads=4, mlp_dim=48)
+example_block = EncoderBlock(embed_dim=24, num_heads=4, mlp_dim=48)
 tokens = jnp.ones((2, 5, 24))  # -> (2, 5, 24)
-params = block.init(jax.random.PRNGKey(2), tokens)
-encoded_tokens = block.apply(params, tokens)  # (2, 5, 24) -> (2, 5, 24)
-
+example_params = example_block.init(jax.random.PRNGKey(2), tokens)
+encoded_tokens = example_block.apply(example_params, tokens)  # (2, 5, 24) -> (2, 5, 24)
+print("encoded_tokens shape:", encoded_tokens.shape)
 
 # %%
 class VisionTransformer(nn.Module):
@@ -155,12 +156,13 @@ class VisionTransformer(nn.Module):
 
 # %% [notebook-only]
 # Create and run a sample image batch: (2, 224, 224, 3) -> (2, 1000).
-model = VisionTransformer(num_classes=1000)
-test_input = jnp.ones((2, 224, 224, 3))  # -> (2, 224, 224, 3)
-params = model.init(jax.random.PRNGKey(0), test_input)
-logits = model.apply(params, test_input)  # (2, 224, 224, 3) -> (2, 1000)
+example_model = VisionTransformer(num_classes=1000)
+example_test_input = jnp.ones((2, 224, 224, 3))  # -> (2, 224, 224, 3)
+example_params = example_model.init(jax.random.PRNGKey(0), example_test_input)
+example_logits = example_model.apply(example_params, example_test_input)  # (2, 224, 224, 3) -> (2, 1000)
+print("logits shape:", example_logits.shape)
 
-
+# %%
 # Train on a tiny synthetic image batch.
 model = VisionTransformer(num_classes=2, embed_dim=48, depth=1, num_heads=4)
 train_images = jnp.zeros((2, 224, 224, 3))  # -> (2, 224, 224, 3)

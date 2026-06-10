@@ -11,6 +11,7 @@
 #     language: python
 #     name: python3
 # ---
+
 # %%
 import jax
 import jax.numpy as jnp
@@ -40,9 +41,9 @@ class SqueezeExcite(nn.Module):
 # Create and run a squeeze-excitation gate: (2, 16, 16, 8) -> (2, 16, 16, 8).
 gate = SqueezeExcite(squeeze_channels=2)
 feature_map = jnp.ones((2, 16, 16, 8))  # -> (2, 16, 16, 8)
-params = gate.init(jax.random.PRNGKey(0), feature_map)
-gated = gate.apply(params, feature_map)  # (2, 16, 16, 8) -> (2, 16, 16, 8)
-
+example_params = gate.init(jax.random.PRNGKey(0), feature_map)
+gated = gate.apply(example_params, feature_map)  # (2, 16, 16, 8) -> (2, 16, 16, 8)
+print("gated shape:", gated.shape)
 
 # %%
 class MBConv(nn.Module):
@@ -103,11 +104,11 @@ class MBConv(nn.Module):
 
 # %% [notebook-only]
 # Create and run one mobile inverted bottleneck: (2, 16, 16, 8) -> (2, 16, 16, 8).
-block = MBConv(out_channels=8, expand_ratio=1, stride=1, kernel_size=3)
+example_block = MBConv(out_channels=8, expand_ratio=1, stride=1, kernel_size=3)
 block_input = jnp.ones((2, 16, 16, 8))  # -> (2, 16, 16, 8)
-variables = block.init(jax.random.PRNGKey(1), block_input, train=False)
-block_output = block.apply(variables, block_input, train=False)  # (2, 16, 16, 8) -> (2, 16, 16, 8)
-
+variables = example_block.init(jax.random.PRNGKey(1), block_input, train=False)
+example_block_output = example_block.apply(variables, block_input, train=False)  # (2, 16, 16, 8) -> (2, 16, 16, 8)
+print("block_output shape:", example_block_output.shape)
 
 # %%
 class EfficientNet(nn.Module):
@@ -169,12 +170,13 @@ class EfficientNet(nn.Module):
 
 # %% [notebook-only]
 # Create and run a sample ImageNet-size batch: (2, 224, 224, 3) -> (2, 1000).
-model = EfficientNet(num_classes=1000)
-test_input = jnp.ones((2, 224, 224, 3))  # -> (2, 224, 224, 3)
-params = model.init(jax.random.PRNGKey(0), test_input, train=False)
-logits = model.apply(params, test_input, train=False)  # (2, 224, 224, 3) -> (2, 1000)
+example_model = EfficientNet(num_classes=1000)
+example_test_input = jnp.ones((2, 224, 224, 3))  # -> (2, 224, 224, 3)
+example_params = example_model.init(jax.random.PRNGKey(0), example_test_input, train=False)
+example_logits = example_model.apply(example_params, example_test_input, train=False)  # (2, 224, 224, 3) -> (2, 1000)
+print("logits shape:", example_logits.shape)
 
-
+# %%
 # Train on a tiny synthetic image batch.
 model = EfficientNet(num_classes=2)
 train_images = jnp.zeros((2, 224, 224, 3))  # -> (2, 224, 224, 3)

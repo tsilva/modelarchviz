@@ -11,6 +11,7 @@
 #     language: python
 #     name: python3
 # ---
+
 # %%
 import torch
 import torch.nn as nn
@@ -86,7 +87,7 @@ example_previous_state = (
 example_next_state = example_cell(example_input, example_previous_state)
 example_hidden = example_next_state[0]  # tuple -> (2, 64)
 example_cell_state = example_next_state[1]  # tuple -> (2, 64)
-print("next hidden shape:", example_hidden.shape, "next cell shape:", example_cell_state.shape)
+print("next hidden shape:", example_hidden.shape, "next example_cell shape:", example_cell_state.shape)
 
 
 # %%
@@ -136,7 +137,7 @@ example_sequence = torch.randn(2, 8, 32)  # -> (2, 8, 32)
 example_outputs = example_model(example_sequence)
 example_logits = example_outputs[0]  # (2, 10)
 example_states = example_outputs[1]  # (2, 8, 64)
-print("logits shape:", example_logits.shape, "states shape:", example_states.shape)
+print("example_logits shape:", example_logits.shape, "example_states shape:", example_states.shape)
 
 
 # %%

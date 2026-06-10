@@ -11,6 +11,7 @@
 #     language: python
 #     name: python3
 # ---
+
 # %%
 import jax
 import jax.numpy as jnp
@@ -59,10 +60,10 @@ class DenseLayer(nn.Module):
 # %% [notebook-only]
 # Create and run one dense layer: (2, 8, 8, 6) -> (2, 8, 8, 10).
 layer = DenseLayer(growth_rate=4)
-dense_input = jnp.ones((2, 8, 8, 6))  # -> (2, 8, 8, 6)
-variables = layer.init(jax.random.PRNGKey(0), dense_input, train=False)
-dense_output = layer.apply(variables, dense_input, train=False)  # (2, 8, 8, 6) -> (2, 8, 8, 10)
-
+example_dense_input = jnp.ones((2, 8, 8, 6))  # -> (2, 8, 8, 6)
+variables = layer.init(jax.random.PRNGKey(0), example_dense_input, train=False)
+example_dense_output = layer.apply(variables, example_dense_input, train=False)  # (2, 8, 8, 6) -> (2, 8, 8, 10)
+print("dense_output shape:", example_dense_output.shape)
 
 # %%
 class Transition(nn.Module):
@@ -84,12 +85,12 @@ class Transition(nn.Module):
 
 
 # %% [notebook-only]
-# Create and run one transition block: (2, 8, 8, 10) -> (2, 4, 4, 6).
-transition = Transition(out_channels=6)
+# Create and run one example_transition block: (2, 8, 8, 10) -> (2, 4, 4, 6).
+example_transition = Transition(out_channels=6)
 transition_input = jnp.ones((2, 8, 8, 10))  # -> (2, 8, 8, 10)
-variables = transition.init(jax.random.PRNGKey(1), transition_input, train=False)
-transition_output = transition.apply(variables, transition_input, train=False)  # (2, 8, 8, 10) -> (2, 4, 4, 6)
-
+variables = example_transition.init(jax.random.PRNGKey(1), transition_input, train=False)
+example_transition_output = example_transition.apply(variables, transition_input, train=False)  # (2, 8, 8, 10) -> (2, 4, 4, 6)
+print("transition_output shape:", example_transition_output.shape)
 
 # %%
 class DenseNet(nn.Module):
@@ -143,12 +144,13 @@ class DenseNet(nn.Module):
 
 # %% [notebook-only]
 # Create and run a sample ImageNet-size batch: (2, 224, 224, 3) -> (2, 1000).
-model = DenseNet(num_classes=1000)
-test_input = jnp.ones((2, 224, 224, 3))  # -> (2, 224, 224, 3)
-params = model.init(jax.random.PRNGKey(0), test_input, train=False)
-logits = model.apply(params, test_input, train=False)  # (2, 224, 224, 3) -> (2, 1000)
+example_model = DenseNet(num_classes=1000)
+example_test_input = jnp.ones((2, 224, 224, 3))  # -> (2, 224, 224, 3)
+example_params = example_model.init(jax.random.PRNGKey(0), example_test_input, train=False)
+example_logits = example_model.apply(example_params, example_test_input, train=False)  # (2, 224, 224, 3) -> (2, 1000)
+print("logits shape:", example_logits.shape)
 
-
+# %%
 # Train on a tiny synthetic image batch.
 model = DenseNet(
     growth_rate=4,
