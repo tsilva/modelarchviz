@@ -86,6 +86,7 @@ previous_state = (
 next_state = cell(cell_input, previous_state)
 next_hidden = next_state[0]  # tuple -> (2, 64)
 next_cell = next_state[1]  # tuple -> (2, 64)
+print("next hidden shape:", next_hidden.shape, "next cell shape:", next_cell.shape)
 
 
 # %%
@@ -130,21 +131,20 @@ class LSTMSequence(nn.Module):
 
 # %% [notebook-only]
 # Create and run a sample sequence: (2, 8, 32) -> logits and states.
-model = LSTMSequence(input_size=32, hidden_size=64, output_size=10)
+example_model = LSTMSequence(input_size=32, hidden_size=64, output_size=10)
 sequence = torch.randn(2, 8, 32)  # -> (2, 8, 32)
-outputs = model(sequence)
+outputs = example_model(sequence)
 logits = outputs[0]  # (2, 10)
 states = outputs[1]  # (2, 8, 64)
+print("logits shape:", logits.shape, "states shape:", states.shape)
 
 
+# %%
 # Train on two synthetic sequences with opposite labels.
-model = LSTMSequence(input_size=3, hidden_size=8, output_size=2)
-train_sequences = torch.tensor(
-    [
-        [[1.0, 0.0, 0.0], [0.5, 0.0, 0.0], [1.0, 0.0, 0.0]],
-        [[0.0, 1.0, 0.0], [0.0, 0.5, 0.0], [0.0, 1.0, 0.0]],
-    ]
-)  # -> (2, 3, 3)
+model = LSTMSequence(input_size=32, hidden_size=64, output_size=10)
+train_sequences = torch.zeros(2, 3, 32)  # -> (2, 3, 32)
+train_sequences[0, :, 0] = torch.tensor([1.0, 0.5, 1.0])  # (3)
+train_sequences[1, :, 1] = torch.tensor([1.0, 0.5, 1.0])  # (3)
 train_targets = torch.tensor([0, 1])  # -> (2)
 criterion = nn.CrossEntropyLoss()
 optimizer = torch.optim.SGD(model.parameters(), lr=0.1)
@@ -153,8 +153,8 @@ optimizer = torch.optim.SGD(model.parameters(), lr=0.1)
 for step in range(3):
     optimizer.zero_grad()
     outputs = model(train_sequences)
-    logits = outputs[0]  # (2, 2)
-    loss = criterion(logits, train_targets)  # (2, 2), (2) -> scalar
+    logits = outputs[0]  # (2, 10)
+    loss = criterion(logits, train_targets)  # (2, 10), (2) -> scalar
     loss.backward()
     optimizer.step()
 

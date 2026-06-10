@@ -13,7 +13,7 @@ Preserve behavior; expose tensor dataflow.
 2. Edit only `app/model-notebooks/*.py` as source; never hand-edit `app/generated/model-code/*.py` or notebook artifacts.
 3. Cells: imports first; `# %%` for implementation; one top-level model/component class per cell, never two.
 4. After every top-level model/component class, immediately add small `# %% [notebook-only]` smoke test: construct, run representative input, show expected input/output shape, end with `print(...)`.
-5. Broader examples, shape inspection, tiny training loops: `# %% [notebook-only]` unless intentionally web-visible.
+5. Component smoke tests/shape inspection/non-web examples: `# %% [notebook-only]`. Training examples meant for the web code panel: separate normal `# %%` cell after the notebook-only smoke test.
 6. Split compound tensor expressions into named steps; add concise block comments; validate, update moved line mappings, regenerate artifacts.
 
 ## Rules
@@ -26,8 +26,9 @@ Preserve behavior; expose tensor dataflow.
 - Spacing: blank before standalone comments, not forced after; one blank between adjacent top-level demo/comment-led examples; two before top-level classes/functions; none between method signature and first explanatory comment.
 - No comments above imports or `super().__init__()`. If parameter comments help, use multiline signatures with inline parameter comments.
 - Multiple classes: repeat `# %%` class, immediate `# %% [notebook-only]` smoke test.
-- Generated web previews stay implementation-focused: no notebook-only examples, smoke tests, shape inspection, tiny training loops, or duplicate top-level model construction unless implementation-owned.
+- Generated web previews stay implementation-focused: no notebook-only examples/smoke tests/shape inspection. Include intended training examples in normal `# %%` cells; do not hide them in notebook-only cells.
 - Web-visible snippets use normal `# %%`; notebook learning/tests/examples use `# %% [notebook-only]`.
+- Keep the final model smoke test and training example split: notebook-only smoke test with `example_*` names and `print(...)`, then normal web-visible training cell with `model`/`params`/`outputs`/`logits` as needed.
 - No separate generated example files unless explicitly asked.
 - No notebook-only examples/smoke tests/training snippets as architecture side-panel nodes unless explicitly asked.
 - No active code selections or highlighted lines on page load; use non-selected/non-highlighted scroll/focus hints only.
@@ -38,7 +39,7 @@ Preserve behavior; expose tensor dataflow.
 
 - Syntax-check when ML deps are available/unneeded: `python3 -m py_compile path/to/file.py`.
 - Run repo checks (typecheck/build) when app bundles/displays files.
-- After regeneration inspect generated web code: no notebook-only comments/tests/examples/toy training; no duplicate top-level `model = ...` except intentional implementation; only intentional normal-cell examples/training.
+- After regeneration inspect generated web code: intended training example is present; no notebook-only comments/tests/examples; no duplicate top-level `model = ...` except intentional implementation; only intentional normal-cell examples/training.
 - Inspect `.ipynb` starts: every top-level class has own cell plus immediate expected notebook-only smoke-test cell; no duplicate training-style `model = ModelClass(...)` unless intentional and clearly named.
 - Confirm smoke tests end with `print(...)` and use `example_*` when normal cells use `model`/`params`/`outputs`/`logits`.
 - If web UI should load with no side-panel node selected, verify zero selected architecture nodes and zero highlighted code lines.

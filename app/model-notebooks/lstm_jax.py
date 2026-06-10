@@ -74,6 +74,7 @@ params = cell.init(jax.random.PRNGKey(0), cell_input, previous_state)
 next_state = cell.apply(params, cell_input, previous_state)
 next_hidden = next_state[0]  # tuple -> (2, 64)
 next_cell = next_state[1]  # tuple -> (2, 64)
+print("next hidden shape:", next_hidden.shape, "next cell shape:", next_cell.shape)
 
 
 # %%
@@ -110,22 +111,21 @@ class LSTMSequence(nn.Module):
 
 # %% [notebook-only]
 # Create and run a sample sequence: (2, 8, 32) -> logits and states.
-model = LSTMSequence(hidden_size=64, output_size=10)
+example_model = LSTMSequence(hidden_size=64, output_size=10)
 sequence = jnp.ones((2, 8, 32))  # -> (2, 8, 32)
-params = model.init(jax.random.PRNGKey(0), sequence)
-outputs = model.apply(params, sequence)
+example_params = example_model.init(jax.random.PRNGKey(0), sequence)
+outputs = example_model.apply(example_params, sequence)
 logits = outputs[0]  # (2, 10)
 states = outputs[1]  # (2, 8, 64)
+print("logits shape:", logits.shape, "states shape:", states.shape)
 
 
+# %%
 # Train on two synthetic sequences with opposite labels.
-model = LSTMSequence(hidden_size=8, output_size=2)
-train_sequences = jnp.array(
-    [
-        [[1.0, 0.0, 0.0], [0.5, 0.0, 0.0], [1.0, 0.0, 0.0]],
-        [[0.0, 1.0, 0.0], [0.0, 0.5, 0.0], [0.0, 1.0, 0.0]],
-    ]
-)  # -> (2, 3, 3)
+model = LSTMSequence(hidden_size=64, output_size=10)
+train_sequences = jnp.zeros((2, 3, 32))  # -> (2, 3, 32)
+train_sequences = train_sequences.at[0, :, 0].set(jnp.array([1.0, 0.5, 1.0]))  # (3)
+train_sequences = train_sequences.at[1, :, 1].set(jnp.array([1.0, 0.5, 1.0]))  # (3)
 train_targets = jnp.array([0, 1])  # -> (2)
 params = model.init(jax.random.PRNGKey(1), train_sequences)
 
