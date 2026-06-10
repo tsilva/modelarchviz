@@ -5193,11 +5193,7 @@ function CodeEditor({
     userCodeSelection.fileName === currentFile.fileName
       ? userCodeSelection
       : null;
-  const highlightedLineNumbers = activeAgentSelection
-    ? activeAgentSelection.lines
-    : selectedLineNumbersForLanguage.length > 0
-      ? selectedLineNumbersForLanguage
-      : defaultLineNumbersForLanguage;
+  const highlightedLineNumbers = activeAgentSelection ? activeAgentSelection.lines : selectedLineNumbersForLanguage;
   const selectedLines = new Set(
     highlightedLineNumbers.filter((lineNumber) => {
       const line = currentFile.code[lineNumber - 1];
@@ -5212,16 +5208,18 @@ function CodeEditor({
         })
       : [],
   );
-  const firstSelectedLine = highlightedLineNumbers.find((lineNumber) => selectedLines.has(lineNumber)) ?? null;
-  const highlightedLineKey = highlightedLineNumbers.join(",");
+  const scrollLineNumbers = highlightedLineNumbers.length > 0 ? highlightedLineNumbers : defaultLineNumbersForLanguage;
+  const firstScrollLine =
+    scrollLineNumbers.find((lineNumber) => currentFile.code[lineNumber - 1] !== undefined) ?? null;
+  const scrollLineKey = scrollLineNumbers.join(",");
 
   useEffect(() => {
     const editor = editorRef.current;
-    if (!editor || firstSelectedLine === null) {
+    if (!editor || firstScrollLine === null) {
       return;
     }
 
-    const selectedLine = editor.querySelector<HTMLElement>(`[data-line-number="${firstSelectedLine}"]`);
+    const selectedLine = editor.querySelector<HTMLElement>(`[data-line-number="${firstScrollLine}"]`);
     if (!selectedLine) {
       return;
     }
@@ -5232,7 +5230,7 @@ function CodeEditor({
       top: Math.max(0, centeredTop),
       behavior: "smooth",
     });
-  }, [firstSelectedLine, highlightedLineKey, language, model.id, selected?.id]);
+  }, [firstScrollLine, scrollLineKey, language, model.id, selected?.id]);
 
   const captureUserCodeSelection = () => {
     const editor = editorRef.current;
@@ -6458,7 +6456,7 @@ export default function ModelArchVizApp({ initialModelId }: ModelArchVizAppProps
       } as React.CSSProperties)
     : undefined;
   const expanded = expandedByModel[currentModelKey] ?? new Set<string>();
-  const selected = selectedByModel[currentModelKey] ?? findNodeById(model.nodes, model.selectedId);
+  const selected = selectedByModel[currentModelKey] ?? null;
 
   useEffect(() => {
     setModelId(initialModel.id);
