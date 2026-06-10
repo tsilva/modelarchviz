@@ -29,6 +29,13 @@ export const modelRouteSummaries = [
     description: "Use the LSTM architecture card to trace sequence inputs, input/forget/output gates, cell-state updates, PyTorch and JAX code, notebooks, and the original paper.",
   },
   {
+    id: "autoencoder",
+    label: "Autoencoder",
+    publishedDate: "2006-07-28",
+    title: "Autoencoder Architecture",
+    description: "Trace an autoencoder encoder, bottleneck code, decoder reconstruction path, reconstruction loss, implementation code, and paper context.",
+  },
+  {
     id: "lenet5",
     label: "LeNet-5",
     publishedDate: "1998-11-01",
@@ -41,6 +48,20 @@ export const modelRouteSummaries = [
     publishedDate: "2012-12-03",
     title: "AlexNet Architecture",
     description: "Inspect AlexNet convolutional stages, classifier layers, implementation code, and paper context.",
+  },
+  {
+    id: "vae",
+    label: "VAE",
+    publishedDate: "2013-12-20",
+    title: "Variational Autoencoder Architecture",
+    description: "Trace a variational autoencoder Gaussian encoder, reparameterization trick, decoder, ELBO loss, implementation code, and paper context.",
+  },
+  {
+    id: "gan",
+    label: "GAN",
+    publishedDate: "2014-06-10",
+    title: "Generative Adversarial Network Architecture",
+    description: "Trace the original GAN generator, discriminator, adversarial losses, alternating training updates, implementation code, and paper context.",
   },
   {
     id: "gru",
@@ -99,6 +120,13 @@ export const modelRouteSummaries = [
     description: "Explore encoder-decoder attention blocks, PyTorch and JAX code, and source-paper context.",
   },
   {
+    id: "vqvae",
+    label: "VQ-VAE",
+    publishedDate: "2017-11-02",
+    title: "VQ-VAE Architecture",
+    description: "Trace VQ-VAE encoder outputs, nearest-code vector quantization, straight-through estimator, decoder reconstruction, implementation code, and paper context.",
+  },
+  {
     id: "bert",
     label: "BERT base",
     publishedDate: "2018-10-11",
@@ -120,11 +148,25 @@ export const modelRouteSummaries = [
     description: "Inspect EfficientNet MBConv stages, squeeze-excitation blocks, code, and paper context.",
   },
   {
+    id: "ddpm",
+    label: "DDPM",
+    publishedDate: "2020-06-19",
+    title: "DDPM Diffusion U-Net Architecture",
+    description: "Trace DDPM forward noising, timestep-conditioned U-Net noise prediction, reverse denoising steps, implementation code, and paper context.",
+  },
+  {
     id: "vit",
     label: "ViT-B/16",
     publishedDate: "2020-10-22",
     title: "Vision Transformer Architecture",
     description: "Explore ViT patch embeddings, transformer encoder blocks, implementation code, and paper context.",
+  },
+  {
+    id: "clip",
+    label: "CLIP",
+    publishedDate: "2021-02-26",
+    title: "CLIP Architecture",
+    description: "Trace CLIP dual image-text encoders, shared embedding projections, contrastive logits, implementation code, and paper context.",
   },
 ] as const satisfies readonly ModelRouteSummary[];
 
