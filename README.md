@@ -37,7 +37,7 @@ pnpm typecheck                 # generate artifacts and run TypeScript checks
 - `# %% [notebook-only]` cells are included in generated notebooks for examples and smoke tests, but excluded from generated site preview code.
 - The code pane imports the generated Python files; edit the canonical notebook sources instead of editing generated files directly.
 - Colab buttons use `NEXT_PUBLIC_GITHUB_REPOSITORY` and `NEXT_PUBLIC_GITHUB_BRANCH` when set. They default to `tsilva/modelarchviz` and `main`.
-- Current examples range from MLPs and recurrent models through classic CNNs, Inception, ResNet, U-Net, BERT, GPT-2, and ViT.
+- Current examples range from MLPs and recurrent/Seq2Seq models through classic CNNs, Inception, ResNet, U-Net, BERT, GPT-2, and ViT.
 - Paper links point to external sources from the embedded model metadata.
 - No database, server-side storage, telemetry, or user-data persistence is configured.
 - `NEXT_PUBLIC_SITE_URL` is optional and only sets the absolute base URL for social metadata. It falls back to `http://localhost:3000`.

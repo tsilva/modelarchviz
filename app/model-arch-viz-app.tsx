@@ -17,6 +17,8 @@ import rnnPythonSource from "./generated/model-code/elman_rnn.py";
 import rnnJaxPythonSource from "./generated/model-code/elman_rnn_jax.py";
 import gruPythonSource from "./generated/model-code/gru.py";
 import gruJaxPythonSource from "./generated/model-code/gru_jax.py";
+import seq2seqPythonSource from "./generated/model-code/seq2seq.py";
+import seq2seqJaxPythonSource from "./generated/model-code/seq2seq_jax.py";
 import lstmPythonSource from "./generated/model-code/lstm.py";
 import lstmJaxPythonSource from "./generated/model-code/lstm_jax.py";
 import lenet5PythonSource from "./generated/model-code/lenet5.py";
@@ -763,6 +765,90 @@ function makeGruStep(index: number, defaultExpanded = false): ArchNode {
   };
 }
 
+function makeSeq2SeqEncoderStep(index: number, defaultExpanded = false): ArchNode {
+  return {
+    id: `encoder.step.${index}`,
+    label: `step.${index}`,
+    type: "EncoderLSTMCell",
+    kind: "group",
+    summary: index === 0 ? "reversed token" : "same cell",
+    defaultExpanded,
+    codeLines: [91, 92, 93, 94, 95],
+    jaxCodeLines: [71, 72, 73, 74, 75],
+    lazyChildren: () => [
+      {
+        id: `encoder.step.${index}.embedding`,
+        label: "token embedding",
+        type: "EmbeddingLookup",
+        kind: "embedding",
+        badges: ["128 dim"],
+        codeLines: [80, 81, 91],
+        jaxCodeLines: [59, 60, 71],
+      },
+      {
+        id: `encoder.step.${index}.lstm_gates`,
+        label: "lstm gates",
+        type: "Input/Forget/Cell/Output",
+        kind: "recurrent",
+        badges: ["i", "f", "g", "o"],
+        codeLines: [27, 28, 29, 30, 33, 34, 35, 36, 39, 40, 41, 42, 45, 46, 47, 48, 92],
+        jaxCodeLines: [14, 15, 16, 17, 20, 21, 22, 23, 26, 27, 28, 29, 32, 33, 34, 35, 72],
+      },
+      {
+        id: `encoder.step.${index}.state`,
+        label: "state update",
+        type: "ContextState",
+        kind: "recurrent",
+        badges: ["h_t", "c_t"],
+        codeLines: [51, 52, 53, 56, 57, 58, 93, 94, 95],
+        jaxCodeLines: [38, 39, 40, 43, 44, 45, 73, 74, 75],
+      },
+    ],
+  };
+}
+
+function makeSeq2SeqDecoderStep(index: number, defaultExpanded = false): ArchNode {
+  return {
+    id: `decoder.step.${index}`,
+    label: `step.${index}`,
+    type: "DecoderLSTMCell",
+    kind: "group",
+    summary: index === 0 ? "context + BOS" : "teacher forced",
+    defaultExpanded,
+    codeLines: [127, 128, 129, 130, 131, 132, 133],
+    jaxCodeLines: [101, 102, 103, 104, 105, 106, 107],
+    lazyChildren: () => [
+      {
+        id: `decoder.step.${index}.embedding`,
+        label: "target embedding",
+        type: "EmbeddingLookup",
+        kind: "embedding",
+        badges: ["shifted target"],
+        codeLines: [121, 127],
+        jaxCodeLines: [93, 101],
+      },
+      {
+        id: `decoder.step.${index}.lstm_gates`,
+        label: "lstm gates",
+        type: "Input/Forget/Cell/Output",
+        kind: "recurrent",
+        badges: ["i", "f", "g", "o"],
+        codeLines: [27, 28, 29, 30, 33, 34, 35, 36, 39, 40, 41, 42, 45, 46, 47, 48, 128],
+        jaxCodeLines: [14, 15, 16, 17, 20, 21, 22, 23, 26, 27, 28, 29, 32, 33, 34, 35, 102],
+      },
+      {
+        id: `decoder.step.${index}.projection`,
+        label: "vocab logits",
+        type: "Linear",
+        kind: "linear",
+        badges: ["256->vocab"],
+        codeLines: [115, 131, 132],
+        jaxCodeLines: [99, 105, 106],
+      },
+    ],
+  };
+}
+
 function makeTransformerDecoderBlock(index: number, defaultExpanded = false): ArchNode {
   return {
     id: `decoder.${index}`,
@@ -1448,6 +1534,187 @@ const models: ModelSpec[] = [
     ],
     code: codeLines(gruPythonSource),
     jaxCode: codeLines(gruJaxPythonSource),
+  },
+  {
+    id: "seq2seq",
+    label: "Seq2Seq",
+    breadcrumb: "Seq2Seq / decoder / step.0 / vocab logits",
+    stats: "7 source steps · 6 target steps · fixed context state",
+    fileName: "seq2seq.py",
+    jaxFileName: "seq2seq_jax.py",
+    paper: {
+      title: "Sequence to Sequence Learning with Neural Networks",
+      authors: "Ilya Sutskever, Oriol Vinyals, Quoc V. Le",
+      year: "2014",
+      publishedLabel: "Sep 10, 2014",
+      publishedDate: "2014-09-10",
+      venue: "arXiv / NeurIPS 2014",
+      url: "https://arxiv.org/abs/1409.3215",
+      pdfUrl: paperPdfUrl("seq2seq"),
+      focus: ["encoder-decoder LSTMs", "fixed-length context", "sequence transduction"],
+    },
+    selectedId: "decoder.step.0.projection",
+    nodes: [
+      {
+        id: "source.input",
+        label: "source input",
+        type: "TokenIds",
+        kind: "input",
+        badges: ["7 tokens", "reversed"],
+        codeLines: [80, 81, 157],
+        jaxCodeLines: [59, 60, 130],
+      },
+      {
+        id: "target.input",
+        label: "target input",
+        type: "ShiftedTokenIds",
+        kind: "input",
+        badges: ["6 tokens", "teacher forcing"],
+        codeLines: [121, 127, 162],
+        jaxCodeLines: [93, 101, 141],
+      },
+      {
+        id: "lstm_cell",
+        label: "LSTM Cell",
+        type: "SharedGateCell",
+        kind: "group",
+        summary: "encoder and decoder cells",
+        badges: ["i", "f", "g", "o"],
+        codeLines: [13, 14, 15, 16, 17, 18, 19, 20, 27, 28, 29, 30, 33, 34, 35, 36, 39, 40, 41, 42, 45, 46, 47, 48, 51, 52, 53, 56, 57, 58],
+        jaxCodeLines: [14, 15, 16, 17, 20, 21, 22, 23, 26, 27, 28, 29, 32, 33, 34, 35, 38, 39, 40, 43, 44, 45],
+        children: [
+          {
+            id: "lstm_cell.input_gate",
+            label: "input gate",
+            type: "SigmoidGate",
+            kind: "recurrent",
+            badges: ["i_t"],
+            codeLines: [13, 14, 27, 28, 29, 30],
+            jaxCodeLines: [14, 15, 16, 17],
+          },
+          {
+            id: "lstm_cell.forget_gate",
+            label: "forget gate",
+            type: "SigmoidGate",
+            kind: "recurrent",
+            badges: ["f_t"],
+            codeLines: [15, 16, 33, 34, 35, 36],
+            jaxCodeLines: [20, 21, 22, 23],
+          },
+          {
+            id: "lstm_cell.candidate",
+            label: "candidate",
+            type: "TanhMemory",
+            kind: "activation",
+            badges: ["g_t"],
+            codeLines: [17, 18, 39, 40, 41, 42],
+            jaxCodeLines: [26, 27, 28, 29],
+          },
+          {
+            id: "lstm_cell.output_gate",
+            label: "output gate",
+            type: "SigmoidGate",
+            kind: "recurrent",
+            badges: ["o_t"],
+            codeLines: [19, 20, 45, 46, 47, 48],
+            jaxCodeLines: [32, 33, 34, 35],
+          },
+          {
+            id: "lstm_cell.state_update",
+            label: "state update",
+            type: "CellAndHidden",
+            kind: "recurrent",
+            badges: ["c_t", "h_t"],
+            codeLines: [51, 52, 53, 56, 57, 58],
+            jaxCodeLines: [38, 39, 40, 43, 44, 45],
+          },
+        ],
+      },
+      {
+        id: "encoder",
+        label: "Encoder",
+        type: "RecurrentEncoder",
+        kind: "group",
+        summary: "compress source",
+        badges: ["fixed context"],
+        defaultExpanded: true,
+        codeLines: [72, 73, 80, 81, 84, 85, 86, 90, 91, 92, 93, 94, 95, 98, 99, 157, 158],
+        jaxCodeLines: [60, 63, 64, 65, 69, 70, 71, 72, 73, 74, 75, 78, 79, 130, 131],
+        children: [
+          {
+            id: "encoder.reverse",
+            label: "reverse source",
+            type: "TokenOrder",
+            kind: "reshape",
+            badges: ["optimization"],
+            codeLines: [79, 80],
+            jaxCodeLines: [58, 59],
+          },
+          {
+            id: "encoder.embedding",
+            label: "source embedding",
+            type: "Embedding",
+            kind: "embedding",
+            badges: ["vocab->128"],
+            codeLines: [72, 81],
+            jaxCodeLines: [60],
+          },
+          {
+            id: "encoder.initial_state",
+            label: "h0/c0",
+            type: "ZeroState",
+            kind: "recurrent",
+            badges: ["256 hidden"],
+            codeLines: [84, 85, 86],
+            jaxCodeLines: [63, 64, 65],
+          },
+          ...Array.from({ length: 7 }, (_, index) => makeSeq2SeqEncoderStep(index, index === 0)),
+        ],
+      },
+      {
+        id: "context",
+        label: "context",
+        type: "FinalEncoderState",
+        kind: "recurrent",
+        badges: ["h", "c"],
+        codeLines: [98, 99, 157, 158, 162],
+        jaxCodeLines: [78, 79, 130, 131, 141],
+      },
+      {
+        id: "decoder",
+        label: "Decoder",
+        type: "RecurrentDecoder",
+        kind: "group",
+        summary: "teacher-forced outputs",
+        badges: ["autoregressive form"],
+        defaultExpanded: true,
+        codeLines: [113, 114, 115, 119, 121, 126, 127, 128, 129, 130, 131, 132, 133, 136, 137, 162, 163, 164],
+        jaxCodeLines: [93, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 110, 111, 141, 142, 143],
+        children: [
+          {
+            id: "decoder.embedding",
+            label: "target embedding",
+            type: "Embedding",
+            kind: "embedding",
+            badges: ["vocab->128"],
+            codeLines: [113, 121],
+            jaxCodeLines: [93],
+          },
+          ...Array.from({ length: 6 }, (_, index) => makeSeq2SeqDecoderStep(index, index === 0)),
+        ],
+      },
+      {
+        id: "outputs",
+        label: "outputs",
+        type: "Logits + Traces",
+        kind: "head",
+        badges: ["target vocab", "states"],
+        codeLines: [115, 131, 136, 137, 163, 164, 165],
+        jaxCodeLines: [99, 105, 110, 111, 142, 143, 144],
+      },
+    ],
+    code: codeLines(seq2seqPythonSource),
+    jaxCode: codeLines(seq2seqJaxPythonSource),
   },
   {
     id: "lstm",

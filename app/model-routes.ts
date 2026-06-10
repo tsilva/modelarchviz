@@ -50,6 +50,13 @@ export const modelRouteSummaries = [
     description: "Explore GRU update and reset gates with architecture blocks, code, and source-paper context.",
   },
   {
+    id: "seq2seq",
+    label: "Seq2Seq",
+    publishedDate: "2014-09-10",
+    title: "Seq2Seq Architecture",
+    description: "Inspect recurrent encoder-decoder sequence transduction with PyTorch, JAX, and source-paper context.",
+  },
+  {
     id: "googlenet",
     label: "GoogLeNet / Inception v1",
     publishedDate: "2014-09-17",
