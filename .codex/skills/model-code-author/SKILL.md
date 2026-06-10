@@ -1,6 +1,6 @@
 ---
 name: model-code-author
-description: Author/edit/review/normalize neural-network model files/snippets: Python, PyTorch, JAX/Flax, app/model-notebooks sources, generated/displayed model-code, readable tensor-shape-aware teaching code.
+description: "Author/edit/review/normalize neural-network model files/snippets: Python, PyTorch, JAX/Flax, app/model-notebooks sources, generated/displayed model-code, readable tensor-shape-aware teaching code."
 ---
 
 # Model Code Author

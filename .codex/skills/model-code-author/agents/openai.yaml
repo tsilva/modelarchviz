@@ -1,0 +1,4 @@
+interface:
+  display_name: "Model Code Author"
+  short_description: "Author tensor-shape-aware model code"
+  default_prompt: "Use $model-code-author to update a ModelArchViz model notebook source and regenerate its displayed code."
