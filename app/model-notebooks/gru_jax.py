@@ -96,14 +96,16 @@ logits = outputs[0]  # (2, 10)
 states = outputs[1]  # (2, 8, 64)
 
 
-# %% [notebook-only]
+# %%
 # Train the same model on two synthetic sequences with opposite labels.
+model = GRUSequence(hidden_size=64, output_size=10)
 train_sequences = jnp.zeros((2, 3, 32))  # -> (2, 3, 32)
 first_pattern = jnp.array([1.0, 0.5, 1.0])  # -> (3)
 second_pattern = jnp.array([1.0, 0.5, 1.0])  # -> (3)
 train_sequences = train_sequences.at[0, :, 0].set(first_pattern)  # (2, 3, 32)
 train_sequences = train_sequences.at[1, :, 1].set(second_pattern)  # (2, 3, 32)
 train_targets = jnp.array([0, 1])  # -> (2)
+params = model.init(jax.random.PRNGKey(1), train_sequences)
 
 
 def train_step(params, inputs, targets, learning_rate=0.1):

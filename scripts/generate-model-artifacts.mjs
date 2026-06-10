@@ -6,7 +6,6 @@ const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), ".."
 const sourceDir = path.join(repoRoot, "app", "model-notebooks");
 const templateDir = path.join(repoRoot, "app", "model-templates");
 const generatedCodeDir = path.join(repoRoot, "app", "generated", "model-code");
-const generatedExampleDir = path.join(repoRoot, "app", "generated", "notebook-examples");
 const notebookDir = path.join(repoRoot, "public", "notebooks");
 
 function stripJupytextHeader(lines) {
@@ -160,12 +159,6 @@ function cleanedPythonFromCells(cells) {
   return `${blocks.join("\n\n").trimEnd()}\n`;
 }
 
-function notebookOnlyPythonFromCells(cells) {
-  const codeCells = cells.filter((cell) => cell.cell_type === "code" && cell.tags?.includes("notebook-only"));
-  const blocks = codeCells.map((cell) => cell.lines.join("\n"));
-  return `${blocks.join("\n\n").trimEnd()}\n`;
-}
-
 function templateValue(context, expression) {
   return expression.split(".").reduce((value, key) => value?.[key], context);
 }
@@ -197,18 +190,15 @@ async function safeReaddir(directory) {
 async function writeArtifacts({ fileName, source, sourceLabel }) {
   const cells = parseNotebookSource(source);
   const cleanedPython = cleanedPythonFromCells(cells);
-  const notebookOnlyPython = notebookOnlyPythonFromCells(cells);
   const notebook = notebookFromCells(fileName, cells, sourceLabel);
   const notebookName = fileName.replace(/\.py$/, ".ipynb");
 
   await writeFile(path.join(generatedCodeDir, fileName), cleanedPython, "utf8");
-  await writeFile(path.join(generatedExampleDir, fileName), notebookOnlyPython, "utf8");
   await writeFile(path.join(notebookDir, notebookName), `${JSON.stringify(notebook, null, 2)}\n`, "utf8");
 }
 
 async function main() {
   await mkdir(generatedCodeDir, { recursive: true });
-  await mkdir(generatedExampleDir, { recursive: true });
   await mkdir(notebookDir, { recursive: true });
 
   const entries = await safeReaddir(sourceDir);

@@ -113,8 +113,9 @@ logits = outputs[0]  # (2, 10)
 states = outputs[1]  # (2, 8, 64)
 
 
-# %% [notebook-only]
+# %%
 # Train the same model on two synthetic sequences with opposite labels.
+model = GRUSequence(input_size=32, hidden_size=64, output_size=10)
 train_sequences = torch.zeros(2, 3, 32)  # -> (2, 3, 32)
 train_sequences[0, :, 0] = torch.tensor([1.0, 0.5, 1.0])  # (3)
 train_sequences[1, :, 1] = torch.tensor([1.0, 0.5, 1.0])  # (3)

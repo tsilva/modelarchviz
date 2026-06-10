@@ -17,8 +17,6 @@ import rnnPythonSource from "./generated/model-code/elman_rnn.py";
 import rnnJaxPythonSource from "./generated/model-code/elman_rnn_jax.py";
 import gruPythonSource from "./generated/model-code/gru.py";
 import gruJaxPythonSource from "./generated/model-code/gru_jax.py";
-import gruExamplePythonSource from "./generated/notebook-examples/gru.py";
-import gruJaxExamplePythonSource from "./generated/notebook-examples/gru_jax.py";
 import seq2seqPythonSource from "./generated/model-code/seq2seq.py";
 import seq2seqJaxPythonSource from "./generated/model-code/seq2seq_jax.py";
 import lstmPythonSource from "./generated/model-code/lstm.py";
@@ -96,9 +94,6 @@ type ModelSpec = {
   stats: string;
   fileName: string;
   jaxFileName: string;
-  exampleFileName?: string;
-  jaxExampleFileName?: string;
-  defaultCodeFileId?: "main" | "examples";
   paper: {
     title: string;
     authors: string;
@@ -114,8 +109,6 @@ type ModelSpec = {
   nodes: ArchNode[];
   code: string[];
   jaxCode: string[];
-  exampleCode?: string[];
-  jaxExampleCode?: string[];
   variants?: ModelVariantSpec[];
   activeVariantId?: string;
 };
@@ -139,12 +132,6 @@ type ModelVariantSpec = {
 
 type PaneKey = "architecture" | "paper" | "code" | "chat";
 type CodeLanguage = "pytorch" | "jax";
-type CodePaneFile = {
-  id: string;
-  fileName: string;
-  notebookName: string;
-  code: string[];
-};
 type ChatMessage = {
   role: "user" | "assistant";
   content: string;
@@ -1451,13 +1438,10 @@ const models: ModelSpec[] = [
   {
     id: "gru",
     label: "GRU",
-    breadcrumb: "GRU / recurrent loop / step.0 / update gate",
+    breadcrumb: "GRU / training example / optimizer step",
     stats: "8 time steps · update/reset gates · 64 hidden units",
     fileName: "gru.py",
     jaxFileName: "gru_jax.py",
-    exampleFileName: "gru_examples.py",
-    jaxExampleFileName: "gru_jax_examples.py",
-    defaultCodeFileId: "examples",
     paper: {
       title: "Learning Phrase Representations using RNN Encoder-Decoder for Statistical Machine Translation",
       authors: "Kyunghyun Cho, Bart van Merrienboer, Caglar Gulcehre, Dzmitry Bahdanau, Fethi Bougares, Holger Schwenk, Yoshua Bengio",
@@ -1469,7 +1453,7 @@ const models: ModelSpec[] = [
       pdfUrl: paperPdfUrl("gru"),
       focus: ["update gate", "reset gate", "encoder-decoder sequence modeling"],
     },
-    selectedId: "step.0.update_gate",
+    selectedId: "training_example",
     nodes: [
       {
         id: "sequence",
@@ -1560,11 +1544,18 @@ const models: ModelSpec[] = [
         codeLines: [75, 76, 77, 78],
         jaxCodeLines: [56, 57, 58, 59],
       },
+      {
+        id: "training_example",
+        label: "training example",
+        type: "Tiny supervised fit",
+        kind: "head",
+        badges: ["2 sequences", "3 steps"],
+        codeLines: [80, 81, 82, 85, 86, 87, 89, 90, 91, 92, 93, 94, 95, 96, 98, 99],
+        jaxCodeLines: [61, 62, 63, 68, 69, 72, 73, 74, 75, 76, 77, 78, 81, 82, 86, 87, 88, 90, 91],
+      },
     ],
     code: codeLines(gruPythonSource),
     jaxCode: codeLines(gruJaxPythonSource),
-    exampleCode: codeLines(gruExamplePythonSource),
-    jaxExampleCode: codeLines(gruJaxExamplePythonSource),
   },
   {
     id: "seq2seq",
@@ -5184,56 +5175,13 @@ function CodeEditor({
   onUserCodeSelectionChange: (selection: UserCodeSelection | null) => void;
 }) {
   const editorRef = useRef<HTMLDivElement>(null);
-  const previousCodeFileModelKey = useRef("");
-  const [selectedFileId, setSelectedFileId] = useState("examples");
-  const pyTorchFiles: CodePaneFile[] = [
-    { id: "main", fileName: model.fileName, notebookName: notebookFileName(model.fileName), code: model.code },
-  ];
-  const jaxFiles: CodePaneFile[] = [
-    { id: "main", fileName: model.jaxFileName, notebookName: notebookFileName(model.jaxFileName), code: model.jaxCode },
-  ];
-
-  if (model.exampleCode?.some((line) => line.trim().length > 0)) {
-    pyTorchFiles.push({
-      id: "examples",
-      fileName: model.exampleFileName ?? model.fileName.replace(/\.py$/, "_examples.py"),
-      notebookName: notebookFileName(model.fileName),
-      code: model.exampleCode,
-    });
-  }
-
-  if (model.jaxExampleCode?.some((line) => line.trim().length > 0)) {
-    jaxFiles.push({
-      id: "examples",
-      fileName: model.jaxExampleFileName ?? model.jaxFileName.replace(/\.py$/, "_examples.py"),
-      notebookName: notebookFileName(model.jaxFileName),
-      code: model.jaxExampleCode,
-    });
-  }
-
   const codeFiles = {
-    pytorch: pyTorchFiles,
-    jax: jaxFiles,
-  } satisfies Record<CodeLanguage, CodePaneFile[]>;
+    pytorch: [{ id: "main", fileName: model.fileName, notebookName: notebookFileName(model.fileName), code: model.code }],
+    jax: [{ id: "main", fileName: model.jaxFileName, notebookName: notebookFileName(model.jaxFileName), code: model.jaxCode }],
+  } satisfies Record<CodeLanguage, Array<{ id: string; fileName: string; notebookName: string; code: string[] }>>;
   const filesForLanguage = codeFiles[language];
-  const currentFile = filesForLanguage.find((file) => file.id === selectedFileId) ?? filesForLanguage[0];
-  const selectedLineNumbersForLanguage = currentFile.id === "main" ? selectedLineNumbers(model, selected, language) : [];
-  const preferredFileId = model.defaultCodeFileId ?? "main";
-
-  useEffect(() => {
-    const modelKey = `${model.id}:${language}`;
-    const modelChanged = previousCodeFileModelKey.current !== modelKey;
-    previousCodeFileModelKey.current = modelKey;
-
-    if (!modelChanged && filesForLanguage.some((file) => file.id === selectedFileId)) {
-      return;
-    }
-
-    const nextFileId = filesForLanguage.some((file) => file.id === preferredFileId) ? preferredFileId : "main";
-    setSelectedFileId(nextFileId);
-    onAgentCodeSelectionChange(null);
-    onUserCodeSelectionChange(null);
-  }, [filesForLanguage, language, model.id, onAgentCodeSelectionChange, onUserCodeSelectionChange, preferredFileId, selectedFileId]);
+  const currentFile = filesForLanguage[0];
+  const selectedLineNumbersForLanguage = selectedLineNumbers(model, selected, language);
   const activeAgentSelection =
     agentCodeSelection &&
     agentCodeSelection.modelId === model.id &&
@@ -5327,17 +5275,7 @@ function CodeEditor({
     <section className="code-pane">
       <div className="pane-toolbar code-toolbar">
         <div className="tab-group file-tab-group">
-          <select
-            className="editor-select"
-            aria-label="Select source file"
-            value={currentFile.id}
-            disabled={filesForLanguage.length === 1}
-            onChange={(event) => {
-              setSelectedFileId(event.currentTarget.value);
-              onAgentCodeSelectionChange(null);
-              onUserCodeSelectionChange(null);
-            }}
-          >
+          <select className="editor-select" aria-label="Select source file" value={currentFile.id} disabled>
             {filesForLanguage.map((file) => (
               <option value={file.id} key={file.id}>
                 {file.fileName}
@@ -6519,7 +6457,7 @@ export default function ModelArchVizApp({ initialModelId }: ModelArchVizAppProps
       } as React.CSSProperties)
     : undefined;
   const expanded = expandedByModel[currentModelKey] ?? new Set<string>();
-  const selected = selectedByModel[currentModelKey] ?? null;
+  const selected = selectedByModel[currentModelKey] ?? findNodeById(model.nodes, model.selectedId);
 
   useEffect(() => {
     setModelId(initialModel.id);
