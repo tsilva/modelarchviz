@@ -16,6 +16,7 @@ import torch
 import torch.nn as nn
 
 
+# %%
 class DoubleConv(nn.Module):
     def __init__(self, in_channels, out_channels):
         super().__init__()
@@ -34,6 +35,14 @@ class DoubleConv(nn.Module):
         return out
 
 
+# %% [notebook-only]
+# Create and run one double convolution: (2, 1, 32, 32) -> (2, 8, 32, 32).
+block = DoubleConv(in_channels=1, out_channels=8)
+block_input = torch.randn(2, 1, 32, 32)  # -> (2, 1, 32, 32)
+block_output = block(block_input)  # (2, 1, 32, 32) -> (2, 8, 32, 32)
+
+
+# %%
 class UNet(nn.Module):
     def __init__(
         self,
@@ -94,6 +103,7 @@ class UNet(nn.Module):
         return logits
 
 
+# %% [notebook-only]
 # Create and run a sample image batch: (2, 1, 572, 572) -> (2, 2, 572, 572).
 model = UNet(num_classes=2)
 test_input = torch.randn(2, 1, 572, 572)  # -> (2, 1, 572, 572)

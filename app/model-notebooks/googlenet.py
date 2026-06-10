@@ -17,6 +17,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 
+# %%
 class InceptionBlock(nn.Module):
     def __init__(
         self,
@@ -66,6 +67,14 @@ class InceptionBlock(nn.Module):
         return x
 
 
+# %% [notebook-only]
+# Create and run one Inception block: (2, 8, 16, 16) -> (2, 16, 16, 16).
+block = InceptionBlock(8, 4, 4, 4, 4, 4, 4)
+block_input = torch.randn(2, 8, 16, 16)  # -> (2, 8, 16, 16)
+block_output = block(block_input)  # (2, 8, 16, 16) -> (2, 16, 16, 16)
+
+
+# %%
 class GoogLeNet(nn.Module):
     def __init__(
         self,
@@ -126,6 +135,7 @@ class GoogLeNet(nn.Module):
         return logits
 
 
+# %% [notebook-only]
 # Create and run a sample image batch: (2, 3, 224, 224) -> (2, 1000).
 model = GoogLeNet(num_classes=1000)
 test_input = torch.randn(2, 3, 224, 224)  # -> (2, 3, 224, 224)

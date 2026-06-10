@@ -2,7 +2,6 @@ import jax
 import jax.numpy as jnp
 from flax import linen as nn
 
-
 class GPT2Small(nn.Module):
     vocab_size: int
     n_ctx: int = 1024
@@ -30,11 +29,11 @@ class GPT2Small(nn.Module):
         logits = nn.Dense(self.vocab_size, name='lm_head')(x)  # (batch, steps, n_embd) -> (batch, steps, vocab_size)
         return logits  # (batch, steps, vocab_size)
 
-
 class CausalSelfAttention(nn.Module):
     n_embd: int = 768
     n_head: int = 12
 
+    @nn.compact
     def __call__(self, x, mask):
         # Project hidden states into query, key, and value tensors.
         batch_size, step_count, channel_count = x.shape  # (batch, steps, channels) -> scalar, scalar, scalar
@@ -67,7 +66,6 @@ class CausalSelfAttention(nn.Module):
         out = nn.Dense(channel_count, name='c_proj')(y)  # (batch, steps, channels)
         return out  # (batch, steps, channels)
 
-
 class MLP(nn.Module):
     n_embd: int = 768
     hidden_dim: int = 3072
@@ -80,8 +78,8 @@ class MLP(nn.Module):
         out = nn.Dense(self.n_embd, name='c_proj')(hidden)  # (batch, steps, hidden_dim) -> (batch, steps, n_embd)
         return out  # (batch, steps, n_embd)
 
-
 class Block(nn.Module):
+    @nn.compact
     def __call__(self, x, mask):
         # Apply causal attention with a residual connection.
         attn_input = nn.LayerNorm(name='ln_1')(x)  # (batch, steps, 768)
@@ -93,46 +91,3 @@ class Block(nn.Module):
         mlp_out = MLP()(mlp_input)  # (batch, steps, 768)
         x = x + mlp_out  # (batch, steps, 768)
         return x  # (batch, steps, 768)
-
-
-# Create and run a sample token batch.
-model = GPT2Small(vocab_size=50257)
-test_input = jnp.ones((2, 16), dtype=jnp.int32)  # -> (2, 16)
-
-# Build a causal attention mask: (1, 1, 16, 16).
-mask_values = jnp.ones((16, 16))  # -> (16, 16)
-mask = jnp.tril(mask_values)  # (16, 16)
-mask = mask.reshape(1, 1, 16, 16)  # (16, 16) -> (1, 1, 16, 16)
-params = model.init(jax.random.PRNGKey(0), test_input, mask)
-logits = model.apply(params, test_input, mask)  # (2, 16), (1, 1, 16, 16) -> (2, 16, 50257)
-
-
-# Train on a tiny next-token prediction batch.
-model = GPT2Small(vocab_size=20, n_layer=1)
-input_ids = jnp.array([[1, 2, 3, 4], [4, 3, 2, 1]], dtype=jnp.int32)  # -> (2, 4)
-train_targets = jnp.array([[2, 3, 4, 5], [3, 2, 1, 0]], dtype=jnp.int32)  # -> (2, 4)
-mask_values = jnp.ones((4, 4))  # -> (4, 4)
-mask = jnp.tril(mask_values)  # (4, 4)
-mask = mask.reshape(1, 1, 4, 4)  # (4, 4) -> (1, 1, 4, 4)
-params = model.init(jax.random.PRNGKey(1), input_ids, mask)
-
-
-def train_step(params, inputs, mask, targets, learning_rate=0.01):
-    def loss_fn(current_params):
-        logits = model.apply(current_params, inputs, mask)  # (2, 4), (1, 1, 4, 4) -> (2, 4, 20)
-        one_hot_targets = jax.nn.one_hot(targets, logits.shape[-1])  # (2, 4) -> (2, 4, 20)
-        log_probs = jax.nn.log_softmax(logits, axis=-1)  # (2, 4, 20)
-        loss = -jnp.mean(jnp.sum(one_hot_targets * log_probs, axis=-1))  # (2, 4, 20), (2, 4, 20) -> scalar
-        return loss  # scalar
-
-    loss, grads = jax.value_and_grad(loss_fn)(params)
-    params = jax.tree_util.tree_map(lambda p, g: p - learning_rate * g, params, grads)
-    return params, loss
-
-
-# Fit the model for a few steps on the tiny dataset.
-for step in range(3):
-    params, loss = train_step(params, input_ids, mask, train_targets)
-
-# Keep the final scalar loss for inspection.
-final_loss = loss  # scalar

@@ -17,6 +17,7 @@ import jax.numpy as jnp
 from flax import linen as nn
 
 
+# %%
 class BertEmbeddings(nn.Module):
     vocab_size: int = 30522
     hidden_size: int = 768
@@ -40,6 +41,16 @@ class BertEmbeddings(nn.Module):
         return x  # (batch, steps, hidden_size)
 
 
+# %% [notebook-only]
+# Create and run the embedding block: (2, 4) -> (2, 4, 12).
+embeddings = BertEmbeddings(vocab_size=20, hidden_size=12, max_position=8)
+input_ids = jnp.array([[1, 2, 3, 4], [4, 3, 2, 1]], dtype=jnp.int32)  # -> (2, 4)
+token_type_ids = jnp.zeros((2, 4), dtype=jnp.int32)  # -> (2, 4)
+params = embeddings.init(jax.random.PRNGKey(0), input_ids, token_type_ids, train=False)
+embedded = embeddings.apply(params, input_ids, token_type_ids, train=False)  # (2, 4), (2, 4) -> (2, 4, 12)
+
+
+# %%
 class BertSelfAttention(nn.Module):
     hidden_size: int = 768
     num_heads: int = 12
@@ -81,6 +92,16 @@ class BertSelfAttention(nn.Module):
         return out  # (batch, steps, hidden_size)
 
 
+# %% [notebook-only]
+# Create and run one BERT self-attention block: (2, 4, 12) -> (2, 4, 12).
+attention = BertSelfAttention(hidden_size=12, num_heads=3)
+hidden_states = jnp.ones((2, 4, 12))  # -> (2, 4, 12)
+attention_mask = jnp.ones((2, 1, 1, 4), dtype=jnp.bool_)  # -> (2, 1, 1, 4)
+params = attention.init(jax.random.PRNGKey(1), hidden_states, attention_mask)
+attended = attention.apply(params, hidden_states, attention_mask)  # (2, 4, 12), (2, 1, 1, 4) -> (2, 4, 12)
+
+
+# %%
 class BertLayer(nn.Module):
     hidden_size: int = 768
     num_heads: int = 12
@@ -104,6 +125,16 @@ class BertLayer(nn.Module):
         return out  # (batch, steps, hidden_size)
 
 
+# %% [notebook-only]
+# Create and run one encoder layer: (2, 4, 12) -> (2, 4, 12).
+layer = BertLayer(hidden_size=12, num_heads=3, intermediate_size=24)
+hidden_states = jnp.ones((2, 4, 12))  # -> (2, 4, 12)
+attention_mask = jnp.ones((2, 1, 1, 4), dtype=jnp.bool_)  # -> (2, 1, 1, 4)
+params = layer.init(jax.random.PRNGKey(2), hidden_states, attention_mask, train=False)
+layer_output = layer.apply(params, hidden_states, attention_mask, train=False)  # (2, 4, 12), (2, 1, 1, 4) -> (2, 4, 12)
+
+
+# %%
 class BERTBase(nn.Module):
     vocab_size: int = 30522
     hidden_size: int = 768
@@ -125,6 +156,7 @@ class BERTBase(nn.Module):
         return outputs
 
 
+# %% [notebook-only]
 # Create and run a sample token batch.
 model = BERTBase(vocab_size=30522)
 input_ids = jnp.ones((2, 16), dtype=jnp.int32)  # -> (2, 16)

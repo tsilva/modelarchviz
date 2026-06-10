@@ -16,6 +16,7 @@ import torch
 import torch.nn as nn
 
 
+# %%
 class LSTMCell(nn.Module):
     def __init__(
         self,
@@ -74,6 +75,20 @@ class LSTMCell(nn.Module):
         return next_state
 
 
+# %% [notebook-only]
+# Create and run one LSTM cell step: (2, 32), state -> next state.
+cell = LSTMCell(input_size=32, hidden_size=64)
+cell_input = torch.randn(2, 32)  # -> (2, 32)
+previous_state = (
+    torch.zeros(2, 64),
+    torch.zeros(2, 64),
+)
+next_state = cell(cell_input, previous_state)
+next_hidden = next_state[0]  # tuple -> (2, 64)
+next_cell = next_state[1]  # tuple -> (2, 64)
+
+
+# %%
 class LSTMSequence(nn.Module):
     def __init__(
         self,
@@ -113,6 +128,7 @@ class LSTMSequence(nn.Module):
         return outputs
 
 
+# %% [notebook-only]
 # Create and run a sample sequence: (2, 8, 32) -> logits and states.
 model = LSTMSequence(input_size=32, hidden_size=64, output_size=10)
 sequence = torch.randn(2, 8, 32)  # -> (2, 8, 32)

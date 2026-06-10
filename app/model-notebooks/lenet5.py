@@ -17,6 +17,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 
+# %%
 class LeNet5(nn.Module):
     def __init__(self):
         super().__init__()
@@ -50,6 +51,7 @@ class LeNet5(nn.Module):
         return logits
 
 
+# %% [notebook-only]
 # Create and run a sample image batch: (2, 1, 32, 32) -> (2, 10).
 model = LeNet5()
 test_input = torch.randn(2, 1, 32, 32)  # -> (2, 1, 32, 32)

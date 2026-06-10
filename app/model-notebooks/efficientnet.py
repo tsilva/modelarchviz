@@ -17,6 +17,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 
+# %%
 class SqueezeExcite(nn.Module):
     def __init__(
         self,
@@ -42,6 +43,14 @@ class SqueezeExcite(nn.Module):
         return out
 
 
+# %% [notebook-only]
+# Create and run a squeeze-excitation gate: (2, 8, 16, 16) -> (2, 8, 16, 16).
+gate = SqueezeExcite(channels=8, squeeze_channels=2)
+feature_map = torch.randn(2, 8, 16, 16)  # -> (2, 8, 16, 16)
+gated = gate(feature_map)  # (2, 8, 16, 16) -> (2, 8, 16, 16)
+
+
+# %%
 class MBConv(nn.Module):
     def __init__(
         self,
@@ -108,6 +117,14 @@ class MBConv(nn.Module):
         return out
 
 
+# %% [notebook-only]
+# Create and run one mobile inverted bottleneck: (2, 8, 16, 16) -> (2, 8, 16, 16).
+block = MBConv(in_channels=8, out_channels=8, expand_ratio=1, stride=1, kernel_size=3)
+block_input = torch.randn(2, 8, 16, 16)  # -> (2, 8, 16, 16)
+block_output = block(block_input)  # (2, 8, 16, 16) -> (2, 8, 16, 16)
+
+
+# %%
 class EfficientNet(nn.Module):
     def __init__(
         self,
@@ -185,6 +202,7 @@ class EfficientNet(nn.Module):
         return logits
 
 
+# %% [notebook-only]
 # Create and run a sample ImageNet-size batch: (2, 3, 224, 224) -> (2, 1000).
 model = EfficientNet(num_classes=1000)
 test_input = torch.randn(2, 3, 224, 224)  # -> (2, 3, 224, 224)

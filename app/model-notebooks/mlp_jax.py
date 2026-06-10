@@ -17,6 +17,7 @@ import jax.numpy as jnp
 from flax import linen as nn
 
 
+# %%
 # Define a multilayer perceptron.
 class MLP(nn.Module):
     hidden_dim: int = 128
@@ -40,6 +41,7 @@ class MLP(nn.Module):
         return logits
 
 
+# %% [notebook-only]
 # Create and run a sample batch: (2, 784) -> (2, 10).
 model = MLP(hidden_dim=128, output_dim=10)
 inputs = jnp.ones((2, 784))  # -> (2, 784)

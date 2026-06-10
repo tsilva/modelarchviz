@@ -16,6 +16,7 @@ import torch
 import torch.nn as nn
 
 
+# %%
 class PatchEmbed(nn.Module):
     def __init__(
         self,
@@ -41,6 +42,14 @@ class PatchEmbed(nn.Module):
         return x  # (batch, patches, embed_dim)
 
 
+# %% [notebook-only]
+# Create and run patch embedding: (2, 3, 32, 32) -> (2, 4, 24).
+patch_embed = PatchEmbed(in_channels=3, embed_dim=24, patch_size=16, image_size=32)
+images = torch.randn(2, 3, 32, 32)  # -> (2, 3, 32, 32)
+patch_tokens = patch_embed(images)  # (2, 3, 32, 32) -> (2, 4, 24)
+
+
+# %%
 class MultiHeadSelfAttention(nn.Module):
     def __init__(
         self,
@@ -89,6 +98,14 @@ class MultiHeadSelfAttention(nn.Module):
         return out  # (batch, tokens, embed_dim)
 
 
+# %% [notebook-only]
+# Create and run vision self-attention: (2, 5, 24) -> (2, 5, 24).
+attention = MultiHeadSelfAttention(embed_dim=24, num_heads=4)
+tokens = torch.randn(2, 5, 24)  # -> (2, 5, 24)
+attended = attention(tokens)  # (2, 5, 24) -> (2, 5, 24)
+
+
+# %%
 class EncoderBlock(nn.Module):
     def __init__(
         self,
@@ -121,6 +138,14 @@ class EncoderBlock(nn.Module):
         return x  # (batch, tokens, embed_dim)
 
 
+# %% [notebook-only]
+# Create and run one ViT encoder block: (2, 5, 24) -> (2, 5, 24).
+block = EncoderBlock(embed_dim=24, num_heads=4, mlp_dim=48)
+tokens = torch.randn(2, 5, 24)  # -> (2, 5, 24)
+encoded_tokens = block(tokens)  # (2, 5, 24) -> (2, 5, 24)
+
+
+# %%
 class VisionTransformer(nn.Module):
     def __init__(
         self,
@@ -158,6 +183,7 @@ class VisionTransformer(nn.Module):
         return logits  # (batch, num_classes)
 
 
+# %% [notebook-only]
 # Create and run a sample image batch: (2, 3, 224, 224) -> (2, 1000).
 model = VisionTransformer(num_classes=1000)
 test_input = torch.randn(2, 3, 224, 224)  # -> (2, 3, 224, 224)

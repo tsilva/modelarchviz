@@ -17,6 +17,7 @@ import jax.numpy as jnp
 from flax import linen as nn
 
 
+# %%
 class DoubleConv(nn.Module):
     out_channels: int
 
@@ -30,6 +31,15 @@ class DoubleConv(nn.Module):
         return x
 
 
+# %% [notebook-only]
+# Create and run one double convolution: (2, 32, 32, 1) -> (2, 32, 32, 8).
+block = DoubleConv(out_channels=8)
+block_input = jnp.ones((2, 32, 32, 1))  # -> (2, 32, 32, 1)
+params = block.init(jax.random.PRNGKey(0), block_input)
+block_output = block.apply(params, block_input)  # (2, 32, 32, 1) -> (2, 32, 32, 8)
+
+
+# %%
 class UNet(nn.Module):
     num_classes: int = 2
 
@@ -74,6 +84,7 @@ def resize_like(x, skip):
     return resized
 
 
+# %% [notebook-only]
 # Create and run a sample image batch: (2, 572, 572, 1) -> (2, 572, 572, 2).
 model = UNet(num_classes=2)
 test_input = jnp.ones((2, 572, 572, 1))  # -> (2, 572, 572, 1)

@@ -17,6 +17,7 @@ import jax.numpy as jnp
 from flax import linen as nn
 
 
+# %%
 class LeNet5(nn.Module):
     @nn.compact
     def __call__(self, x):
@@ -42,6 +43,7 @@ class LeNet5(nn.Module):
         return logits
 
 
+# %% [notebook-only]
 # Create and run a sample image batch: (2, 32, 32, 1) -> (2, 10).
 model = LeNet5()
 test_input = jnp.ones((2, 32, 32, 1))  # -> (2, 32, 32, 1)

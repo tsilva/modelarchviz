@@ -17,6 +17,7 @@ import jax.numpy as jnp
 from flax import linen as nn
 
 
+# %%
 class DenseLayer(nn.Module):
     growth_rate: int
     bottleneck_width: int = 4
@@ -55,6 +56,15 @@ class DenseLayer(nn.Module):
         return y
 
 
+# %% [notebook-only]
+# Create and run one dense layer: (2, 8, 8, 6) -> (2, 8, 8, 10).
+layer = DenseLayer(growth_rate=4)
+dense_input = jnp.ones((2, 8, 8, 6))  # -> (2, 8, 8, 6)
+variables = layer.init(jax.random.PRNGKey(0), dense_input, train=False)
+dense_output = layer.apply(variables, dense_input, train=False)  # (2, 8, 8, 6) -> (2, 8, 8, 10)
+
+
+# %%
 class Transition(nn.Module):
     out_channels: int
 
@@ -73,6 +83,15 @@ class Transition(nn.Module):
         return y
 
 
+# %% [notebook-only]
+# Create and run one transition block: (2, 8, 8, 10) -> (2, 4, 4, 6).
+transition = Transition(out_channels=6)
+transition_input = jnp.ones((2, 8, 8, 10))  # -> (2, 8, 8, 10)
+variables = transition.init(jax.random.PRNGKey(1), transition_input, train=False)
+transition_output = transition.apply(variables, transition_input, train=False)  # (2, 8, 8, 10) -> (2, 4, 4, 6)
+
+
+# %%
 class DenseNet(nn.Module):
     growth_rate: int = 32
     block_config: tuple = (6, 12, 24, 16)
@@ -122,6 +141,7 @@ class DenseNet(nn.Module):
         return logits
 
 
+# %% [notebook-only]
 # Create and run a sample ImageNet-size batch: (2, 224, 224, 3) -> (2, 1000).
 model = DenseNet(num_classes=1000)
 test_input = jnp.ones((2, 224, 224, 3))  # -> (2, 224, 224, 3)

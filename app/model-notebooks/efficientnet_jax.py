@@ -17,6 +17,7 @@ import jax.numpy as jnp
 from flax import linen as nn
 
 
+# %%
 class SqueezeExcite(nn.Module):
     squeeze_channels: int
 
@@ -35,6 +36,15 @@ class SqueezeExcite(nn.Module):
         return y
 
 
+# %% [notebook-only]
+# Create and run a squeeze-excitation gate: (2, 16, 16, 8) -> (2, 16, 16, 8).
+gate = SqueezeExcite(squeeze_channels=2)
+feature_map = jnp.ones((2, 16, 16, 8))  # -> (2, 16, 16, 8)
+params = gate.init(jax.random.PRNGKey(0), feature_map)
+gated = gate.apply(params, feature_map)  # (2, 16, 16, 8) -> (2, 16, 16, 8)
+
+
+# %%
 class MBConv(nn.Module):
     out_channels: int
     expand_ratio: int
@@ -91,6 +101,15 @@ class MBConv(nn.Module):
         return y
 
 
+# %% [notebook-only]
+# Create and run one mobile inverted bottleneck: (2, 16, 16, 8) -> (2, 16, 16, 8).
+block = MBConv(out_channels=8, expand_ratio=1, stride=1, kernel_size=3)
+block_input = jnp.ones((2, 16, 16, 8))  # -> (2, 16, 16, 8)
+variables = block.init(jax.random.PRNGKey(1), block_input, train=False)
+block_output = block.apply(variables, block_input, train=False)  # (2, 16, 16, 8) -> (2, 16, 16, 8)
+
+
+# %%
 class EfficientNet(nn.Module):
     num_classes: int = 1000
 
@@ -148,6 +167,7 @@ class EfficientNet(nn.Module):
         return logits
 
 
+# %% [notebook-only]
 # Create and run a sample ImageNet-size batch: (2, 224, 224, 3) -> (2, 1000).
 model = EfficientNet(num_classes=1000)
 test_input = jnp.ones((2, 224, 224, 3))  # -> (2, 224, 224, 3)

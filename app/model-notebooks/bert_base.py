@@ -16,6 +16,7 @@ import torch
 import torch.nn as nn
 
 
+# %%
 class BertEmbeddings(nn.Module):
     def __init__(
         self,
@@ -47,6 +48,15 @@ class BertEmbeddings(nn.Module):
         return x  # (batch, steps, hidden_size)
 
 
+# %% [notebook-only]
+# Create and run the embedding block: (2, 4) -> (2, 4, 12).
+embeddings = BertEmbeddings(vocab_size=20, hidden_size=12, max_position=8)
+input_ids = torch.tensor([[1, 2, 3, 4], [4, 3, 2, 1]])  # -> (2, 4)
+token_type_ids = torch.zeros((2, 4), dtype=torch.long)  # -> (2, 4)
+embedded = embeddings(input_ids, token_type_ids)  # (2, 4), (2, 4) -> (2, 4, 12)
+
+
+# %%
 class BertSelfAttention(nn.Module):
     def __init__(
         self,
@@ -98,6 +108,15 @@ class BertSelfAttention(nn.Module):
         return out  # (batch, steps, hidden_size)
 
 
+# %% [notebook-only]
+# Create and run one BERT self-attention block: (2, 4, 12) -> (2, 4, 12).
+attention = BertSelfAttention(hidden_size=12, num_heads=3)
+hidden_states = torch.randn(2, 4, 12)  # -> (2, 4, 12)
+attention_mask = torch.zeros((2, 4), dtype=torch.bool)  # -> (2, 4)
+attended = attention(hidden_states, attention_mask)  # (2, 4, 12), (2, 4) -> (2, 4, 12)
+
+
+# %%
 class BertLayer(nn.Module):
     def __init__(
         self,
@@ -133,6 +152,15 @@ class BertLayer(nn.Module):
         return out  # (batch, steps, hidden_size)
 
 
+# %% [notebook-only]
+# Create and run one encoder layer: (2, 4, 12) -> (2, 4, 12).
+layer = BertLayer(hidden_size=12, num_heads=3, intermediate_size=24)
+hidden_states = torch.randn(2, 4, 12)  # -> (2, 4, 12)
+attention_mask = torch.zeros((2, 4), dtype=torch.bool)  # -> (2, 4)
+layer_output = layer(hidden_states, attention_mask)  # (2, 4, 12), (2, 4) -> (2, 4, 12)
+
+
+# %%
 class BERTBase(nn.Module):
     def __init__(
         self,
@@ -163,6 +191,7 @@ class BERTBase(nn.Module):
         return outputs
 
 
+# %% [notebook-only]
 # Create and run a sample token batch.
 model = BERTBase(vocab_size=30522)
 input_ids = torch.randint(0, 30522, (2, 16))  # -> (2, 16)

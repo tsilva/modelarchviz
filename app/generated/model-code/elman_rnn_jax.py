@@ -2,7 +2,6 @@ import jax
 import jax.numpy as jnp
 from flax import linen as nn
 
-
 class ElmanRNN(nn.Module):
     hidden_size: int = 64
     output_size: int = 10

@@ -16,6 +16,7 @@ import torch
 import torch.nn as nn
 
 
+# %%
 # Define a multilayer perceptron.
 class MLP(nn.Module):
     def __init__(
@@ -45,6 +46,7 @@ class MLP(nn.Module):
         return logits
 
 
+# %% [notebook-only]
 # Create and run a sample batch: (2, 784) -> (2, 10).
 model = MLP(input_dim=784, hidden_dim=128, output_dim=10)
 inputs = torch.randn(2, 784)  # -> (2, 784)

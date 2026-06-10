@@ -17,6 +17,7 @@ import jax.numpy as jnp
 from flax import linen as nn
 
 
+# %%
 class AlexNet(nn.Module):
     num_classes: int = 1000
 
@@ -75,6 +76,7 @@ def local_response_norm(x, size=5, alpha=1e-4, beta=0.75, k=2.0):
     return normalized
 
 
+# %% [notebook-only]
 # Create and run a sample image batch: (2, 227, 227, 3) -> (2, 1000).
 model = AlexNet(num_classes=1000)
 test_input = jnp.ones((2, 227, 227, 3))  # -> (2, 227, 227, 3)

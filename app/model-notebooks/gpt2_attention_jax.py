@@ -17,6 +17,7 @@ import jax.numpy as jnp
 from flax import linen as nn
 
 
+# %%
 class GPT2Small(nn.Module):
     vocab_size: int
     n_ctx: int = 1024
@@ -45,10 +46,12 @@ class GPT2Small(nn.Module):
         return logits  # (batch, steps, vocab_size)
 
 
+# %%
 class CausalSelfAttention(nn.Module):
     n_embd: int = 768
     n_head: int = 12
 
+    @nn.compact
     def __call__(self, x, mask):
         # Project hidden states into query, key, and value tensors.
         batch_size, step_count, channel_count = x.shape  # (batch, steps, channels) -> scalar, scalar, scalar
@@ -82,6 +85,16 @@ class CausalSelfAttention(nn.Module):
         return out  # (batch, steps, channels)
 
 
+# %% [notebook-only]
+# Create and run causal self-attention: (2, 4, 24) -> (2, 4, 24).
+attention = CausalSelfAttention(n_embd=24, n_head=4)
+hidden_states = jnp.ones((2, 4, 24))  # -> (2, 4, 24)
+mask = jnp.tril(jnp.ones((4, 4))).reshape(1, 1, 4, 4)  # -> (1, 1, 4, 4)
+params = attention.init(jax.random.PRNGKey(0), hidden_states, mask)
+attended = attention.apply(params, hidden_states, mask)  # (2, 4, 24), (1, 1, 4, 4) -> (2, 4, 24)
+
+
+# %%
 class MLP(nn.Module):
     n_embd: int = 768
     hidden_dim: int = 3072
@@ -95,7 +108,17 @@ class MLP(nn.Module):
         return out  # (batch, steps, n_embd)
 
 
+# %% [notebook-only]
+# Create and run the GPT feed-forward block: (2, 4, 24) -> (2, 4, 24).
+mlp = MLP(n_embd=24, hidden_dim=48)
+hidden_states = jnp.ones((2, 4, 24))  # -> (2, 4, 24)
+params = mlp.init(jax.random.PRNGKey(1), hidden_states)
+mlp_output = mlp.apply(params, hidden_states)  # (2, 4, 24) -> (2, 4, 24)
+
+
+# %%
 class Block(nn.Module):
+    @nn.compact
     def __call__(self, x, mask):
         # Apply causal attention with a residual connection.
         attn_input = nn.LayerNorm(name='ln_1')(x)  # (batch, steps, 768)
@@ -109,6 +132,7 @@ class Block(nn.Module):
         return x  # (batch, steps, 768)
 
 
+# %% [notebook-only]
 # Create and run a sample token batch.
 model = GPT2Small(vocab_size=50257)
 test_input = jnp.ones((2, 16), dtype=jnp.int32)  # -> (2, 16)

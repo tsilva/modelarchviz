@@ -17,6 +17,7 @@ import jax.numpy as jnp
 from flax import linen as nn
 
 
+# %%
 class PositionalEncoding(nn.Module):
     d_model: int = 512
 
@@ -41,6 +42,14 @@ class PositionalEncoding(nn.Module):
         return encoded  # (batch, steps, d_model)
 
 
+# %% [notebook-only]
+# Create and run positional encoding: (2, 4, 8) -> (2, 4, 8).
+positioner = PositionalEncoding(d_model=8)
+embeddings = jnp.ones((2, 4, 8))  # -> (2, 4, 8)
+encoded = positioner.init_with_output(jax.random.PRNGKey(0), embeddings)[0]  # (2, 4, 8)
+
+
+# %%
 class MultiHeadAttention(nn.Module):
     d_model: int = 512
     nhead: int = 8
@@ -81,6 +90,18 @@ class MultiHeadAttention(nn.Module):
         return out  # (batch, query_steps, d_model)
 
 
+# %% [notebook-only]
+# Create and run multi-head attention: query and memory -> (2, 3, 8).
+attention = MultiHeadAttention(d_model=8, nhead=2)
+query = jnp.ones((2, 3, 8))  # -> (2, 3, 8)
+key = jnp.ones((2, 4, 8))  # -> (2, 4, 8)
+value = jnp.ones((2, 4, 8))  # -> (2, 4, 8)
+mask = jnp.ones((1, 1, 3, 4))  # -> (1, 1, 3, 4)
+params = attention.init(jax.random.PRNGKey(1), query, key, value, mask)
+attended = attention.apply(params, query, key, value, mask)  # inputs -> (2, 3, 8)
+
+
+# %%
 class EncoderLayer(nn.Module):
     d_model: int = 512
     nhead: int = 8
@@ -101,6 +122,15 @@ class EncoderLayer(nn.Module):
         return out  # (batch, steps, d_model)
 
 
+# %% [notebook-only]
+# Create and run one encoder layer: (2, 4, 8) -> (2, 4, 8).
+encoder_layer = EncoderLayer(d_model=8, nhead=2, d_ff=16)
+encoder_input = jnp.ones((2, 4, 8))  # -> (2, 4, 8)
+params = encoder_layer.init(jax.random.PRNGKey(2), encoder_input)
+encoder_output = encoder_layer.apply(params, encoder_input)  # (2, 4, 8) -> (2, 4, 8)
+
+
+# %%
 class DecoderLayer(nn.Module):
     d_model: int = 512
     nhead: int = 8
@@ -126,6 +156,17 @@ class DecoderLayer(nn.Module):
         return out  # (batch, target_steps, d_model)
 
 
+# %% [notebook-only]
+# Create and run one decoder layer: target and memory -> (2, 4, 8).
+decoder_layer = DecoderLayer(d_model=8, nhead=2, d_ff=16)
+decoder_input = jnp.ones((2, 4, 8))  # -> (2, 4, 8)
+encoder_memory = jnp.ones((2, 5, 8))  # -> (2, 5, 8)
+mask = jnp.ones((1, 1, 4, 4))  # -> (1, 1, 4, 4)
+params = decoder_layer.init(jax.random.PRNGKey(3), decoder_input, encoder_memory, mask)
+decoder_output = decoder_layer.apply(params, decoder_input, encoder_memory, mask)  # inputs -> (2, 4, 8)
+
+
+# %%
 class Transformer(nn.Module):
     vocab_size: int = 37000
     d_model: int = 512
@@ -151,6 +192,7 @@ class Transformer(nn.Module):
         return logits  # (batch, target_steps, vocab_size)
 
 
+# %% [notebook-only]
 # Create and run a sample translation batch.
 model = Transformer(vocab_size=37000)
 src_ids = jnp.ones((2, 16), dtype=jnp.int32)  # -> (2, 16)

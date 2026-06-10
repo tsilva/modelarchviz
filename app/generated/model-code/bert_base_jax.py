@@ -2,7 +2,6 @@ import jax
 import jax.numpy as jnp
 from flax import linen as nn
 
-
 class BertEmbeddings(nn.Module):
     vocab_size: int = 30522
     hidden_size: int = 768
@@ -24,7 +23,6 @@ class BertEmbeddings(nn.Module):
         x = nn.LayerNorm(name='LayerNorm')(x)  # (batch, steps, hidden_size)
         x = nn.Dropout(0.1, deterministic=not train)(x)  # (batch, steps, hidden_size)
         return x  # (batch, steps, hidden_size)
-
 
 class BertSelfAttention(nn.Module):
     hidden_size: int = 768
@@ -66,7 +64,6 @@ class BertSelfAttention(nn.Module):
         out = nn.Dense(self.hidden_size, name='out_proj')(merged)  # (batch, steps, hidden_size)
         return out  # (batch, steps, hidden_size)
 
-
 class BertLayer(nn.Module):
     hidden_size: int = 768
     num_heads: int = 12
@@ -89,7 +86,6 @@ class BertLayer(nn.Module):
         out = nn.LayerNorm(name='output_norm')(ffn_residual)  # (batch, steps, hidden_size)
         return out  # (batch, steps, hidden_size)
 
-
 class BERTBase(nn.Module):
     vocab_size: int = 30522
     hidden_size: int = 768
@@ -109,45 +105,3 @@ class BERTBase(nn.Module):
         mlm_logits = nn.Dense(self.vocab_size, name='mlm_head')(x)  # (batch, steps, hidden_size) -> (batch, steps, vocab_size)
         outputs = (mlm_logits, pooled)
         return outputs
-
-
-# Create and run a sample token batch.
-model = BERTBase(vocab_size=30522)
-input_ids = jnp.ones((2, 16), dtype=jnp.int32)  # -> (2, 16)
-token_type_ids = jnp.zeros((2, 16), dtype=jnp.int32)  # -> (2, 16)
-attention_mask = jnp.ones((2, 1, 1, 16), dtype=jnp.bool_)  # -> (2, 1, 1, 16)
-params = model.init(jax.random.PRNGKey(0), input_ids, token_type_ids, attention_mask)
-outputs = model.apply(params, input_ids, token_type_ids, attention_mask)
-mlm_logits = outputs[0]  # tuple -> (2, 16, 30522)
-pooled = outputs[1]  # tuple -> (2, 768)
-
-
-# Train on a tiny masked-token prediction batch.
-model = BERTBase(vocab_size=20, hidden_size=12, num_layers=1)
-input_ids = jnp.array([[1, 2, 3, 4], [4, 3, 2, 1]], dtype=jnp.int32)  # -> (2, 4)
-token_type_ids = jnp.zeros((2, 4), dtype=jnp.int32)  # -> (2, 4)
-attention_mask = jnp.ones((2, 1, 1, 4), dtype=jnp.bool_)  # -> (2, 1, 1, 4)
-train_targets = jnp.array([[2, 3, 4, 5], [3, 2, 1, 0]], dtype=jnp.int32)  # -> (2, 4)
-params = model.init(jax.random.PRNGKey(1), input_ids, token_type_ids, attention_mask, train=False)
-
-
-def train_step(params, input_ids, token_type_ids, attention_mask, targets, learning_rate=0.1):
-    def loss_fn(current_params):
-        outputs = model.apply(current_params, input_ids, token_type_ids, attention_mask, train=False)  # (2, 4), (2, 4), (2, 1, 1, 4) -> tuple
-        mlm_logits = outputs[0]  # tuple -> (2, 4, 20)
-        one_hot_targets = jax.nn.one_hot(targets, mlm_logits.shape[-1])  # (2, 4) -> (2, 4, 20)
-        log_probs = jax.nn.log_softmax(mlm_logits, axis=-1)  # (2, 4, 20)
-        loss = -jnp.mean(jnp.sum(one_hot_targets * log_probs, axis=-1))  # (2, 4, 20), (2, 4, 20) -> scalar
-        return loss  # scalar
-
-    loss, grads = jax.value_and_grad(loss_fn)(params)
-    params = jax.tree_util.tree_map(lambda p, g: p - learning_rate * g, params, grads)
-    return params, loss
-
-
-# Fit the model for a few steps on the tiny dataset.
-for step in range(3):
-    params, loss = train_step(params, input_ids, token_type_ids, attention_mask, train_targets)
-
-# Keep the final scalar loss for inspection.
-final_loss = loss  # scalar

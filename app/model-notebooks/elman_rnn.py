@@ -16,6 +16,7 @@ import torch
 import torch.nn as nn
 
 
+# %%
 class ElmanRNN(nn.Module):
     def __init__(
         self,
@@ -62,6 +63,7 @@ sequence = torch.randn(2, 8, 32)  # -> (2, 8, 32)
 outputs = model(sequence)
 logits = outputs[0]  # (2, 10)
 states = outputs[1]  # (2, 8, 64)
+
 
 # %% [notebook-only]
 # Train on two synthetic sequences with opposite labels.

@@ -2,7 +2,6 @@ import jax
 import jax.numpy as jnp
 from flax import linen as nn
 
-
 class PatchEmbed(nn.Module):
     embed_dim: int = 768
     patch_size: int = 16
@@ -18,7 +17,6 @@ class PatchEmbed(nn.Module):
         sequence_shape = (batch_size, -1, self.embed_dim)  # -> (batch, patches, embed_dim)
         x = x.reshape(sequence_shape)  # (batch, grid, grid, embed_dim) -> (batch, patches, embed_dim)
         return x  # (batch, patches, embed_dim)
-
 
 class MultiHeadSelfAttention(nn.Module):
     embed_dim: int = 768
@@ -58,7 +56,6 @@ class MultiHeadSelfAttention(nn.Module):
         out = nn.Dense(self.embed_dim, name='out_proj')(merged)  # (batch, tokens, embed_dim)
         return out  # (batch, tokens, embed_dim)
 
-
 class EncoderBlock(nn.Module):
     embed_dim: int = 768
     num_heads: int = 12
@@ -78,7 +75,6 @@ class EncoderBlock(nn.Module):
         y = nn.Dense(self.embed_dim, name='mlp_fc2')(y)  # (batch, tokens, mlp_dim) -> (batch, tokens, embed_dim)
         out = x + y  # (batch, tokens, embed_dim)
         return out  # (batch, tokens, embed_dim)
-
 
 class VisionTransformer(nn.Module):
     num_classes: int = 1000
@@ -109,40 +105,3 @@ class VisionTransformer(nn.Module):
         cls_output = x[:, 0]  # (batch, tokens, embed_dim) -> (batch, embed_dim)
         logits = nn.Dense(self.num_classes, name='head')(cls_output)  # (batch, embed_dim) -> (batch, num_classes)
         return logits  # (batch, num_classes)
-
-
-# Create and run a sample image batch: (2, 224, 224, 3) -> (2, 1000).
-model = VisionTransformer(num_classes=1000)
-test_input = jnp.ones((2, 224, 224, 3))  # -> (2, 224, 224, 3)
-params = model.init(jax.random.PRNGKey(0), test_input)
-logits = model.apply(params, test_input)  # (2, 224, 224, 3) -> (2, 1000)
-
-
-# Train on a tiny synthetic image batch.
-model = VisionTransformer(num_classes=2, embed_dim=48, depth=1, num_heads=4)
-train_images = jnp.zeros((2, 224, 224, 3))  # -> (2, 224, 224, 3)
-train_images = train_images.at[0, 32:96, 32:96, :].set(1.0)  # (2, 224, 224, 3)
-train_images = train_images.at[1, 128:192, 128:192, :].set(1.0)  # (2, 224, 224, 3)
-train_targets = jnp.array([0, 1])  # -> (2)
-params = model.init(jax.random.PRNGKey(1), train_images)
-
-
-def train_step(params, inputs, targets, learning_rate=0.01):
-    def loss_fn(current_params):
-        logits = model.apply(current_params, inputs)  # (2, 224, 224, 3) -> (2, 2)
-        one_hot_targets = jax.nn.one_hot(targets, logits.shape[-1])  # (2) -> (2, 2)
-        log_probs = jax.nn.log_softmax(logits, axis=-1)  # (2, 2)
-        loss = -jnp.mean(jnp.sum(one_hot_targets * log_probs, axis=-1))  # (2, 2), (2, 2) -> scalar
-        return loss  # scalar
-
-    loss, grads = jax.value_and_grad(loss_fn)(params)
-    params = jax.tree_util.tree_map(lambda p, g: p - learning_rate * g, params, grads)
-    return params, loss
-
-
-# Fit the model for a few steps on the tiny dataset.
-for step in range(3):
-    params, loss = train_step(params, train_images, train_targets)
-
-# Keep the final scalar loss for inspection.
-final_loss = loss  # scalar

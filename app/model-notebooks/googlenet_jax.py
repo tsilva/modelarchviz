@@ -17,6 +17,7 @@ import jax.numpy as jnp
 from flax import linen as nn
 
 
+# %%
 class InceptionBlock(nn.Module):
     branch1_channels: int
     branch3_reduce: int
@@ -51,6 +52,15 @@ class InceptionBlock(nn.Module):
         return x
 
 
+# %% [notebook-only]
+# Create and run one Inception block: (2, 16, 16, 8) -> (2, 16, 16, 16).
+block = InceptionBlock(4, 4, 4, 4, 4, 4)
+block_input = jnp.ones((2, 16, 16, 8))  # -> (2, 16, 16, 8)
+params = block.init(jax.random.PRNGKey(0), block_input)
+block_output = block.apply(params, block_input)  # (2, 16, 16, 8) -> (2, 16, 16, 16)
+
+
+# %%
 class GoogLeNet(nn.Module):
     num_classes: int = 1000
 
@@ -90,6 +100,7 @@ class GoogLeNet(nn.Module):
         return logits
 
 
+# %% [notebook-only]
 # Create and run a sample image batch: (2, 224, 224, 3) -> (2, 1000).
 model = GoogLeNet(num_classes=1000)
 test_input = jnp.ones((2, 224, 224, 3))  # -> (2, 224, 224, 3)

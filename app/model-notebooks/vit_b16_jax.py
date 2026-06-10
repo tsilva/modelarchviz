@@ -17,6 +17,7 @@ import jax.numpy as jnp
 from flax import linen as nn
 
 
+# %%
 class PatchEmbed(nn.Module):
     embed_dim: int = 768
     patch_size: int = 16
@@ -34,6 +35,15 @@ class PatchEmbed(nn.Module):
         return x  # (batch, patches, embed_dim)
 
 
+# %% [notebook-only]
+# Create and run patch embedding: (2, 32, 32, 3) -> (2, 4, 24).
+patch_embed = PatchEmbed(embed_dim=24, patch_size=16)
+images = jnp.ones((2, 32, 32, 3))  # -> (2, 32, 32, 3)
+params = patch_embed.init(jax.random.PRNGKey(0), images)
+patch_tokens = patch_embed.apply(params, images)  # (2, 32, 32, 3) -> (2, 4, 24)
+
+
+# %%
 class MultiHeadSelfAttention(nn.Module):
     embed_dim: int = 768
     num_heads: int = 12
@@ -73,6 +83,15 @@ class MultiHeadSelfAttention(nn.Module):
         return out  # (batch, tokens, embed_dim)
 
 
+# %% [notebook-only]
+# Create and run vision self-attention: (2, 5, 24) -> (2, 5, 24).
+attention = MultiHeadSelfAttention(embed_dim=24, num_heads=4)
+tokens = jnp.ones((2, 5, 24))  # -> (2, 5, 24)
+params = attention.init(jax.random.PRNGKey(1), tokens)
+attended = attention.apply(params, tokens)  # (2, 5, 24) -> (2, 5, 24)
+
+
+# %%
 class EncoderBlock(nn.Module):
     embed_dim: int = 768
     num_heads: int = 12
@@ -94,6 +113,15 @@ class EncoderBlock(nn.Module):
         return out  # (batch, tokens, embed_dim)
 
 
+# %% [notebook-only]
+# Create and run one ViT encoder block: (2, 5, 24) -> (2, 5, 24).
+block = EncoderBlock(embed_dim=24, num_heads=4, mlp_dim=48)
+tokens = jnp.ones((2, 5, 24))  # -> (2, 5, 24)
+params = block.init(jax.random.PRNGKey(2), tokens)
+encoded_tokens = block.apply(params, tokens)  # (2, 5, 24) -> (2, 5, 24)
+
+
+# %%
 class VisionTransformer(nn.Module):
     num_classes: int = 1000
     embed_dim: int = 768
@@ -125,6 +153,7 @@ class VisionTransformer(nn.Module):
         return logits  # (batch, num_classes)
 
 
+# %% [notebook-only]
 # Create and run a sample image batch: (2, 224, 224, 3) -> (2, 1000).
 model = VisionTransformer(num_classes=1000)
 test_input = jnp.ones((2, 224, 224, 3))  # -> (2, 224, 224, 3)

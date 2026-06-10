@@ -17,6 +17,7 @@ import jax.numpy as jnp
 from flax import linen as nn
 
 
+# %%
 class ElmanRNN(nn.Module):
     hidden_size: int = 64
     output_size: int = 10
@@ -59,6 +60,7 @@ params = model.init(jax.random.PRNGKey(0), sequence)
 outputs = model.apply(params, sequence)
 logits = outputs[0]  # (2, 10)
 states = outputs[1]  # (2, 8, 64)
+
 
 # %% [notebook-only]
 # Train on two synthetic sequences with opposite labels.

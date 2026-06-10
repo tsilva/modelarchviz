@@ -17,6 +17,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 
+# %%
 class GPT2Small(nn.Module):
     def __init__(
         self,
@@ -54,6 +55,7 @@ class GPT2Small(nn.Module):
         return logits  # (batch, steps, vocab_size)
 
 
+# %%
 class CausalSelfAttention(nn.Module):
     def __init__(
         self,
@@ -100,6 +102,15 @@ class CausalSelfAttention(nn.Module):
         return out  # (batch, steps, channels)
 
 
+# %% [notebook-only]
+# Create and run causal self-attention: (2, 4, 24) -> (2, 4, 24).
+attention = CausalSelfAttention(n_embd=24, n_head=4)
+hidden_states = torch.randn(2, 4, 24)  # -> (2, 4, 24)
+mask = torch.tril(torch.ones(4, 4)).view(1, 1, 4, 4)  # -> (1, 1, 4, 4)
+attended = attention(hidden_states, mask)  # (2, 4, 24), (1, 1, 4, 4) -> (2, 4, 24)
+
+
+# %%
 class Block(nn.Module):
     def __init__(self):
         super().__init__()
@@ -127,6 +138,7 @@ class Block(nn.Module):
         return x  # (batch, steps, 768)
 
 
+# %% [notebook-only]
 # Create and run a sample token batch.
 model = GPT2Small(vocab_size=50257)
 test_input = torch.randint(0, 50257, (2, 16))  # -> (2, 16)

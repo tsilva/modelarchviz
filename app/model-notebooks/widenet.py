@@ -17,6 +17,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 
+# %%
 class WideBasicBlock(nn.Module):
     def __init__(
         self,
@@ -79,6 +80,14 @@ class WideBasicBlock(nn.Module):
         return out
 
 
+# %% [notebook-only]
+# Create and run one widened residual block: (2, 16, 32, 32) -> (2, 32, 16, 16).
+block = WideBasicBlock(in_channels=16, out_channels=32, stride=2, dropout_rate=0.0)
+block_input = torch.randn(2, 16, 32, 32)  # -> (2, 16, 32, 32)
+block_output = block(block_input)  # (2, 16, 32, 32) -> (2, 32, 16, 16)
+
+
+# %%
 class WideNet(nn.Module):
     def __init__(
         self,
@@ -173,6 +182,7 @@ class WideNet(nn.Module):
         return logits
 
 
+# %% [notebook-only]
 # Create and run a sample CIFAR-size image batch: (2, 3, 32, 32) -> (2, 10).
 model = WideNet(depth=28, widen_factor=10, dropout_rate=0.0, num_classes=10)
 test_input = torch.randn(2, 3, 32, 32)  # -> (2, 3, 32, 32)

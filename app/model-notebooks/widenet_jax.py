@@ -17,6 +17,7 @@ import jax.numpy as jnp
 from flax import linen as nn
 
 
+# %%
 class WideBasicBlock(nn.Module):
     out_channels: int
     stride: int = 1
@@ -67,6 +68,15 @@ class WideBasicBlock(nn.Module):
         return y
 
 
+# %% [notebook-only]
+# Create and run one widened residual block: (2, 32, 32, 16) -> (2, 16, 16, 32).
+block = WideBasicBlock(out_channels=32, stride=2, dropout_rate=0.0)
+block_input = jnp.ones((2, 32, 32, 16))  # -> (2, 32, 32, 16)
+variables = block.init(jax.random.PRNGKey(0), block_input, train=False)
+block_output = block.apply(variables, block_input, train=False)  # (2, 32, 32, 16) -> (2, 16, 16, 32)
+
+
+# %%
 class WideNet(nn.Module):
     depth: int = 28
     widen_factor: int = 10
@@ -144,6 +154,7 @@ class WideNet(nn.Module):
         return x
 
 
+# %% [notebook-only]
 # Create and run a sample CIFAR-size image batch: (2, 32, 32, 3) -> (2, 10).
 model = WideNet(depth=28, widen_factor=10, dropout_rate=0.0, num_classes=10)
 test_input = jnp.ones((2, 32, 32, 3))  # -> (2, 32, 32, 3)

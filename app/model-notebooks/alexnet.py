@@ -17,6 +17,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 
+# %%
 class AlexNet(nn.Module):
     def __init__(
         self,
@@ -67,6 +68,7 @@ class AlexNet(nn.Module):
         return logits
 
 
+# %% [notebook-only]
 # Create and run a sample image batch: (2, 3, 227, 227) -> (2, 1000).
 model = AlexNet(num_classes=1000)
 test_input = torch.randn(2, 3, 227, 227)  # -> (2, 3, 227, 227)

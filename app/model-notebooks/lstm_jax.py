@@ -17,6 +17,7 @@ import jax.numpy as jnp
 from flax import linen as nn
 
 
+# %%
 class LSTMCell(nn.Module):
     hidden_size: int = 64
 
@@ -61,6 +62,21 @@ class LSTMCell(nn.Module):
         return next_state
 
 
+# %% [notebook-only]
+# Create and run one LSTM cell step: (2, 32), state -> next state.
+cell = LSTMCell(hidden_size=64)
+cell_input = jnp.ones((2, 32))  # -> (2, 32)
+previous_state = (
+    jnp.zeros((2, 64)),
+    jnp.zeros((2, 64)),
+)
+params = cell.init(jax.random.PRNGKey(0), cell_input, previous_state)
+next_state = cell.apply(params, cell_input, previous_state)
+next_hidden = next_state[0]  # tuple -> (2, 64)
+next_cell = next_state[1]  # tuple -> (2, 64)
+
+
+# %%
 class LSTMSequence(nn.Module):
     hidden_size: int = 64
     output_size: int = 10
@@ -92,6 +108,7 @@ class LSTMSequence(nn.Module):
         return outputs
 
 
+# %% [notebook-only]
 # Create and run a sample sequence: (2, 8, 32) -> logits and states.
 model = LSTMSequence(hidden_size=64, output_size=10)
 sequence = jnp.ones((2, 8, 32))  # -> (2, 8, 32)
