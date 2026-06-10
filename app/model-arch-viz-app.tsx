@@ -98,6 +98,7 @@ type ModelSpec = {
   jaxFileName: string;
   exampleFileName?: string;
   jaxExampleFileName?: string;
+  defaultCodeFileId?: "main" | "examples";
   paper: {
     title: string;
     authors: string;
@@ -1456,6 +1457,7 @@ const models: ModelSpec[] = [
     jaxFileName: "gru_jax.py",
     exampleFileName: "gru_examples.py",
     jaxExampleFileName: "gru_jax_examples.py",
+    defaultCodeFileId: "examples",
     paper: {
       title: "Learning Phrase Representations using RNN Encoder-Decoder for Statistical Machine Translation",
       authors: "Kyunghyun Cho, Bart van Merrienboer, Caglar Gulcehre, Dzmitry Bahdanau, Fethi Bougares, Holger Schwenk, Yoshua Bengio",
@@ -5182,7 +5184,8 @@ function CodeEditor({
   onUserCodeSelectionChange: (selection: UserCodeSelection | null) => void;
 }) {
   const editorRef = useRef<HTMLDivElement>(null);
-  const [selectedFileId, setSelectedFileId] = useState("main");
+  const previousCodeFileModelKey = useRef("");
+  const [selectedFileId, setSelectedFileId] = useState("examples");
   const pyTorchFiles: CodePaneFile[] = [
     { id: "main", fileName: model.fileName, notebookName: notebookFileName(model.fileName), code: model.code },
   ];
@@ -5215,16 +5218,22 @@ function CodeEditor({
   const filesForLanguage = codeFiles[language];
   const currentFile = filesForLanguage.find((file) => file.id === selectedFileId) ?? filesForLanguage[0];
   const selectedLineNumbersForLanguage = currentFile.id === "main" ? selectedLineNumbers(model, selected, language) : [];
+  const preferredFileId = model.defaultCodeFileId ?? "main";
 
   useEffect(() => {
-    if (filesForLanguage.some((file) => file.id === selectedFileId)) {
+    const modelKey = `${model.id}:${language}`;
+    const modelChanged = previousCodeFileModelKey.current !== modelKey;
+    previousCodeFileModelKey.current = modelKey;
+
+    if (!modelChanged && filesForLanguage.some((file) => file.id === selectedFileId)) {
       return;
     }
 
-    setSelectedFileId("main");
+    const nextFileId = filesForLanguage.some((file) => file.id === preferredFileId) ? preferredFileId : "main";
+    setSelectedFileId(nextFileId);
     onAgentCodeSelectionChange(null);
     onUserCodeSelectionChange(null);
-  }, [filesForLanguage, selectedFileId, onAgentCodeSelectionChange, onUserCodeSelectionChange]);
+  }, [filesForLanguage, language, model.id, onAgentCodeSelectionChange, onUserCodeSelectionChange, preferredFileId, selectedFileId]);
   const activeAgentSelection =
     agentCodeSelection &&
     agentCodeSelection.modelId === model.id &&
