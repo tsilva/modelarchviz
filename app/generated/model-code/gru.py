@@ -1,7 +1,6 @@
 import torch
 import torch.nn as nn
 
-
 class GRUCell(nn.Module):
     def __init__(
         self,
@@ -43,7 +42,6 @@ class GRUCell(nn.Module):
         candidate_h = (1 - z) * n  # (batch, hidden_size)
         h_next = candidate_h + keep_h  # (batch, hidden_size)
         return h_next
-
 
 class GRUSequence(nn.Module):
     def __init__(

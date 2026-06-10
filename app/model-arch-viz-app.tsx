@@ -2939,7 +2939,8 @@ const models: ModelSpec[] = [
         type: "Input",
         kind: "input",
         badges: ["3 x 224 x 224"],
-        codeLines: [85],
+        codeLines: [144],
+        jaxCodeLines: [67],
       },
       {
         id: "stem",
@@ -6103,7 +6104,7 @@ export default function ModelArchVizApp({ initialModelId }: ModelArchVizAppProps
       } as React.CSSProperties)
     : undefined;
   const expanded = expandedByModel[currentModelKey] ?? new Set<string>();
-  const selected = selectedByModel[currentModelKey] ?? findNodeById(model.nodes, model.selectedId);
+  const selected = selectedByModel[currentModelKey] ?? null;
 
   useEffect(() => {
     setModelId(initialModel.id);

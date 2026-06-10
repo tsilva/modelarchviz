@@ -16,6 +16,7 @@ import torch
 import torch.nn as nn
 
 
+# %%
 class GRUCell(nn.Module):
     def __init__(
         self,
@@ -59,6 +60,15 @@ class GRUCell(nn.Module):
         return h_next
 
 
+# %% [notebook-only]
+# Create and run one GRU cell step: (2, 32), (2, 64) -> (2, 64).
+cell = GRUCell(input_size=32, hidden_size=64)
+cell_input = torch.randn(2, 32)  # -> (2, 32)
+previous_state = torch.zeros(2, 64)  # -> (2, 64)
+next_state = cell(cell_input, previous_state)  # (2, 32), (2, 64) -> (2, 64)
+
+
+# %%
 class GRUSequence(nn.Module):
     def __init__(
         self,

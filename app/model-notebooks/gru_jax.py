@@ -17,6 +17,7 @@ import jax.numpy as jnp
 from flax import linen as nn
 
 
+# %%
 class GRUCell(nn.Module):
     hidden_size: int = 64
 
@@ -48,6 +49,16 @@ class GRUCell(nn.Module):
         return h_next
 
 
+# %% [notebook-only]
+# Create and run one GRU cell step: (2, 32), (2, 64) -> (2, 64).
+cell = GRUCell(hidden_size=64)
+cell_input = jnp.ones((2, 32))  # -> (2, 32)
+previous_state = jnp.zeros((2, 64))  # -> (2, 64)
+cell_params = cell.init(jax.random.PRNGKey(0), cell_input, previous_state)
+next_state = cell.apply(cell_params, cell_input, previous_state)  # (2, 32), (2, 64) -> (2, 64)
+
+
+# %%
 class GRUSequence(nn.Module):
     hidden_size: int = 64
     output_size: int = 10
@@ -75,25 +86,24 @@ class GRUSequence(nn.Module):
         return outputs
 
 
+# %% [notebook-only]
 # Create and run a sample sequence: (2, 8, 32) -> logits and states.
 model = GRUSequence(hidden_size=64, output_size=10)
 sequence = jnp.ones((2, 8, 32))  # -> (2, 8, 32)
-params = model.init(jax.random.PRNGKey(0), sequence)
+params = model.init(jax.random.PRNGKey(1), sequence)
 outputs = model.apply(params, sequence)
 logits = outputs[0]  # (2, 10)
 states = outputs[1]  # (2, 8, 64)
 
 
-# Train on two synthetic sequences with opposite labels.
-model = GRUSequence(hidden_size=8, output_size=2)
-train_sequences = jnp.array(
-    [
-        [[1.0, 0.0, 0.0], [0.5, 0.0, 0.0], [1.0, 0.0, 0.0]],
-        [[0.0, 1.0, 0.0], [0.0, 0.5, 0.0], [0.0, 1.0, 0.0]],
-    ]
-)  # -> (2, 3, 3)
+# %% [notebook-only]
+# Train the same model on two synthetic sequences with opposite labels.
+train_sequences = jnp.zeros((2, 3, 32))  # -> (2, 3, 32)
+first_pattern = jnp.array([1.0, 0.5, 1.0])  # -> (3)
+second_pattern = jnp.array([1.0, 0.5, 1.0])  # -> (3)
+train_sequences = train_sequences.at[0, :, 0].set(first_pattern)  # (2, 3, 32)
+train_sequences = train_sequences.at[1, :, 1].set(second_pattern)  # (2, 3, 32)
 train_targets = jnp.array([0, 1])  # -> (2)
-params = model.init(jax.random.PRNGKey(1), train_sequences)
 
 
 def train_step(params, inputs, targets, learning_rate=0.1):
