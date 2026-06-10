@@ -448,6 +448,7 @@ function makeResNetNodes(variant: ResNetTemplateVariant): ArchNode[] {
       kind: "input",
       badges: ["3 x 224 x 224"],
       codeLines: [144],
+      jaxCodeLines: [67],
     },
     {
       id: "stem",
@@ -1196,7 +1197,8 @@ const models: ModelSpec[] = [
         type: "FlatVector",
         kind: "input",
         badges: ["784->784"],
-        codeLines: [9, 34, 36, 37],
+        codeLines: [22, 36, 37],
+        jaxCodeLines: [15, 31, 33],
       },
       {
         id: "hidden.1",
@@ -1298,7 +1300,8 @@ const models: ModelSpec[] = [
         type: "SequenceInput",
         kind: "input",
         badges: ["8 steps", "32 features"],
-        codeLines: [20, 22, 28, 30, 46, 47],
+        codeLines: [30],
+        jaxCodeLines: [26],
       },
       {
         id: "recurrent_loop",
@@ -1472,7 +1475,8 @@ const models: ModelSpec[] = [
         type: "SequenceInput",
         kind: "input",
         badges: ["8 steps", "32 features"],
-        codeLines: [77, 79, 86, 88, 104, 105],
+        codeLines: [88, 104, 105],
+        jaxCodeLines: [67, 83, 85],
       },
       {
         id: "cell_params",
@@ -1650,7 +1654,8 @@ const models: ModelSpec[] = [
         type: "Input",
         kind: "input",
         badges: ["1 x 32 x 32"],
-        codeLines: [18],
+        codeLines: [20, 41, 42],
+        jaxCodeLines: [10, 33, 35],
       },
       {
         id: "features",
@@ -1789,7 +1794,8 @@ const models: ModelSpec[] = [
         type: "Input",
         kind: "input",
         badges: ["3 x 227 x 227"],
-        codeLines: [55],
+        codeLines: [46, 58, 59],
+        jaxCodeLines: [12, 66, 68],
       },
       {
         id: "features",
@@ -2020,7 +2026,8 @@ const models: ModelSpec[] = [
         type: "Image",
         kind: "input",
         badges: ["3 x 224 x 224"],
-        codeLines: [117],
+        codeLines: [88, 117, 118],
+        jaxCodeLines: [46, 81, 83],
       },
       {
         id: "stem",
@@ -2313,7 +2320,8 @@ const models: ModelSpec[] = [
         type: "Image",
         kind: "input",
         badges: ["1 x 572 x 572"],
-        codeLines: [74],
+        codeLines: [52, 85, 86],
+        jaxCodeLines: [25, 65, 67],
       },
       {
         id: "contracting",
@@ -2543,7 +2551,8 @@ const models: ModelSpec[] = [
         type: "TokenIds",
         kind: "input",
         badges: ["source", "16 tokens"],
-        codeLines: [176, 178, 195, 196],
+        codeLines: [173],
+        jaxCodeLines: [124, 142, 149],
       },
       {
         id: "tgt.input",
@@ -2551,7 +2560,8 @@ const models: ModelSpec[] = [
         type: "TokenIds",
         kind: "input",
         badges: ["target", "shifted"],
-        codeLines: [176, 184, 195, 197],
+        codeLines: [179],
+        jaxCodeLines: [130, 143, 149],
       },
       {
         id: "embeddings",
@@ -2648,7 +2658,8 @@ const models: ModelSpec[] = [
         type: "TokenIds",
         kind: "input",
         badges: ["WordPiece", "16 tokens"],
-        codeLines: [137, 139, 153, 154, 164],
+        codeLines: [139, 154, 157],
+        jaxCodeLines: [101, 116, 120],
       },
       {
         id: "token_type_ids",
@@ -2656,7 +2667,8 @@ const models: ModelSpec[] = [
         type: "SegmentIds",
         kind: "input",
         badges: ["sentence A/B"],
-        codeLines: [137, 139, 153, 155, 165],
+        codeLines: [139, 155, 157],
+        jaxCodeLines: [101, 117, 120],
       },
       {
         id: "embeddings",
@@ -2813,7 +2825,8 @@ const models: ModelSpec[] = [
         type: "Image",
         kind: "input",
         badges: ["3 x 224 x 224"],
-        codeLines: [128, 130, 148, 149],
+        codeLines: [130, 149, 150],
+        jaxCodeLines: [92, 116, 118],
       },
       {
         id: "patch_embed",
@@ -3463,7 +3476,8 @@ const models: ModelSpec[] = [
         type: "CIFARImage",
         kind: "input",
         badges: ["3 x 32 x 32"],
-        codeLines: [144, 145, 162, 164],
+        codeLines: [146, 164, 165],
+        jaxCodeLines: [76, 77, 78, 79, 80, 81, 82, 135, 137],
       },
       {
         id: "stem",
@@ -3670,7 +3684,8 @@ const models: ModelSpec[] = [
         type: "Image",
         kind: "input",
         badges: ["3 x 224 x 224"],
-        codeLines: [166, 181, 183],
+        codeLines: [163],
+        jaxCodeLines: [73, 74, 75, 76, 77, 78, 79, 80, 113, 115],
       },
       {
         id: "stem",
@@ -3928,7 +3943,8 @@ const models: ModelSpec[] = [
         type: "Image",
         kind: "input",
         badges: ["3 x 224 x 224"],
-        codeLines: [159, 160, 174, 176],
+        codeLines: [161, 176, 177],
+        jaxCodeLines: [97, 98, 99, 100, 101, 102, 103, 104, 139, 141],
       },
       {
         id: "stem",
