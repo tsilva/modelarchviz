@@ -727,7 +727,8 @@ function makeGruStep(index: number, defaultExpanded = false): ArchNode {
     kind: "group",
     summary: index === 0 ? "z/r/n gates" : "same gates",
     defaultExpanded,
-    codeLines: [21, 23, 24, 25, 26, 29, 30, 31, 32, 35, 36, 37, 38, 39, 42, 43, 44, 45, 71, 72, 73, 74],
+    codeLines: [21, 22, 23, 24, 25, 27, 28, 29, 30, 31, 33, 34, 35, 36, 37, 38, 40, 41, 42, 43, 44, 69, 70, 71, 72],
+    jaxCodeLines: [10, 11, 12, 13, 14, 16, 17, 18, 19, 20, 22, 23, 24, 25, 26, 27, 29, 30, 31, 32, 33, 50, 51, 52, 53],
     lazyChildren: () => [
       {
         id: `step.${index}.update_gate`,
@@ -735,7 +736,8 @@ function makeGruStep(index: number, defaultExpanded = false): ArchNode {
         type: "SigmoidGate",
         kind: "recurrent",
         badges: ["z_t"],
-        codeLines: [14, 15, 23, 24, 25, 26],
+        codeLines: [13, 14, 22, 23, 24, 25],
+        jaxCodeLines: [11, 12, 13, 14],
       },
       {
         id: `step.${index}.reset_gate`,
@@ -743,7 +745,8 @@ function makeGruStep(index: number, defaultExpanded = false): ArchNode {
         type: "SigmoidGate",
         kind: "recurrent",
         badges: ["r_t"],
-        codeLines: [16, 17, 29, 30, 31, 32],
+        codeLines: [15, 16, 28, 29, 30, 31],
+        jaxCodeLines: [17, 18, 19, 20],
       },
       {
         id: `step.${index}.candidate`,
@@ -751,7 +754,8 @@ function makeGruStep(index: number, defaultExpanded = false): ArchNode {
         type: "TanhState",
         kind: "activation",
         badges: ["n_t"],
-        codeLines: [18, 19, 35, 36, 37, 38, 39],
+        codeLines: [17, 18, 34, 35, 36, 37, 38],
+        jaxCodeLines: [23, 24, 25, 26, 27],
       },
       {
         id: `step.${index}.mix`,
@@ -759,7 +763,8 @@ function makeGruStep(index: number, defaultExpanded = false): ArchNode {
         type: "GatedInterpolation",
         kind: "recurrent",
         badges: ["h_t"],
-        codeLines: [42, 43, 44, 45],
+        codeLines: [40, 41, 42, 43, 44],
+        jaxCodeLines: [29, 30, 31, 32, 33],
       },
     ],
   };
@@ -1456,8 +1461,8 @@ const models: ModelSpec[] = [
         type: "SequenceInput",
         kind: "input",
         badges: ["8 steps", "32 features"],
-        codeLines: [72],
-        jaxCodeLines: [53, 66, 68],
+        codeLines: [82, 83],
+        jaxCodeLines: [63, 65],
       },
       {
         id: "cell_params",
@@ -1467,7 +1472,8 @@ const models: ModelSpec[] = [
         summary: "6 affine projections",
         badges: ["z", "r", "n"],
         defaultExpanded: true,
-        codeLines: [5, 6, 13, 14, 15, 16, 17, 18, 19, 21],
+        codeLines: [5, 6, 13, 14, 15, 16, 17, 18, 20],
+        jaxCodeLines: [5, 6, 8, 11, 12, 17, 18, 24, 25],
         children: [
           {
             id: "cell_params.update",
@@ -1475,7 +1481,8 @@ const models: ModelSpec[] = [
             type: "Linear pairs",
             kind: "recurrent",
             badges: ["x_z", "h_z"],
-            codeLines: [14, 15, 23, 24],
+            codeLines: [13, 14, 22, 23],
+            jaxCodeLines: [11, 12],
           },
           {
             id: "cell_params.reset",
@@ -1483,7 +1490,8 @@ const models: ModelSpec[] = [
             type: "Linear pairs",
             kind: "recurrent",
             badges: ["x_r", "h_r"],
-            codeLines: [16, 17, 29, 30],
+            codeLines: [15, 16, 28, 29],
+            jaxCodeLines: [17, 18],
           },
           {
             id: "cell_params.candidate",
@@ -1491,7 +1499,8 @@ const models: ModelSpec[] = [
             type: "Linear pairs",
             kind: "recurrent",
             badges: ["x_n", "h_n"],
-            codeLines: [18, 19, 36, 37],
+            codeLines: [17, 18, 35, 36],
+            jaxCodeLines: [24, 25],
           },
         ],
       },
@@ -1502,7 +1511,8 @@ const models: ModelSpec[] = [
         kind: "group",
         summary: "shared gated cell",
         defaultExpanded: true,
-        codeLines: [62, 64, 65, 66, 69, 70, 71, 72, 73, 74],
+        codeLines: [62, 63, 64, 67, 68, 69, 70, 71, 72],
+        jaxCodeLines: [42, 43, 44, 47, 48, 49, 50, 51, 52, 53],
         children: [
           {
             id: "h0",
@@ -1510,7 +1520,8 @@ const models: ModelSpec[] = [
             type: "ZeroState",
             kind: "recurrent",
             badges: ["64 hidden"],
-            codeLines: [64, 65, 66],
+            codeLines: [62, 63, 64],
+            jaxCodeLines: [42, 43, 44],
           },
           ...Array.from({ length: 8 }, (_, index) => makeGruStep(index, index === 0)),
         ],
@@ -1521,7 +1532,8 @@ const models: ModelSpec[] = [
         type: "Linear",
         kind: "linear",
         badges: ["64->10", "last h"],
-        codeLines: [60, 76, 77],
+        codeLines: [58, 75],
+        jaxCodeLines: [37, 56],
       },
       {
         id: "outputs",
@@ -1529,7 +1541,8 @@ const models: ModelSpec[] = [
         type: "Logits + StateTrace",
         kind: "head",
         badges: ["classes", "all states"],
-        codeLines: [77, 78, 79, 80],
+        codeLines: [75, 76, 77, 78, 83, 84, 85],
+        jaxCodeLines: [56, 57, 58, 59, 65, 66, 67],
       },
     ],
     code: codeLines(gruPythonSource),
@@ -6117,15 +6130,17 @@ function PdfViewer({
   };
 
   const trimmedSearchQuery = searchQuery.trim();
+  const hasSearchQuery = trimmedSearchQuery.length > 0;
   const searchCountLabel =
-    trimmedSearchQuery.length === 0
+    !hasSearchQuery
       ? ""
       : isSearchPending
         ? "..."
         : searchMatches.length > 0
           ? `${Math.max(activeSearchIndex + 1, 1)} / ${searchMatches.length}`
           : "0 / 0";
-  const searchControlsDisabled = trimmedSearchQuery.length === 0 || searchMatches.length === 0 || isSearchPending;
+  const hasSearchMatches = searchMatches.length > 0;
+  const searchControlsDisabled = !hasSearchMatches || isSearchPending;
   const fullscreenSupported = typeof document !== "undefined" && document.fullscreenEnabled;
 
   return (
@@ -6198,78 +6213,89 @@ function PdfViewer({
               </span>
             ) : null}
           </label>
-          <button
-            className="pdf-control-button"
-            type="button"
-            aria-label="Previous search match"
-            title="Previous match"
-            disabled={searchControlsDisabled}
-            onClick={() => goToSearchMatch(-1)}
-          >
-            <ArrowIcon direction="left" />
-          </button>
-          <button
-            className="pdf-control-button"
-            type="button"
-            aria-label="Next search match"
-            title="Next match"
-            disabled={searchControlsDisabled}
-            onClick={() => goToSearchMatch(1)}
-          >
-            <ArrowIcon direction="right" />
-          </button>
-          <button
-            className="pdf-control-button"
-            type="button"
-            aria-label="Clear paper search"
-            title="Clear search"
-            disabled={searchQuery.length === 0}
-            onClick={() => setSearchQuery("")}
-          >
-            <ClearIcon />
-          </button>
-          <button
-            className="pdf-control-button"
-            type="button"
-            aria-label="Previous paper page"
-            title="Previous page"
-            disabled={pageNumber <= 1}
-            onClick={() => setPageNumber((current) => Math.max(1, current - 1))}
-          >
-            <ArrowIcon direction="left" />
-          </button>
-          <span className="pdf-page-count">
-            {pageCount > 0 ? `${pageNumber} / ${pageCount}` : "Loading"}
-          </span>
-          <button
-            className="pdf-control-button"
-            type="button"
-            aria-label="Next paper page"
-            title="Next page"
-            disabled={pageCount === 0 || pageNumber >= pageCount}
-            onClick={() => setPageNumber((current) => Math.min(pageCount, current + 1))}
-          >
-            <ArrowIcon direction="right" />
-          </button>
-          <button
-            className="pdf-control-button"
-            type="button"
-            aria-label={isFullscreen ? "Exit fullscreen paper viewer" : "Enter fullscreen paper viewer"}
-            title={isFullscreen ? "Exit fullscreen" : "Fullscreen"}
-            disabled={!fullscreenSupported}
-            onClick={toggleFullscreen}
-          >
-            <FullscreenIcon active={isFullscreen} />
-          </button>
-          <a
-            className="pdf-control-button"
-            href={model.paper.pdfUrl}
-            download={`${model.id}.pdf`}
-            aria-label={`Download PDF for ${model.label}`}
-            title={`Download PDF for ${model.label}`}
-          >
-            <DownloadIcon />
-          </a>
+          {hasSearchQuery ? (
+            <div className="pdf-control-group" role="group" aria-label="Paper search match navigation">
+              {hasSearchMatches ? (
+                <>
+                  <button
+                    className="pdf-control-button"
+                    type="button"
+                    aria-label="Previous search match"
+                    title="Previous match"
+                    disabled={searchControlsDisabled}
+                    onClick={() => goToSearchMatch(-1)}
+                  >
+                    <ArrowIcon direction="left" />
+                  </button>
+                  <button
+                    className="pdf-control-button"
+                    type="button"
+                    aria-label="Next search match"
+                    title="Next match"
+                    disabled={searchControlsDisabled}
+                    onClick={() => goToSearchMatch(1)}
+                  >
+                    <ArrowIcon direction="right" />
+                  </button>
+                </>
+              ) : null}
+              <button
+                className="pdf-control-button"
+                type="button"
+                aria-label="Clear paper search"
+                title="Clear search"
+                onClick={() => setSearchQuery("")}
+              >
+                <ClearIcon />
+              </button>
+            </div>
+          ) : null}
+          <div className="pdf-control-group pdf-page-controls" role="group" aria-label="Paper page navigation">
+            <button
+              className="pdf-control-button"
+              type="button"
+              aria-label="Previous paper page"
+              title="Previous page"
+              disabled={pageNumber <= 1}
+              onClick={() => setPageNumber((current) => Math.max(1, current - 1))}
+            >
+              <ArrowIcon direction="left" />
+            </button>
+            <span className="pdf-page-count">
+              {pageCount > 0 ? `${pageNumber} / ${pageCount}` : "Loading"}
+            </span>
+            <button
+              className="pdf-control-button"
+              type="button"
+              aria-label="Next paper page"
+              title="Next page"
+              disabled={pageCount === 0 || pageNumber >= pageCount}
+              onClick={() => setPageNumber((current) => Math.min(pageCount, current + 1))}
+            >
+              <ArrowIcon direction="right" />
+            </button>
+          </div>
+          <div className="pdf-control-group" role="group" aria-label="Paper viewer actions">
+            <button
+              className="pdf-control-button"
+              type="button"
+              aria-label={isFullscreen ? "Exit fullscreen paper viewer" : "Enter fullscreen paper viewer"}
+              title={isFullscreen ? "Exit fullscreen" : "Fullscreen"}
+              disabled={!fullscreenSupported}
+              onClick={toggleFullscreen}
+            >
+              <FullscreenIcon active={isFullscreen} />
+            </button>
+            <a
+              className="pdf-control-button"
+              href={model.paper.pdfUrl}
+              download={`${model.id}.pdf`}
+              aria-label={`Download PDF for ${model.label}`}
+              title={`Download PDF for ${model.label}`}
+            >
+              <DownloadIcon />
+            </a>
+          </div>
         </div>
       </div>
     </div>

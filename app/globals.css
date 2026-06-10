@@ -773,6 +773,13 @@ select {
   color: #991b1b;
 }
 
+.pdf-control-group {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 8px;
+}
+
 .pdf-control-button {
   display: grid;
   width: 34px;
