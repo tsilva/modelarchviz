@@ -50,6 +50,13 @@ export const modelRouteSummaries = [
     description: "Inspect AlexNet convolutional stages, classifier layers, implementation code, and paper context.",
   },
   {
+    id: "vgg16",
+    label: "VGG-16",
+    publishedDate: "2014-09-04",
+    title: "VGG-16 Architecture",
+    description: "Inspect VGG-16 stacked 3x3 convolutional stages, dense classifier layers, implementation code, and paper context.",
+  },
+  {
     id: "vae",
     label: "VAE",
     publishedDate: "2013-12-20",
