@@ -134,6 +134,13 @@ export const modelRouteSummaries = [
     description: "Trace VQ-VAE encoder outputs, nearest-code vector quantization, straight-through estimator, decoder reconstruction, implementation code, and paper context.",
   },
   {
+    id: "mobilenetv2",
+    label: "MobileNetV2",
+    publishedDate: "2018-01-13",
+    title: "MobileNetV2 Architecture",
+    description: "Inspect MobileNetV2 inverted residual blocks, depthwise separable convolutions, linear bottlenecks, implementation code, and paper context.",
+  },
+  {
     id: "bert",
     label: "BERT base",
     publishedDate: "2018-10-11",
