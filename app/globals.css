@@ -1023,8 +1023,9 @@ select {
   gap: 8px;
 }
 
-.editor-select {
+.editor-file-name {
   display: inline-flex;
+  max-width: 210px;
   min-height: 32px;
   align-items: center;
   border: 1px solid #334154;
@@ -1035,15 +1036,9 @@ select {
   padding: 0 12px;
   font-size: 13px;
   font-weight: 650;
-}
-
-.editor-select {
-  max-width: 210px;
-  appearance: none;
-}
-
-.editor-select:disabled {
-  opacity: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .colab-link {

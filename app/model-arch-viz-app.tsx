@@ -18,7 +18,7 @@ import {
   type ChatResponse,
 } from "./chat-contract";
 import { modelSources } from "./generated/model-sources";
-import { modelRoutePath, modelRouteSummaries, type ModelId } from "./model-routes";
+import { modelCatalog, modelRoutePath, type ModelId } from "./model-routes";
 import resnetTemplateVariants from "./model-templates/resnet.variants.json";
 
 type NodeKind =
@@ -96,9 +96,7 @@ type ModelVariantSpec = {
 type ModelDefinition = Omit<
   ModelSpec,
   "id" | "label" | "paper" | "fileName" | "jaxFileName" | "code" | "jaxCode"
-> & {
-  paper: Omit<ModelSpec["paper"], "publishedDate" | "pdfUrl">;
-};
+>;
 
 type PaneKey = "architecture" | "paper" | "code" | "chat";
 type CodeLanguage = ChatCodeLanguage;
@@ -169,13 +167,6 @@ function codeLines(source: string) {
   const trimmed = source.trimEnd();
   return trimmed.split("\n");
 }
-
-const sourceBaseNameByModel: Partial<Record<ModelId, string>> = {
-  rnn: "elman_rnn",
-  bert: "bert_base",
-  gpt2: "gpt2_attention",
-  vit: "vit_b16",
-};
 
 function modelSourcePair(baseName: string) {
   const fileName = `${baseName}.py`;
@@ -892,11 +883,8 @@ function makeBertLayer(index: number, defaultExpanded = false): ArchNode {
     kind: "group",
     summary: "self-attn + ffn",
     defaultExpanded,
-    codeLines: [
-      36, 44, 47, 48, 49, 50, 52, 56, 57, 58, 61, 62, 63, 64, 65, 66, 69, 70, 71, 72, 76, 79, 80, 82,
-      83, 84, 87, 96, 97, 98, 99, 100, 101, 102, 104, 105, 107, 109, 110, 111, 112, 115, 116, 117, 118,
-      119, 133, 140, 141,
-    ],
+    codeLines: lineRange(84, 116),
+    jaxCodeLines: lineRange(67, 87),
     lazyChildren: () => [
       {
         id: `encoder.layer.${index}.self_attn`,
@@ -904,17 +892,16 @@ function makeBertLayer(index: number, defaultExpanded = false): ArchNode {
         type: "BidirectionalSelfAttention",
         kind: "attention",
         badges: ["12 heads", "768"],
-        codeLines: [
-          47, 48, 49, 50, 56, 57, 58, 61, 62, 63, 64, 65, 66, 69, 70, 71, 72, 74, 75, 76, 79, 80, 81, 82,
-          83, 97, 109,
-        ],
+        codeLines: [34, 43, 44, 45, 46, 47, 48, 50, 52, 53, 54, 55, 56, 59, 60, 61, 62, 63, 64, 67, 68, 69, 70, 71, 72, 73, 74, 77, 78, 79, 80, 81, 82, 94, 106],
+        jaxCodeLines: [27, 28, 29, 31, 32, 34, 35, 36, 37, 38, 39, 42, 43, 44, 45, 46, 47, 48, 51, 52, 53, 54, 55, 56, 57, 60, 61, 62, 63, 64, 65, 75],
       },
       {
         id: `encoder.layer.${index}.attn_norm`,
         label: "add + norm",
         type: "ResidualLayerNorm",
         kind: "residual",
-        codeLines: [110, 111, 112],
+        codeLines: [95, 108, 109],
+        jaxCodeLines: [77, 78],
       },
       {
         id: `encoder.layer.${index}.intermediate`,
@@ -922,7 +909,8 @@ function makeBertLayer(index: number, defaultExpanded = false): ArchNode {
         type: "Dense + GELU",
         kind: "mlp",
         badges: ["768->3072"],
-        codeLines: [99, 100, 101, 102, 115],
+        codeLines: [96, 97, 98, 112],
+        jaxCodeLines: [81, 82],
       },
       {
         id: `encoder.layer.${index}.output`,
@@ -930,14 +918,16 @@ function makeBertLayer(index: number, defaultExpanded = false): ArchNode {
         type: "Dense",
         kind: "mlp",
         badges: ["3072->768"],
-        codeLines: [99, 100, 101, 102, 115],
+        codeLines: [99, 112],
+        jaxCodeLines: [83],
       },
       {
         id: `encoder.layer.${index}.output_norm`,
         label: "add + norm",
         type: "ResidualLayerNorm",
         kind: "residual",
-        codeLines: [116, 117, 118, 119],
+        codeLines: [101, 114, 115],
+        jaxCodeLines: [85, 86],
       },
     ],
   };
@@ -1238,12 +1228,6 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
   mlp: {
     breadcrumb: "MLP / hidden.1 / dense",
     stats: "2 hidden layers · sigmoid activations · backprop",
-    paper: {
-      title: "Learning representations by back-propagating errors",
-      authors: "David E. Rumelhart, Geoffrey E. Hinton, Ronald J. Williams",
-      venue: "Nature",
-      focus: ["backpropagation", "hidden representations", "multilayer perceptrons"],
-    },
     nodes: [
       {
         id: "input",
@@ -1329,12 +1313,6 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
   rnn: {
     breadcrumb: "RNN / recurrent loop / step.0 / hidden_to_hidden",
     stats: "8 time steps · 64 hidden units · shared recurrent cell",
-    paper: {
-      title: "Finding Structure in Time",
-      authors: "Jeffrey L. Elman",
-      venue: "Cognitive Science",
-      focus: ["recurrent hidden state", "dynamic memory", "sequence structure"],
-    },
     nodes: [
       {
         id: "sequence",
@@ -1387,12 +1365,6 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
   gru: {
     breadcrumb: "GRU / recurrent loop / step.0 / update gate",
     stats: "8 time steps · update/reset gates · 64 hidden units",
-    paper: {
-      title: "Learning Phrase Representations using RNN Encoder-Decoder for Statistical Machine Translation",
-      authors: "Kyunghyun Cho, Bart van Merrienboer, Caglar Gulcehre, Dzmitry Bahdanau, Fethi Bougares, Holger Schwenk, Yoshua Bengio",
-      venue: "arXiv / EMNLP 2014",
-      focus: ["update gate", "reset gate", "encoder-decoder sequence modeling"],
-    },
     nodes: [
       {
         id: "sequence",
@@ -1490,12 +1462,6 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
   vae: {
     breadcrumb: "VAE / reparameterization / latent sample",
     stats: "Gaussian encoder · reparameterization trick · ELBO loss",
-    paper: {
-      title: "Auto-Encoding Variational Bayes",
-      authors: "Diederik P. Kingma, Max Welling",
-      venue: "arXiv / ICLR 2014",
-      focus: ["variational inference", "reparameterization trick", "latent-variable generative models"],
-    },
     nodes: [
       {
         id: "input",
@@ -1621,12 +1587,6 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
   gan: {
     breadcrumb: "GAN / adversarial game / generator loss",
     stats: "latent generator · real/fake discriminator · minimax training",
-    paper: {
-      title: "Generative Adversarial Nets",
-      authors: "Ian J. Goodfellow, Jean Pouget-Abadie, Mehdi Mirza, Bing Xu, David Warde-Farley, Sherjil Ozair, Aaron Courville, Yoshua Bengio",
-      venue: "arXiv / NeurIPS 2014",
-      focus: ["adversarial training", "generator-discriminator game", "implicit generative models"],
-    },
     nodes: [
       {
         id: "latent",
@@ -1762,12 +1722,6 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
   seq2seq: {
     breadcrumb: "Seq2Seq / decoder / step.0 / vocab logits",
     stats: "7 source steps · 6 target steps · fixed context state",
-    paper: {
-      title: "Sequence to Sequence Learning with Neural Networks",
-      authors: "Ilya Sutskever, Oriol Vinyals, Quoc V. Le",
-      venue: "arXiv / NeurIPS 2014",
-      focus: ["encoder-decoder LSTMs", "fixed-length context", "sequence transduction"],
-    },
     nodes: [
       {
         id: "source.input",
@@ -1931,12 +1885,6 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
   lstm: {
     breadcrumb: "LSTM / recurrent loop / step.0 / forget gate",
     stats: "Sequence classifier · (batch, 8, 32) input · logits + state trace · PyTorch/JAX notebooks",
-    paper: {
-      title: "Long Short-Term Memory",
-      authors: "Sepp Hochreiter, Jurgen Schmidhuber",
-      venue: "Neural Computation",
-      focus: ["cell state memory", "input/forget/output gates", "long-range dependencies"],
-    },
     nodes: [
       {
         id: "sequence",
@@ -2100,12 +2048,6 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
   autoencoder: {
     breadcrumb: "Autoencoder / bottleneck / latent code",
     stats: "encoder · 32-d bottleneck · decoder · reconstruction loss",
-    paper: {
-      title: "Reducing the Dimensionality of Data with Neural Networks",
-      authors: "Geoffrey E. Hinton, Ruslan R. Salakhutdinov",
-      venue: "Science",
-      focus: ["dimensionality reduction", "encoder-decoder reconstruction", "bottleneck representations"],
-    },
     nodes: [
       {
         id: "input",
@@ -2193,12 +2135,6 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
   lenet5: {
     breadcrumb: "LeNet-5 / Feature Extractor / conv1",
     stats: "3 groups · 11 ops",
-    paper: {
-      title: "Gradient-Based Learning Applied to Document Recognition",
-      authors: "Yann LeCun, Leon Bottou, Yoshua Bengio, Patrick Haffner",
-      venue: "Proceedings of the IEEE",
-      focus: ["convolutional feature maps", "subsampling", "document recognition"],
-    },
     nodes: [
       {
         id: "input",
@@ -2321,12 +2257,6 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
   alexnet: {
     breadcrumb: "AlexNet / features / conv1",
     stats: "5 conv layers · 3 FC layers · 60M params",
-    paper: {
-      title: "ImageNet Classification with Deep Convolutional Neural Networks",
-      authors: "Alex Krizhevsky, Ilya Sutskever, Geoffrey E. Hinton",
-      venue: "NeurIPS 2012",
-      focus: ["large-scale CNNs", "ReLU activations", "GPU training"],
-    },
     nodes: [
       {
         id: "input",
@@ -2541,12 +2471,6 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
   vgg16: {
     breadcrumb: "VGG-16 / stage3 / conv3_3",
     stats: "13 conv layers · 3 FC layers · stacked 3x3 filters",
-    paper: {
-      title: "Very Deep Convolutional Networks for Large-Scale Image Recognition",
-      authors: "Karen Simonyan, Andrew Zisserman",
-      venue: "arXiv / ICLR 2015",
-      focus: ["deep plain CNNs", "3x3 convolution stacks", "ImageNet classification"],
-    },
     nodes: [
       {
         id: "input",
@@ -2728,12 +2652,6 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
   googlenet: {
     breadcrumb: "GoogLeNet / inception3a / concat",
     stats: "9 Inception blocks · parallel conv branches · 22 layers",
-    paper: {
-      title: "Going Deeper with Convolutions",
-      authors: "Christian Szegedy, Wei Liu, Yangqing Jia, Pierre Sermanet, Scott Reed, Dragomir Anguelov, Dumitru Erhan, Vincent Vanhoucke, Andrew Rabinovich",
-      venue: "arXiv / CVPR 2015",
-      focus: ["Inception modules", "parallel convolutions", "channel concatenation"],
-    },
     nodes: [
       {
         id: "input",
@@ -3010,12 +2928,6 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
   unet: {
     breadcrumb: "U-Net / expansive path / up4 / skip d4",
     stats: "4 down blocks · bottleneck · 4 up blocks",
-    paper: {
-      title: "U-Net: Convolutional Networks for Biomedical Image Segmentation",
-      authors: "Olaf Ronneberger, Philipp Fischer, Thomas Brox",
-      venue: "arXiv / MICCAI 2015",
-      focus: ["encoder-decoder segmentation", "skip concatenations", "biomedical images"],
-    },
     nodes: [
       {
         id: "input",
@@ -3229,12 +3141,6 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
   transformer: {
     breadcrumb: "Transformer / decoder.0 / cross_attn",
     stats: "6 encoder layers · 6 decoder layers · 8 heads",
-    paper: {
-      title: "Attention Is All You Need",
-      authors: "Ashish Vaswani, Noam Shazeer, Niki Parmar, Jakob Uszkoreit, Llion Jones, Aidan N. Gomez, Lukasz Kaiser, Illia Polosukhin",
-      venue: "NeurIPS 2017",
-      focus: ["scaled dot-product attention", "encoder-decoder stacks", "positional encoding"],
-    },
     nodes: [
       {
         id: "src.input",
@@ -3324,12 +3230,6 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
   vqvae: {
     breadcrumb: "VQ-VAE / quantizer / nearest code",
     stats: "discrete codebook · nearest-neighbor lookup · straight-through estimator",
-    paper: {
-      title: "Neural Discrete Representation Learning",
-      authors: "Aaron van den Oord, Oriol Vinyals, Koray Kavukcuoglu",
-      venue: "arXiv / NeurIPS 2017",
-      focus: ["vector quantization", "discrete latent codes", "straight-through estimator"],
-    },
     nodes: [
       {
         id: "input",
@@ -3467,12 +3367,6 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
   bert: {
     breadcrumb: "BERT / encoder.layer.3 / self_attn",
     stats: "12 encoder layers · 12 heads/layer · 110M params",
-    paper: {
-      title: "BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding",
-      authors: "Jacob Devlin, Ming-Wei Chang, Kenton Lee, Kristina Toutanova",
-      venue: "arXiv / NAACL 2019",
-      focus: ["masked language modeling", "bidirectional encoders", "fine-tuning"],
-    },
     nodes: [
       {
         id: "input_ids",
@@ -3480,8 +3374,8 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
         type: "TokenIds",
         kind: "input",
         badges: ["WordPiece", "16 tokens"],
-        codeLines: [139],
-        jaxCodeLines: [101],
+        codeLines: [23, 135, 149, 159],
+        jaxCodeLines: [15, 97, 111, 115, 120],
       },
       {
         id: "token_type_ids",
@@ -3489,8 +3383,8 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
         type: "SegmentIds",
         kind: "input",
         badges: ["sentence A/B"],
-        codeLines: [139],
-        jaxCodeLines: [101],
+        codeLines: [27, 135, 150, 159],
+        jaxCodeLines: [19, 97, 112, 115, 120],
       },
       {
         id: "embeddings",
@@ -3499,7 +3393,8 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
         kind: "group",
         summary: "token + position + segment",
         defaultExpanded: true,
-        codeLines: [15, 16, 17, 18, 19, 21, 23, 24, 25, 26, 27, 28, 31, 32, 132, 139],
+        codeLines: [4, 14, 15, 16, 17, 18, 20, 22, 23, 24, 25, 26, 27, 30, 31, 32, 128, 135],
+        jaxCodeLines: [5, 11, 12, 14, 15, 16, 17, 18, 19, 20, 23, 24, 25, 97],
         children: [
           {
             id: "embeddings.word",
@@ -3507,7 +3402,8 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
             type: "WordPieceEmbedding",
             kind: "embedding",
             badges: ["30522", "768"],
-            codeLines: [15, 24],
+            codeLines: [14, 23],
+            jaxCodeLines: [15],
           },
           {
             id: "embeddings.position",
@@ -3515,7 +3411,8 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
             type: "PositionEmbedding",
             kind: "embedding",
             badges: ["512", "768"],
-            codeLines: [16, 23, 25, 26, 27],
+            codeLines: [15, 22, 24, 25, 26],
+            jaxCodeLines: [14, 16, 17, 18],
           },
           {
             id: "embeddings.segment",
@@ -3523,14 +3420,16 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
             type: "TokenTypeEmbedding",
             kind: "embedding",
             badges: ["2", "768"],
-            codeLines: [17, 28],
+            codeLines: [16, 27],
+            jaxCodeLines: [19, 20],
           },
           {
             id: "embeddings.norm",
             label: "norm",
             type: "LayerNorm",
             kind: "norm",
-            codeLines: [18, 31],
+            codeLines: [17, 30],
+            jaxCodeLines: [23],
           },
           {
             id: "embeddings.dropout",
@@ -3538,7 +3437,8 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
             type: "Dropout",
             kind: "dropout",
             badges: ["p=0.1"],
-            codeLines: [19, 32],
+            codeLines: [18, 31],
+            jaxCodeLines: [24],
           },
         ],
       },
@@ -3550,7 +3450,8 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
         summary: "12 bidirectional layers",
         badges: ["no causal mask"],
         defaultExpanded: true,
-        codeLines: [133, 140, 141],
+        codeLines: [129, 136, 137],
+        jaxCodeLines: [98, 99],
         children: Array.from({ length: 12 }, (_, index) => makeBertLayer(index, index === 3)),
       },
       {
@@ -3559,7 +3460,8 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
         type: "CLSProjection",
         kind: "linear",
         badges: ["CLS", "768->768"],
-        codeLines: [134, 144, 145],
+        codeLines: [130, 140, 141, 142],
+        jaxCodeLines: [102, 103, 104],
       },
       {
         id: "mlm_head",
@@ -3567,19 +3469,14 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
         type: "MaskedLMHead",
         kind: "head",
         badges: ["768->30522"],
-        codeLines: [135],
+        codeLines: [131, 143],
+        jaxCodeLines: [105],
       },
     ],
   },
   gpt2: {
     breadcrumb: "GPT-2 / block.3 / attn / head.2",
     stats: "12 blocks · 12 heads/block · virtualized",
-    paper: {
-      title: "Language Models are Unsupervised Multitask Learners",
-      authors: "Alec Radford, Jeffrey Wu, Rewon Child, David Luan, Dario Amodei, Ilya Sutskever",
-      venue: "OpenAI technical report",
-      focus: ["decoder-only transformers", "causal language modeling", "zero-shot transfer"],
-    },
     nodes: [
       {
         id: "wte",
@@ -3613,12 +3510,6 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
   vit: {
     breadcrumb: "ViT-B/16 / encoder.block.3 / attn",
     stats: "196 patches · 12 encoder blocks · 12 heads",
-    paper: {
-      title: "An Image is Worth 16x16 Words: Transformers for Image Recognition at Scale",
-      authors: "Alexey Dosovitskiy, Lucas Beyer, Alexander Kolesnikov, Dirk Weissenborn, Xiaohua Zhai, Thomas Unterthiner, Mostafa Dehghani, Matthias Minderer, Georg Heigold, Sylvain Gelly, Jakob Uszkoreit, Neil Houlsby",
-      venue: "arXiv / ICLR 2021",
-      focus: ["image patches as tokens", "class token", "Transformer encoders for vision"],
-    },
     nodes: [
       {
         id: "input",
@@ -3714,12 +3605,6 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
   clip: {
     breadcrumb: "CLIP / contrastive logits / image-text similarity",
     stats: "dual encoders · shared embedding space · contrastive logits",
-    paper: {
-      title: "Learning Transferable Visual Models From Natural Language Supervision",
-      authors: "Alec Radford, Jong Wook Kim, Chris Hallacy, Aditya Ramesh, Gabriel Goh, Sandhini Agarwal, Girish Sastry, Amanda Askell, Pamela Mishkin, Jack Clark, Gretchen Krueger, Ilya Sutskever",
-      venue: "arXiv / ICML 2021",
-      focus: ["natural language supervision", "dual encoders", "contrastive image-text pretraining"],
-    },
     nodes: [
       {
         id: "image_input",
@@ -3882,12 +3767,6 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
   ddpm: {
     breadcrumb: "DDPM / U-Net denoiser / predicted noise",
     stats: "forward noising · timestep-conditioned U-Net · reverse denoising",
-    paper: {
-      title: "Denoising Diffusion Probabilistic Models",
-      authors: "Jonathan Ho, Ajay Jain, Pieter Abbeel",
-      venue: "arXiv / NeurIPS 2020",
-      focus: ["forward diffusion", "noise prediction", "iterative denoising"],
-    },
     nodes: [
       {
         id: "clean_input",
@@ -4079,12 +3958,6 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
     breadcrumb: "ResNet / layer2 / block.0 / conv1",
     stats: resnetVariants[0].stats,
     variants: resnetVariants,
-    paper: {
-      title: "Deep Residual Learning for Image Recognition",
-      authors: "Kaiming He, Xiangyu Zhang, Shaoqing Ren, Jian Sun",
-      venue: "arXiv / CVPR 2016",
-      focus: ["identity shortcuts", "residual blocks", "very deep CNNs"],
-    },
     nodes: [
       {
         id: "input",
@@ -4605,12 +4478,6 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
   widenet: {
     breadcrumb: "WideNet / layer2 / block.0 / conv1",
     stats: "WRN-28-10 · width factor 10 · pre-activation residual blocks",
-    paper: {
-      title: "Wide Residual Networks",
-      authors: "Sergey Zagoruyko, Nikos Komodakis",
-      venue: "arXiv / BMVC 2016",
-      focus: ["widened residual blocks", "feature reuse", "CIFAR image classification"],
-    },
     nodes: [
       {
         id: "input",
@@ -4818,12 +4685,6 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
   densenet: {
     breadcrumb: "DenseNet-121 / denseblock2 / layer.1 / concat",
     stats: "4 dense blocks · 58 dense layers · feature concatenation",
-    paper: {
-      title: "Densely Connected Convolutional Networks",
-      authors: "Gao Huang, Zhuang Liu, Laurens van der Maaten, Kilian Q. Weinberger",
-      venue: "arXiv / CVPR 2017",
-      focus: ["dense connectivity", "feature reuse", "vanishing-gradient mitigation"],
-    },
     nodes: [
       {
         id: "input",
@@ -5074,12 +4935,6 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
   mobilenetv2: {
     breadcrumb: "MobileNetV2 / blocks / inverted residual / linear bottleneck",
     stats: "17 inverted residual blocks · depthwise separable convs · linear bottlenecks",
-    paper: {
-      title: "MobileNetV2: Inverted Residuals and Linear Bottlenecks",
-      authors: "Mark Sandler, Andrew Howard, Menglong Zhu, Andrey Zhmoginov, Liang-Chieh Chen",
-      venue: "arXiv / CVPR 2018",
-      focus: ["inverted residuals", "linear bottlenecks", "mobile-efficient CNNs"],
-    },
     nodes: [
       {
         id: "input",
@@ -5270,12 +5125,6 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
   efficientnet: {
     breadcrumb: "EfficientNet-B0 / blocks / stage.2 / mbconv.0 / depthwise",
     stats: "MBConv stages · depthwise convs · squeeze-excitation · compound scaling",
-    paper: {
-      title: "EfficientNet: Rethinking Model Scaling for Convolutional Neural Networks",
-      authors: "Mingxing Tan, Quoc V. Le",
-      venue: "arXiv / ICML 2019",
-      focus: ["compound scaling", "mobile inverted bottlenecks", "squeeze-and-excitation"],
-    },
     nodes: [
       {
         id: "input",
@@ -5520,18 +5369,18 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
   },
 };
 
-const models: ModelSpec[] = modelRouteSummaries.map((route) => {
-  const definition = modelDefinitions[route.id];
+const models: ModelSpec[] = modelCatalog.map((entry) => {
+  const definition = modelDefinitions[entry.id];
 
   return {
     ...definition,
-    ...modelSourcePair(sourceBaseNameByModel[route.id] ?? route.id),
-    id: route.id,
-    label: route.label,
+    ...modelSourcePair(entry.sourceBaseName),
+    id: entry.id,
+    label: entry.label,
     paper: {
-      ...definition.paper,
-      publishedDate: route.publishedDate,
-      pdfUrl: paperPdfUrl(route.id),
+      ...entry.paper,
+      publishedDate: entry.publishedDate,
+      pdfUrl: paperPdfUrl(entry.id),
     },
   };
 });
@@ -6173,12 +6022,11 @@ function CodeEditor({
   onUserCodeSelectionChange: (selection: UserCodeSelection | null) => void;
 }) {
   const editorRef = useRef<HTMLDivElement>(null);
-  const codeFiles = {
-    pytorch: [{ id: "main", fileName: model.fileName, notebookName: notebookFileName(model.fileName), code: model.code }],
-    jax: [{ id: "main", fileName: model.jaxFileName, notebookName: notebookFileName(model.jaxFileName), code: model.jaxCode }],
-  } satisfies Record<CodeLanguage, Array<{ id: string; fileName: string; notebookName: string; code: string[] }>>;
-  const filesForLanguage = codeFiles[language];
-  const currentFile = filesForLanguage[0];
+  const source = getCodeForLanguage(model, language);
+  const currentFile = {
+    ...source,
+    notebookName: notebookFileName(source.fileName),
+  };
   const selectedLineNumbersForLanguage = selectedLineNumbers(model, selected, language);
   const defaultLineNumbersForLanguage =
     language === "jax" && model.jaxDefaultCodeLines ? model.jaxDefaultCodeLines : (model.defaultCodeLines ?? []);
@@ -6277,13 +6125,7 @@ function CodeEditor({
     <section className="code-pane">
       <div className="pane-toolbar code-toolbar">
         <div className="tab-group file-tab-group">
-          <select className="editor-select" aria-label="Select source file" value={currentFile.id} disabled>
-            {filesForLanguage.map((file) => (
-              <option value={file.id} key={file.id}>
-                {file.fileName}
-              </option>
-            ))}
-          </select>
+          <span className="editor-file-name">{currentFile.fileName}</span>
           <a
             className="colab-link"
             href={colabUrl(currentFile.notebookName)}

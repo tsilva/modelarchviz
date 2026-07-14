@@ -27,20 +27,14 @@ async function randomAvailablePort() {
   });
 }
 
-function usesServeListenFlag(command, args) {
-  return command === "serve" || (command === "pnpm" && args[0] === "exec" && args[1] === "serve");
-}
-
-async function resolveAutoPortArgs(command, args) {
+async function resolveAutoPortArgs(args) {
   const nextArgs = [...args];
-  const serveListenFlag = usesServeListenFlag(command, args);
 
   for (let index = 0; index < nextArgs.length; index += 1) {
     const arg = nextArgs[index];
 
     if ((arg === "--port" || arg === "-p") && nextArgs[index + 1] === "auto") {
       const port = await randomAvailablePort();
-      nextArgs[index] = serveListenFlag ? "--listen" : arg;
       nextArgs[index + 1] = String(port);
       console.error(`Using random available port ${port}`);
       return nextArgs;
@@ -49,7 +43,7 @@ async function resolveAutoPortArgs(command, args) {
     if (arg === "--port=auto" || arg === "-p=auto") {
       const port = await randomAvailablePort();
       const [flag] = arg.split("=");
-      nextArgs[index] = serveListenFlag ? `--listen=${port}` : `${flag}=${port}`;
+      nextArgs[index] = `${flag}=${port}`;
       console.error(`Using random available port ${port}`);
       return nextArgs;
     }
@@ -59,15 +53,16 @@ async function resolveAutoPortArgs(command, args) {
 }
 
 async function main() {
-  const [command, ...rawArgs] = process.argv.slice(2);
+  const [mode, ...rawArgs] = process.argv.slice(2);
 
-  if (!command) {
-    console.error("Usage: node scripts/dev-server.mjs <command> [...args]");
+  if (mode !== "dev" && mode !== "start") {
+    console.error("Usage: node scripts/dev-server.mjs <dev|start> [...args]");
     process.exit(1);
   }
 
-  const args = await resolveAutoPortArgs(command, rawArgs);
-  const child = spawn(command, args, {
+  const nextArgs = rawArgs[0] === "--" ? rawArgs.slice(1) : rawArgs;
+  const args = await resolveAutoPortArgs([mode, ...nextArgs]);
+  const child = spawn("next", args, {
     env: process.env,
     stdio: "inherit",
     shell: process.platform === "win32",

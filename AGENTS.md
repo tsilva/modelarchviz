@@ -10,9 +10,9 @@ Do not create new branches by default. Work on the current branch unless the use
 
 ## Model File Code Style
 
-Use the `$model-code-author` skill when creating, editing, reviewing, or normalizing model implementation files, including canonical notebook-source files under `app/model-notebooks/*.py` and generated UI sources under `app/generated/model-code/*.py`.
+Use the `$model-code-author` skill when creating, editing, reviewing, or normalizing model implementation files, including canonical notebook-source files under `app/model-notebooks/*.py` and their generated UI source map under `app/generated/model-sources.ts`.
 
-Edit `app/model-notebooks/*.py` as the source of truth. Do not hand-edit `app/generated/model-code/*.py` or `public/notebooks/*.ipynb`; regenerate them with `pnpm generate:model-artifacts`.
+Edit `app/model-notebooks/*.py` as the source of truth. Do not hand-edit `app/generated/model-sources.ts` or `public/notebooks/*.ipynb`; regenerate them with `pnpm generate:model-artifacts`.
 
 Structure canonical notebook sources for both site previews and notebook consumption. Use `# %%` cells for imports and implementation blocks, especially one top-level class or function per cell where practical.
 
@@ -46,7 +46,7 @@ Do not add comments above base initializer calls such as `super().__init__()`.
 
 When adding, renaming, or removing a model in `app/model-arch-viz-app.tsx`, update `app/model-routes.ts` in the same change so `/models/[modelId]` routes and `app/sitemap.ts` stay aligned.
 
-Each model route entry must include the canonical model id, label, published date, route title, and route description. Do not add model-specific URLs directly to `app/sitemap.ts`; keep sitemap coverage derived from `modelRouteSummaries`.
+Each model catalog entry must include the canonical model id, label, published date, route title and description, source basename, and paper metadata. Do not add model-specific URLs directly to `app/sitemap.ts`; keep sitemap coverage derived from `modelCatalog`.
 
 ## Architecture Code Highlights
 

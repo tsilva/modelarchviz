@@ -11,7 +11,9 @@ Use this skill to validate that a ModelArchViz architecture tree matches the imp
 
 ## Workflow
 
-1. Inspect the target model spec in `app/page.tsx`.
+1. Inspect the target model contract.
+   - Read model identity, route, paper, and source metadata in `app/model-routes.ts`.
+   - Read architecture nodes and code-highlight mappings in `app/model-arch-viz-app.tsx`.
    - Find the `ModelSpec` entry by `id`, `label`, or `fileName`.
    - Treat each `ArchNode.codeLines` value as the expected highlight set for that node in the active code language, unless the app has language-specific mappings.
    - Include eager `children` and lazy groups from `lazyChildren`.
@@ -19,20 +21,20 @@ Use this skill to validate that a ModelArchViz architecture tree matches the imp
 
 2. Inspect the corresponding implementation code.
    - Treat `app/model-notebooks/*.py` as the source of truth for model implementations.
-   - Inspect `app/generated/model-code/*.py` for the exact line numbers rendered in the UI.
-   - Do not hand-edit `app/generated/model-code/*.py` or `public/notebooks/*.ipynb`; if a fix is requested, edit `app/model-notebooks/*.py` and regenerate with `pnpm generate:model-artifacts`.
+   - Inspect `app/generated/model-sources.ts` for the exact generated strings and line numbers rendered in the UI.
+   - Do not hand-edit `app/generated/model-sources.ts` or `public/notebooks/*.ipynb`; if a fix is requested, edit `app/model-notebooks/*.py` and regenerate with `pnpm generate:model-artifacts`.
    - Confirm each node label/type is conceptually correct for the code lines it references.
    - Flag code lines that are stale, shifted, missing, duplicated only by accident, or mapped to unrelated operations.
    - For PyTorch/JAX parity checks, switch the UI language selector and verify whether shared line mappings still make sense for the selected source.
 
 3. Start or reuse the local app.
-   - Prefer the repo's existing script: `pnpm dev`.
+   - Prefer the repo's existing script: `pnpm dev -- --port auto`.
    - Use the currently running localhost URL when already available.
    - Keep npm/pnpm supply-chain hardening intact; do not install or update packages unless required for the user's task.
 
 4. Use the official OpenAI Browser Use plugin for browser testing.
    - Load the Browser skill first when it is available.
-   - Open the local app in the in-app Browser, usually `http://localhost:3000`.
+   - Open the exact local URL printed by the dev-server wrapper.
    - Do not substitute shell-only checks for UI behavior. The browser audit is the source of truth for selection and highlighting behavior.
 
 5. Select the target model in the `Select model` combobox.

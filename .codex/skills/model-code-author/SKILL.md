@@ -10,7 +10,7 @@ Preserve behavior; expose tensor dataflow.
 ## Workflow
 
 1. Identify model files/snippets and dependent metadata: `codeLines`, docs, snapshots, tests.
-2. Edit only `app/model-notebooks/*.py` as source; never hand-edit `app/generated/model-code/*.py` or notebook artifacts.
+2. Edit only `app/model-notebooks/*.py` as source; never hand-edit `app/generated/model-sources.ts` or notebook artifacts.
 3. Cells: imports first; `# %%` for implementation; one top-level model/component class per cell, never two.
 4. After every top-level model/component class, immediately add small `# %% [notebook-only]` smoke test: construct, run representative input, show expected input/output shape, end with `print(...)`.
 5. Component smoke tests/shape inspection/non-web examples: `# %% [notebook-only]`. Training examples meant for the web code panel: separate normal `# %%` cell after the notebook-only smoke test.
@@ -39,7 +39,7 @@ Preserve behavior; expose tensor dataflow.
 
 - Syntax-check when ML deps are available/unneeded: `python3 -m py_compile path/to/file.py`.
 - Run repo checks (typecheck/build) when app bundles/displays files.
-- After regeneration inspect generated web code: intended training example is present; no notebook-only comments/tests/examples; no duplicate top-level `model = ...` except intentional implementation; only intentional normal-cell examples/training.
+- After regeneration inspect the relevant entry in `app/generated/model-sources.ts`: intended training example is present; no notebook-only comments/tests/examples; no duplicate top-level `model = ...` except intentional implementation; only intentional normal-cell examples/training.
 - Inspect `.ipynb` starts: every top-level class has own cell plus immediate expected notebook-only smoke-test cell; no duplicate training-style `model = ModelClass(...)` unless intentional and clearly named.
 - Confirm smoke tests end with `print(...)` and use `example_*` when normal cells use `model`/`params`/`outputs`/`logits`.
 - If web UI should load with no side-panel node selected, verify zero selected architecture nodes and zero highlighted code lines.

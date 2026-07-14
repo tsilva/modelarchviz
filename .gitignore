@@ -1,6 +1,7 @@
 node_modules
 .next
 /app/generated/
+/public/pdf.worker.min.mjs
 out
 dist
 .env

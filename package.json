@@ -4,9 +4,9 @@
   "private": true,
   "scripts": {
     "generate:model-artifacts": "node scripts/generate-model-artifacts.mjs",
-    "dev": "pnpm generate:model-artifacts && node scripts/dev-server.mjs next dev",
+    "dev": "pnpm generate:model-artifacts && node scripts/dev-server.mjs dev",
     "build": "pnpm generate:model-artifacts && next build",
-    "start": "node scripts/dev-server.mjs next start",
+    "start": "node scripts/dev-server.mjs start",
     "typecheck": "pnpm generate:model-artifacts && tsc --noEmit"
   },
   "dependencies": {

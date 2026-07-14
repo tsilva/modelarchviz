@@ -1,13 +1,16 @@
-import { mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
+import { copyFile, mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
+import { createRequire } from "node:module";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const require = createRequire(import.meta.url);
 const sourceDir = path.join(repoRoot, "app", "model-notebooks");
 const templateDir = path.join(repoRoot, "app", "model-templates");
-const generatedCodeDir = path.join(repoRoot, "app", "generated", "model-code");
 const generatedManifestPath = path.join(repoRoot, "app", "generated", "model-sources.ts");
 const notebookDir = path.join(repoRoot, "public", "notebooks");
+const pdfWorkerSourcePath = require.resolve("pdfjs-dist/build/pdf.worker.min.mjs");
+const pdfWorkerPath = path.join(repoRoot, "public", "pdf.worker.min.mjs");
 
 function stripJupytextHeader(lines) {
   if (lines[0] !== "# ---") {
@@ -194,10 +197,9 @@ async function writeArtifacts({ fileName, source, sourceLabel }) {
   const notebook = notebookFromCells(fileName, cells, sourceLabel);
   const notebookName = fileName.replace(/\.py$/, ".ipynb");
 
-  await writeFile(path.join(generatedCodeDir, fileName), cleanedPython, "utf8");
   await writeFile(path.join(notebookDir, notebookName), `${JSON.stringify(notebook, null, 2)}\n`, "utf8");
 
-  return { fileName, notebookName };
+  return { cleanedPython, fileName, notebookName };
 }
 
 async function pruneUnexpectedArtifacts(directory, extension, expectedNames) {
@@ -210,28 +212,26 @@ async function pruneUnexpectedArtifacts(directory, extension, expectedNames) {
   );
 }
 
-function modelSourceManifest(fileNames) {
-  const sortedFileNames = [...fileNames].sort((a, b) => a.localeCompare(b));
-  const imports = sortedFileNames.map(
-    (fileName, index) => `import source${index} from "./model-code/${fileName}";`,
-  );
-  const entries = sortedFileNames.map(
-    (fileName, index) => `  ${JSON.stringify(fileName)}: source${index},`,
-  );
+function modelSourceManifest(sources) {
+  const entries = [...sources.entries()]
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(
+      ([fileName, source]) => `  ${JSON.stringify(fileName)}: ${JSON.stringify(source)},`,
+    );
 
-  return `${imports.join("\n")}\n\nexport const modelSources: Readonly<Record<string, string>> = {\n${entries.join("\n")}\n};\n`;
+  return `export const modelSources: Readonly<Record<string, string>> = {\n${entries.join("\n")}\n};\n`;
 }
 
 async function main() {
-  await mkdir(generatedCodeDir, { recursive: true });
+  await mkdir(path.dirname(generatedManifestPath), { recursive: true });
   await mkdir(notebookDir, { recursive: true });
 
-  const generatedFileNames = new Set();
+  const generatedSources = new Map();
   const generatedNotebookNames = new Set();
 
   async function generateAndTrack(options) {
     const artifact = await writeArtifacts(options);
-    generatedFileNames.add(artifact.fileName);
+    generatedSources.set(artifact.fileName, artifact.cleanedPython);
     generatedNotebookNames.add(artifact.notebookName);
   }
 
@@ -293,9 +293,9 @@ async function main() {
     throw new Error(`No notebook source files found in ${sourceDir} or ${templateDir}`);
   }
 
-  await pruneUnexpectedArtifacts(generatedCodeDir, ".py", generatedFileNames);
   await pruneUnexpectedArtifacts(notebookDir, ".ipynb", generatedNotebookNames);
-  await writeFile(generatedManifestPath, modelSourceManifest(generatedFileNames), "utf8");
+  await writeFile(generatedManifestPath, modelSourceManifest(generatedSources), "utf8");
+  await copyFile(pdfWorkerSourcePath, pdfWorkerPath);
 
   console.log(`Generated model artifacts from ${sourceFiles.length} notebook sources and ${variantFiles.length} variant families.`);
 }

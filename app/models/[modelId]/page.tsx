@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import ModelArchVizApp from "../../model-arch-viz-app";
-import { getModelRoute, modelRoutePath, modelRouteSummaries } from "../../model-routes";
+import { getModelRoute, modelCatalog, modelRoutePath } from "../../model-routes";
 
 type ModelPageProps = {
   params: {
@@ -10,7 +10,7 @@ type ModelPageProps = {
 };
 
 export function generateStaticParams() {
-  return modelRouteSummaries.map((model) => ({
+  return modelCatalog.map((model) => ({
     modelId: model.id,
   }));
 }
