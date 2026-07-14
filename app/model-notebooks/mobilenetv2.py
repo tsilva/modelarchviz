@@ -83,7 +83,8 @@ print("block_output shape:", example_block_output.shape)
 class MobileNetV2(nn.Module):
     def __init__(
         self,
-        num_classes=1000  # Number of output classes.
+        num_classes=1000,  # Number of output classes.
+        dropout=0.2  # Dropout probability before classification.
     ):
         super().__init__()
 
@@ -127,6 +128,7 @@ class MobileNetV2(nn.Module):
             nn.BatchNorm2d(1280),
             nn.ReLU6(inplace=True),
         )
+        self.dropout = nn.Dropout(p=dropout)
         self.classifier = nn.Linear(1280, num_classes)
 
     def forward(self, x):
@@ -136,10 +138,11 @@ class MobileNetV2(nn.Module):
         # Run inverted residual stages with depthwise filters and linear bottlenecks.
         x = self.blocks(x)  # (batch, 32, 112, 112) -> (batch, 320, 7, 7)
 
-        # Expand channels, globally pool, and classify.
+        # Expand channels, globally pool, regularize, and classify.
         x = self.head(x)  # (batch, 320, 7, 7) -> (batch, 1280, 7, 7)
         x = F.adaptive_avg_pool2d(x, output_size=(1, 1))  # (batch, 1280, 7, 7) -> (batch, 1280, 1, 1)
         x = torch.flatten(x, start_dim=1)  # (batch, 1280, 1, 1) -> (batch, 1280)
+        x = self.dropout(x)  # (batch, 1280)
         logits = self.classifier(x)  # (batch, 1280) -> (batch, num_classes)
         return logits
 

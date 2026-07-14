@@ -1,4 +1,4 @@
-import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -6,6 +6,7 @@ const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), ".."
 const sourceDir = path.join(repoRoot, "app", "model-notebooks");
 const templateDir = path.join(repoRoot, "app", "model-templates");
 const generatedCodeDir = path.join(repoRoot, "app", "generated", "model-code");
+const generatedManifestPath = path.join(repoRoot, "app", "generated", "model-sources.ts");
 const notebookDir = path.join(repoRoot, "public", "notebooks");
 
 function stripJupytextHeader(lines) {
@@ -195,11 +196,44 @@ async function writeArtifacts({ fileName, source, sourceLabel }) {
 
   await writeFile(path.join(generatedCodeDir, fileName), cleanedPython, "utf8");
   await writeFile(path.join(notebookDir, notebookName), `${JSON.stringify(notebook, null, 2)}\n`, "utf8");
+
+  return { fileName, notebookName };
+}
+
+async function pruneUnexpectedArtifacts(directory, extension, expectedNames) {
+  const entries = await safeReaddir(directory);
+
+  await Promise.all(
+    entries
+      .filter((entry) => entry.isFile() && entry.name.endsWith(extension) && !expectedNames.has(entry.name))
+      .map((entry) => rm(path.join(directory, entry.name))),
+  );
+}
+
+function modelSourceManifest(fileNames) {
+  const sortedFileNames = [...fileNames].sort((a, b) => a.localeCompare(b));
+  const imports = sortedFileNames.map(
+    (fileName, index) => `import source${index} from "./model-code/${fileName}";`,
+  );
+  const entries = sortedFileNames.map(
+    (fileName, index) => `  ${JSON.stringify(fileName)}: source${index},`,
+  );
+
+  return `${imports.join("\n")}\n\nexport const modelSources: Readonly<Record<string, string>> = {\n${entries.join("\n")}\n};\n`;
 }
 
 async function main() {
   await mkdir(generatedCodeDir, { recursive: true });
   await mkdir(notebookDir, { recursive: true });
+
+  const generatedFileNames = new Set();
+  const generatedNotebookNames = new Set();
+
+  async function generateAndTrack(options) {
+    const artifact = await writeArtifacts(options);
+    generatedFileNames.add(artifact.fileName);
+    generatedNotebookNames.add(artifact.notebookName);
+  }
 
   const entries = await safeReaddir(sourceDir);
   const sourceFiles = entries
@@ -210,7 +244,7 @@ async function main() {
   for (const fileName of sourceFiles) {
     const sourcePath = path.join(sourceDir, fileName);
     const source = await readFile(sourcePath, "utf8");
-    await writeArtifacts({
+    await generateAndTrack({
       fileName,
       source,
       sourceLabel: `app/model-notebooks/${fileName}`,
@@ -241,13 +275,13 @@ async function main() {
         stage4Blocks: variant.stageBlocks[3],
       };
 
-      await writeArtifacts({
+      await generateAndTrack({
         fileName: `${variant.id}.py`,
         source: renderTemplate(pytorchTemplate, templateContext),
         sourceLabel: `app/model-templates/${pytorchTemplateName}#${variant.id}`,
       });
 
-      await writeArtifacts({
+      await generateAndTrack({
         fileName: `${variant.id}_jax.py`,
         source: renderTemplate(jaxTemplate, templateContext),
         sourceLabel: `app/model-templates/${jaxTemplateName}#${variant.id}`,
@@ -258,6 +292,10 @@ async function main() {
   if (sourceFiles.length === 0 && variantFiles.length === 0) {
     throw new Error(`No notebook source files found in ${sourceDir} or ${templateDir}`);
   }
+
+  await pruneUnexpectedArtifacts(generatedCodeDir, ".py", generatedFileNames);
+  await pruneUnexpectedArtifacts(notebookDir, ".ipynb", generatedNotebookNames);
+  await writeFile(generatedManifestPath, modelSourceManifest(generatedFileNames), "utf8");
 
   console.log(`Generated model artifacts from ${sourceFiles.length} notebook sources and ${variantFiles.length} variant families.`);
 }

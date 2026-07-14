@@ -184,6 +184,8 @@ export const modelRouteSummaries = [
   },
 ] as const satisfies readonly ModelRouteSummary[];
 
+export type ModelId = (typeof modelRouteSummaries)[number]["id"];
+
 export function getModelRoute(modelId: string) {
   return modelRouteSummaries.find((model) => model.id === modelId);
 }

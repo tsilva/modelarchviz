@@ -11,64 +11,14 @@ import {
   type SetStateAction,
 } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import mlpPythonSource from "./generated/model-code/mlp.py";
-import mlpJaxPythonSource from "./generated/model-code/mlp_jax.py";
-import rnnPythonSource from "./generated/model-code/elman_rnn.py";
-import rnnJaxPythonSource from "./generated/model-code/elman_rnn_jax.py";
-import gruPythonSource from "./generated/model-code/gru.py";
-import gruJaxPythonSource from "./generated/model-code/gru_jax.py";
-import seq2seqPythonSource from "./generated/model-code/seq2seq.py";
-import seq2seqJaxPythonSource from "./generated/model-code/seq2seq_jax.py";
-import lstmPythonSource from "./generated/model-code/lstm.py";
-import lstmJaxPythonSource from "./generated/model-code/lstm_jax.py";
-import autoencoderPythonSource from "./generated/model-code/autoencoder.py";
-import autoencoderJaxPythonSource from "./generated/model-code/autoencoder_jax.py";
-import lenet5PythonSource from "./generated/model-code/lenet5.py";
-import lenet5JaxPythonSource from "./generated/model-code/lenet5_jax.py";
-import alexnetPythonSource from "./generated/model-code/alexnet.py";
-import alexnetJaxPythonSource from "./generated/model-code/alexnet_jax.py";
-import vgg16PythonSource from "./generated/model-code/vgg16.py";
-import vgg16JaxPythonSource from "./generated/model-code/vgg16_jax.py";
-import vaePythonSource from "./generated/model-code/vae.py";
-import vaeJaxPythonSource from "./generated/model-code/vae_jax.py";
-import ganPythonSource from "./generated/model-code/gan.py";
-import ganJaxPythonSource from "./generated/model-code/gan_jax.py";
-import googlenetPythonSource from "./generated/model-code/googlenet.py";
-import googlenetJaxPythonSource from "./generated/model-code/googlenet_jax.py";
-import unetPythonSource from "./generated/model-code/unet.py";
-import unetJaxPythonSource from "./generated/model-code/unet_jax.py";
-import transformerPythonSource from "./generated/model-code/transformer.py";
-import transformerJaxPythonSource from "./generated/model-code/transformer_jax.py";
-import vqvaePythonSource from "./generated/model-code/vqvae.py";
-import vqvaeJaxPythonSource from "./generated/model-code/vqvae_jax.py";
-import bertPythonSource from "./generated/model-code/bert_base.py";
-import bertJaxPythonSource from "./generated/model-code/bert_base_jax.py";
-import gpt2PythonSource from "./generated/model-code/gpt2_attention.py";
-import gpt2JaxPythonSource from "./generated/model-code/gpt2_attention_jax.py";
-import ddpmPythonSource from "./generated/model-code/ddpm.py";
-import ddpmJaxPythonSource from "./generated/model-code/ddpm_jax.py";
-import vitPythonSource from "./generated/model-code/vit_b16.py";
-import vitJaxPythonSource from "./generated/model-code/vit_b16_jax.py";
-import clipPythonSource from "./generated/model-code/clip.py";
-import clipJaxPythonSource from "./generated/model-code/clip_jax.py";
-import resnet18PythonSource from "./generated/model-code/resnet18.py";
-import resnet18JaxPythonSource from "./generated/model-code/resnet18_jax.py";
-import resnet34PythonSource from "./generated/model-code/resnet34.py";
-import resnet34JaxPythonSource from "./generated/model-code/resnet34_jax.py";
-import resnet50PythonSource from "./generated/model-code/resnet50.py";
-import resnet50JaxPythonSource from "./generated/model-code/resnet50_jax.py";
-import resnet101PythonSource from "./generated/model-code/resnet101.py";
-import resnet101JaxPythonSource from "./generated/model-code/resnet101_jax.py";
-import resnet152PythonSource from "./generated/model-code/resnet152.py";
-import resnet152JaxPythonSource from "./generated/model-code/resnet152_jax.py";
-import widenetPythonSource from "./generated/model-code/widenet.py";
-import widenetJaxPythonSource from "./generated/model-code/widenet_jax.py";
-import densenetPythonSource from "./generated/model-code/densenet.py";
-import densenetJaxPythonSource from "./generated/model-code/densenet_jax.py";
-import mobilenetv2PythonSource from "./generated/model-code/mobilenetv2.py";
-import mobilenetv2JaxPythonSource from "./generated/model-code/mobilenetv2_jax.py";
-import efficientnetPythonSource from "./generated/model-code/efficientnet.py";
-import efficientnetJaxPythonSource from "./generated/model-code/efficientnet_jax.py";
+import {
+  normalizeLineNumbers,
+  type ChatCodeLanguage,
+  type ChatMessage,
+  type ChatResponse,
+} from "./chat-contract";
+import { modelSources } from "./generated/model-sources";
+import { modelRoutePath, modelRouteSummaries, type ModelId } from "./model-routes";
 import resnetTemplateVariants from "./model-templates/resnet.variants.json";
 
 type NodeKind =
@@ -113,15 +63,11 @@ type ModelSpec = {
   paper: {
     title: string;
     authors: string;
-    year: string;
-    publishedLabel: string;
     publishedDate: string;
     venue: string;
-    url: string;
     pdfUrl: string;
     focus: string[];
   };
-  selectedId: string;
   nodes: ArchNode[];
   code: string[];
   jaxCode: string[];
@@ -142,18 +88,20 @@ type ModelVariantSpec = {
   stats: string;
   fileName: string;
   jaxFileName: string;
-  selectedId: string;
   nodes: ArchNode[];
   code: string[];
   jaxCode: string[];
 };
 
-type PaneKey = "architecture" | "paper" | "code" | "chat";
-type CodeLanguage = "pytorch" | "jax";
-type ChatMessage = {
-  role: "user" | "assistant";
-  content: string;
+type ModelDefinition = Omit<
+  ModelSpec,
+  "id" | "label" | "paper" | "fileName" | "jaxFileName" | "code" | "jaxCode"
+> & {
+  paper: Omit<ModelSpec["paper"], "publishedDate" | "pdfUrl">;
 };
+
+type PaneKey = "architecture" | "paper" | "code" | "chat";
+type CodeLanguage = ChatCodeLanguage;
 type AgentCodeSelection = {
   modelId: string;
   language: CodeLanguage;
@@ -222,6 +170,31 @@ function codeLines(source: string) {
   return trimmed.split("\n");
 }
 
+const sourceBaseNameByModel: Partial<Record<ModelId, string>> = {
+  rnn: "elman_rnn",
+  bert: "bert_base",
+  gpt2: "gpt2_attention",
+  vit: "vit_b16",
+};
+
+function modelSourcePair(baseName: string) {
+  const fileName = `${baseName}.py`;
+  const jaxFileName = `${baseName}_jax.py`;
+  const source = modelSources[fileName];
+  const jaxSource = modelSources[jaxFileName];
+
+  if (!source || !jaxSource) {
+    throw new Error(`Missing generated model source pair for ${baseName}`);
+  }
+
+  return {
+    fileName,
+    jaxFileName,
+    code: codeLines(source),
+    jaxCode: codeLines(jaxSource),
+  };
+}
+
 function lineRange(start: number, end: number) {
   return Array.from({ length: end - start + 1 }, (_, index) => start + index);
 }
@@ -244,29 +217,6 @@ type ResNetTemplateVariant = {
   expansion: 1 | 4;
 };
 
-const resnetGeneratedSources: Record<string, { code: string[]; jaxCode: string[] }> = {
-  resnet18: {
-    code: codeLines(resnet18PythonSource),
-    jaxCode: codeLines(resnet18JaxPythonSource),
-  },
-  resnet34: {
-    code: codeLines(resnet34PythonSource),
-    jaxCode: codeLines(resnet34JaxPythonSource),
-  },
-  resnet50: {
-    code: codeLines(resnet50PythonSource),
-    jaxCode: codeLines(resnet50JaxPythonSource),
-  },
-  resnet101: {
-    code: codeLines(resnet101PythonSource),
-    jaxCode: codeLines(resnet101JaxPythonSource),
-  },
-  resnet152: {
-    code: codeLines(resnet152PythonSource),
-    jaxCode: codeLines(resnet152JaxPythonSource),
-  },
-};
-
 function resnetVariantStats(variant: ResNetTemplateVariant) {
   const blockCount = variant.stageBlocks.reduce((total, blocks) => total + blocks, 0);
   const stageSummary = variant.stageBlocks.join("-");
@@ -281,7 +231,6 @@ function makeResNetBlockNode(
   defaultExpanded = false,
 ): ArchNode {
   const stageChannels = [64, 128, 256, 512] as const;
-  const stageSpatial = [56, 28, 14, 7] as const;
   const stageName = `layer${stageIndex + 1}`;
   const stageBaseChannels = stageChannels[stageIndex];
   const previousStageBaseChannels = stageIndex === 0 ? 64 : stageChannels[stageIndex - 1];
@@ -571,17 +520,11 @@ function makeResNetNodes(variant: ResNetTemplateVariant): ArchNode[] {
 const resnetVariantDefinitions = resnetTemplateVariants as unknown as ResNetTemplateVariant[];
 
 const resnetVariants: ModelVariantSpec[] = resnetVariantDefinitions.map((variant) => {
-  const sources = resnetGeneratedSources[variant.id];
-
   return {
     ...variant,
     stats: resnetVariantStats(variant),
-    fileName: `${variant.id}.py`,
-    jaxFileName: `${variant.id}_jax.py`,
-    selectedId: "",
+    ...modelSourcePair(variant.id),
     nodes: makeResNetNodes(variant),
-    code: sources.code,
-    jaxCode: sources.jaxCode,
   };
 });
 
@@ -1291,26 +1234,16 @@ function makeVitBlock(index: number, defaultExpanded = false): ArchNode {
   };
 }
 
-const models: ModelSpec[] = [
-  {
-    id: "mlp",
-    label: "MLP",
+const modelDefinitions: Record<ModelId, ModelDefinition> = {
+  mlp: {
     breadcrumb: "MLP / hidden.1 / dense",
     stats: "2 hidden layers · sigmoid activations · backprop",
-    fileName: "mlp.py",
-    jaxFileName: "mlp_jax.py",
     paper: {
       title: "Learning representations by back-propagating errors",
       authors: "David E. Rumelhart, Geoffrey E. Hinton, Ronald J. Williams",
-      year: "1986",
-      publishedLabel: "Oct 9, 1986",
-      publishedDate: "1986-10-09",
       venue: "Nature",
-      url: "https://www.nature.com/articles/323533a0",
-      pdfUrl: paperPdfUrl("mlp"),
       focus: ["backpropagation", "hidden representations", "multilayer perceptrons"],
     },
-    selectedId: "",
     nodes: [
       {
         id: "input",
@@ -1392,28 +1325,16 @@ const models: ModelSpec[] = [
         codeLines: [30],
       },
     ],
-    code: codeLines(mlpPythonSource),
-    jaxCode: codeLines(mlpJaxPythonSource),
   },
-  {
-    id: "rnn",
-    label: "RNN (Elman)",
+  rnn: {
     breadcrumb: "RNN / recurrent loop / step.0 / hidden_to_hidden",
     stats: "8 time steps · 64 hidden units · shared recurrent cell",
-    fileName: "elman_rnn.py",
-    jaxFileName: "elman_rnn_jax.py",
     paper: {
       title: "Finding Structure in Time",
       authors: "Jeffrey L. Elman",
-      year: "1990",
-      publishedLabel: "Mar 1990",
-      publishedDate: "1990-03-01",
       venue: "Cognitive Science",
-      url: "https://doi.org/10.1207/s15516709cog1402_1",
-      pdfUrl: paperPdfUrl("rnn"),
       focus: ["recurrent hidden state", "dynamic memory", "sequence structure"],
     },
-    selectedId: "",
     nodes: [
       {
         id: "sequence",
@@ -1462,28 +1383,16 @@ const models: ModelSpec[] = [
         codeLines: [38, 39, 40],
       },
     ],
-    code: codeLines(rnnPythonSource),
-    jaxCode: codeLines(rnnJaxPythonSource),
   },
-  {
-    id: "gru",
-    label: "GRU",
+  gru: {
     breadcrumb: "GRU / recurrent loop / step.0 / update gate",
     stats: "8 time steps · update/reset gates · 64 hidden units",
-    fileName: "gru.py",
-    jaxFileName: "gru_jax.py",
     paper: {
       title: "Learning Phrase Representations using RNN Encoder-Decoder for Statistical Machine Translation",
       authors: "Kyunghyun Cho, Bart van Merrienboer, Caglar Gulcehre, Dzmitry Bahdanau, Fethi Bougares, Holger Schwenk, Yoshua Bengio",
-      year: "2014",
-      publishedLabel: "Jun 3, 2014",
-      publishedDate: "2014-06-03",
       venue: "arXiv / EMNLP 2014",
-      url: "https://arxiv.org/abs/1406.1078",
-      pdfUrl: paperPdfUrl("gru"),
       focus: ["update gate", "reset gate", "encoder-decoder sequence modeling"],
     },
-    selectedId: "",
     nodes: [
       {
         id: "sequence",
@@ -1575,30 +1484,18 @@ const models: ModelSpec[] = [
         jaxCodeLines: [56, 57, 58, 59],
       },
     ],
-    code: codeLines(gruPythonSource),
-    jaxCode: codeLines(gruJaxPythonSource),
     defaultCodeLines: [80, 81, 82, 85, 86, 87, 89, 90, 91, 92, 93, 94, 95, 96, 98, 99],
     jaxDefaultCodeLines: [61, 62, 63, 68, 69, 72, 73, 74, 75, 76, 77, 78, 81, 82, 86, 87, 88, 90, 91],
   },
-  {
-    id: "vae",
-    label: "VAE",
+  vae: {
     breadcrumb: "VAE / reparameterization / latent sample",
     stats: "Gaussian encoder · reparameterization trick · ELBO loss",
-    fileName: "vae.py",
-    jaxFileName: "vae_jax.py",
     paper: {
       title: "Auto-Encoding Variational Bayes",
       authors: "Diederik P. Kingma, Max Welling",
-      year: "2013",
-      publishedLabel: "Dec 20, 2013",
-      publishedDate: "2013-12-20",
       venue: "arXiv / ICLR 2014",
-      url: "https://arxiv.org/abs/1312.6114",
-      pdfUrl: paperPdfUrl("vae"),
       focus: ["variational inference", "reparameterization trick", "latent-variable generative models"],
     },
-    selectedId: "",
     nodes: [
       {
         id: "input",
@@ -1720,28 +1617,16 @@ const models: ModelSpec[] = [
         ],
       },
     ],
-    code: codeLines(vaePythonSource),
-    jaxCode: codeLines(vaeJaxPythonSource),
   },
-  {
-    id: "gan",
-    label: "GAN",
+  gan: {
     breadcrumb: "GAN / adversarial game / generator loss",
     stats: "latent generator · real/fake discriminator · minimax training",
-    fileName: "gan.py",
-    jaxFileName: "gan_jax.py",
     paper: {
       title: "Generative Adversarial Nets",
       authors: "Ian J. Goodfellow, Jean Pouget-Abadie, Mehdi Mirza, Bing Xu, David Warde-Farley, Sherjil Ozair, Aaron Courville, Yoshua Bengio",
-      year: "2014",
-      publishedLabel: "Jun 10, 2014",
-      publishedDate: "2014-06-10",
       venue: "arXiv / NeurIPS 2014",
-      url: "https://arxiv.org/abs/1406.2661",
-      pdfUrl: paperPdfUrl("gan"),
       focus: ["adversarial training", "generator-discriminator game", "implicit generative models"],
     },
-    selectedId: "",
     nodes: [
       {
         id: "latent",
@@ -1873,28 +1758,16 @@ const models: ModelSpec[] = [
         jaxCodeLines: [98, 103, 104, 108, 113, 114, 118, 119, 120, 121],
       },
     ],
-    code: codeLines(ganPythonSource),
-    jaxCode: codeLines(ganJaxPythonSource),
   },
-  {
-    id: "seq2seq",
-    label: "Seq2Seq",
+  seq2seq: {
     breadcrumb: "Seq2Seq / decoder / step.0 / vocab logits",
     stats: "7 source steps · 6 target steps · fixed context state",
-    fileName: "seq2seq.py",
-    jaxFileName: "seq2seq_jax.py",
     paper: {
       title: "Sequence to Sequence Learning with Neural Networks",
       authors: "Ilya Sutskever, Oriol Vinyals, Quoc V. Le",
-      year: "2014",
-      publishedLabel: "Sep 10, 2014",
-      publishedDate: "2014-09-10",
       venue: "arXiv / NeurIPS 2014",
-      url: "https://arxiv.org/abs/1409.3215",
-      pdfUrl: paperPdfUrl("seq2seq"),
       focus: ["encoder-decoder LSTMs", "fixed-length context", "sequence transduction"],
     },
-    selectedId: "",
     nodes: [
       {
         id: "source.input",
@@ -2054,28 +1927,16 @@ const models: ModelSpec[] = [
         jaxCodeLines: [99, 105, 110, 111, 142, 143, 144],
       },
     ],
-    code: codeLines(seq2seqPythonSource),
-    jaxCode: codeLines(seq2seqJaxPythonSource),
   },
-  {
-    id: "lstm",
-    label: "LSTM",
+  lstm: {
     breadcrumb: "LSTM / recurrent loop / step.0 / forget gate",
     stats: "Sequence classifier · (batch, 8, 32) input · logits + state trace · PyTorch/JAX notebooks",
-    fileName: "lstm.py",
-    jaxFileName: "lstm_jax.py",
     paper: {
       title: "Long Short-Term Memory",
       authors: "Sepp Hochreiter, Jurgen Schmidhuber",
-      year: "1997",
-      publishedLabel: "Nov 1, 1997",
-      publishedDate: "1997-11-01",
       venue: "Neural Computation",
-      url: "https://doi.org/10.1162/neco.1997.9.8.1735",
-      pdfUrl: paperPdfUrl("lstm"),
       focus: ["cell state memory", "input/forget/output gates", "long-range dependencies"],
     },
-    selectedId: "",
     nodes: [
       {
         id: "sequence",
@@ -2233,30 +2094,18 @@ const models: ModelSpec[] = [
         codeLines: [96, 97],
       },
     ],
-    code: codeLines(lstmPythonSource),
-    jaxCode: codeLines(lstmJaxPythonSource),
     defaultCodeLines: [61, 62, 63, 64, 65, 66, 72, 73, 75, 77, 79, 80, 84, 85, 86, 88, 89, 90, 94, 95, 96, 97],
     jaxDefaultCodeLines: [48, 49, 50, 53, 55, 57, 58, 63, 64, 65, 67, 68, 69, 73, 74, 75, 76],
   },
-  {
-    id: "autoencoder",
-    label: "Autoencoder",
+  autoencoder: {
     breadcrumb: "Autoencoder / bottleneck / latent code",
     stats: "encoder · 32-d bottleneck · decoder · reconstruction loss",
-    fileName: "autoencoder.py",
-    jaxFileName: "autoencoder_jax.py",
     paper: {
       title: "Reducing the Dimensionality of Data with Neural Networks",
       authors: "Geoffrey E. Hinton, Ruslan R. Salakhutdinov",
-      year: "2006",
-      publishedLabel: "Jul 28, 2006",
-      publishedDate: "2006-07-28",
       venue: "Science",
-      url: "https://www.science.org/doi/10.1126/science.1127647",
-      pdfUrl: paperPdfUrl("autoencoder"),
       focus: ["dimensionality reduction", "encoder-decoder reconstruction", "bottleneck representations"],
     },
-    selectedId: "",
     nodes: [
       {
         id: "input",
@@ -2340,28 +2189,16 @@ const models: ModelSpec[] = [
         jaxCodeLines: [64, 65, 66, 67, 70, 71, 76, 77],
       },
     ],
-    code: codeLines(autoencoderPythonSource),
-    jaxCode: codeLines(autoencoderJaxPythonSource),
   },
-  {
-    id: "lenet5",
-    label: "LeNet-5",
+  lenet5: {
     breadcrumb: "LeNet-5 / Feature Extractor / conv1",
     stats: "3 groups · 11 ops",
-    fileName: "lenet5.py",
-    jaxFileName: "lenet5_jax.py",
     paper: {
       title: "Gradient-Based Learning Applied to Document Recognition",
       authors: "Yann LeCun, Leon Bottou, Yoshua Bengio, Patrick Haffner",
-      year: "1998",
-      publishedLabel: "Nov 1998",
-      publishedDate: "1998-11-01",
       venue: "Proceedings of the IEEE",
-      url: "https://ieeexplore.ieee.org/document/726791",
-      pdfUrl: paperPdfUrl("lenet5"),
       focus: ["convolutional feature maps", "subsampling", "document recognition"],
     },
-    selectedId: "",
     nodes: [
       {
         id: "input",
@@ -2480,28 +2317,16 @@ const models: ModelSpec[] = [
         ],
       },
     ],
-    code: codeLines(lenet5PythonSource),
-    jaxCode: codeLines(lenet5JaxPythonSource),
   },
-  {
-    id: "alexnet",
-    label: "AlexNet",
+  alexnet: {
     breadcrumb: "AlexNet / features / conv1",
     stats: "5 conv layers · 3 FC layers · 60M params",
-    fileName: "alexnet.py",
-    jaxFileName: "alexnet_jax.py",
     paper: {
       title: "ImageNet Classification with Deep Convolutional Neural Networks",
       authors: "Alex Krizhevsky, Ilya Sutskever, Geoffrey E. Hinton",
-      year: "2012",
-      publishedLabel: "Dec 2012",
-      publishedDate: "2012-12-03",
       venue: "NeurIPS 2012",
-      url: "https://papers.nips.cc/paper/4824-imagenet-classification-with-deep-convolutional-neural-networks",
-      pdfUrl: paperPdfUrl("alexnet"),
       focus: ["large-scale CNNs", "ReLU activations", "GPU training"],
     },
-    selectedId: "",
     nodes: [
       {
         id: "input",
@@ -2712,28 +2537,16 @@ const models: ModelSpec[] = [
         ],
       },
     ],
-    code: codeLines(alexnetPythonSource),
-    jaxCode: codeLines(alexnetJaxPythonSource),
   },
-  {
-    id: "vgg16",
-    label: "VGG-16",
+  vgg16: {
     breadcrumb: "VGG-16 / stage3 / conv3_3",
     stats: "13 conv layers · 3 FC layers · stacked 3x3 filters",
-    fileName: "vgg16.py",
-    jaxFileName: "vgg16_jax.py",
     paper: {
       title: "Very Deep Convolutional Networks for Large-Scale Image Recognition",
       authors: "Karen Simonyan, Andrew Zisserman",
-      year: "2014",
-      publishedLabel: "Sep 4, 2014",
-      publishedDate: "2014-09-04",
       venue: "arXiv / ICLR 2015",
-      url: "https://arxiv.org/abs/1409.1556",
-      pdfUrl: paperPdfUrl("vgg16"),
       focus: ["deep plain CNNs", "3x3 convolution stacks", "ImageNet classification"],
     },
-    selectedId: "",
     nodes: [
       {
         id: "input",
@@ -2911,28 +2724,16 @@ const models: ModelSpec[] = [
         ],
       },
     ],
-    code: codeLines(vgg16PythonSource),
-    jaxCode: codeLines(vgg16JaxPythonSource),
   },
-  {
-    id: "googlenet",
-    label: "GoogLeNet / Inception v1",
+  googlenet: {
     breadcrumb: "GoogLeNet / inception3a / concat",
     stats: "9 Inception blocks · parallel conv branches · 22 layers",
-    fileName: "googlenet.py",
-    jaxFileName: "googlenet_jax.py",
     paper: {
       title: "Going Deeper with Convolutions",
       authors: "Christian Szegedy, Wei Liu, Yangqing Jia, Pierre Sermanet, Scott Reed, Dragomir Anguelov, Dumitru Erhan, Vincent Vanhoucke, Andrew Rabinovich",
-      year: "2014",
-      publishedLabel: "Sep 17, 2014",
-      publishedDate: "2014-09-17",
       venue: "arXiv / CVPR 2015",
-      url: "https://arxiv.org/abs/1409.4842",
-      pdfUrl: paperPdfUrl("googlenet"),
       focus: ["Inception modules", "parallel convolutions", "channel concatenation"],
     },
-    selectedId: "",
     nodes: [
       {
         id: "input",
@@ -3205,28 +3006,16 @@ const models: ModelSpec[] = [
         ],
       },
     ],
-    code: codeLines(googlenetPythonSource),
-    jaxCode: codeLines(googlenetJaxPythonSource),
   },
-  {
-    id: "unet",
-    label: "U-Net",
+  unet: {
     breadcrumb: "U-Net / expansive path / up4 / skip d4",
     stats: "4 down blocks · bottleneck · 4 up blocks",
-    fileName: "unet.py",
-    jaxFileName: "unet_jax.py",
     paper: {
       title: "U-Net: Convolutional Networks for Biomedical Image Segmentation",
       authors: "Olaf Ronneberger, Philipp Fischer, Thomas Brox",
-      year: "2015",
-      publishedLabel: "May 18, 2015",
-      publishedDate: "2015-05-18",
       venue: "arXiv / MICCAI 2015",
-      url: "https://arxiv.org/abs/1505.04597",
-      pdfUrl: paperPdfUrl("unet"),
       focus: ["encoder-decoder segmentation", "skip concatenations", "biomedical images"],
     },
-    selectedId: "",
     nodes: [
       {
         id: "input",
@@ -3436,28 +3225,16 @@ const models: ModelSpec[] = [
         codeLines: [46, 71],
       },
     ],
-    code: codeLines(unetPythonSource),
-    jaxCode: codeLines(unetJaxPythonSource),
   },
-  {
-    id: "transformer",
-    label: "Transformer",
+  transformer: {
     breadcrumb: "Transformer / decoder.0 / cross_attn",
     stats: "6 encoder layers · 6 decoder layers · 8 heads",
-    fileName: "transformer.py",
-    jaxFileName: "transformer_jax.py",
     paper: {
       title: "Attention Is All You Need",
       authors: "Ashish Vaswani, Noam Shazeer, Niki Parmar, Jakob Uszkoreit, Llion Jones, Aidan N. Gomez, Lukasz Kaiser, Illia Polosukhin",
-      year: "2017",
-      publishedLabel: "Jun 12, 2017",
-      publishedDate: "2017-06-12",
       venue: "NeurIPS 2017",
-      url: "https://arxiv.org/abs/1706.03762",
-      pdfUrl: paperPdfUrl("transformer"),
       focus: ["scaled dot-product attention", "encoder-decoder stacks", "positional encoding"],
     },
-    selectedId: "",
     nodes: [
       {
         id: "src.input",
@@ -3543,28 +3320,16 @@ const models: ModelSpec[] = [
         codeLines: [174],
       },
     ],
-    code: codeLines(transformerPythonSource),
-    jaxCode: codeLines(transformerJaxPythonSource),
   },
-  {
-    id: "vqvae",
-    label: "VQ-VAE",
+  vqvae: {
     breadcrumb: "VQ-VAE / quantizer / nearest code",
     stats: "discrete codebook · nearest-neighbor lookup · straight-through estimator",
-    fileName: "vqvae.py",
-    jaxFileName: "vqvae_jax.py",
     paper: {
       title: "Neural Discrete Representation Learning",
       authors: "Aaron van den Oord, Oriol Vinyals, Koray Kavukcuoglu",
-      year: "2017",
-      publishedLabel: "Nov 2, 2017",
-      publishedDate: "2017-11-02",
       venue: "arXiv / NeurIPS 2017",
-      url: "https://arxiv.org/abs/1711.00937",
-      pdfUrl: paperPdfUrl("vqvae"),
       focus: ["vector quantization", "discrete latent codes", "straight-through estimator"],
     },
-    selectedId: "",
     nodes: [
       {
         id: "input",
@@ -3698,28 +3463,16 @@ const models: ModelSpec[] = [
         ],
       },
     ],
-    code: codeLines(vqvaePythonSource),
-    jaxCode: codeLines(vqvaeJaxPythonSource),
   },
-  {
-    id: "bert",
-    label: "BERT base",
+  bert: {
     breadcrumb: "BERT / encoder.layer.3 / self_attn",
     stats: "12 encoder layers · 12 heads/layer · 110M params",
-    fileName: "bert_base.py",
-    jaxFileName: "bert_base_jax.py",
     paper: {
       title: "BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding",
       authors: "Jacob Devlin, Ming-Wei Chang, Kenton Lee, Kristina Toutanova",
-      year: "2018",
-      publishedLabel: "Oct 11, 2018",
-      publishedDate: "2018-10-11",
       venue: "arXiv / NAACL 2019",
-      url: "https://arxiv.org/abs/1810.04805",
-      pdfUrl: paperPdfUrl("bert"),
       focus: ["masked language modeling", "bidirectional encoders", "fine-tuning"],
     },
-    selectedId: "",
     nodes: [
       {
         id: "input_ids",
@@ -3817,28 +3570,16 @@ const models: ModelSpec[] = [
         codeLines: [135],
       },
     ],
-    code: codeLines(bertPythonSource),
-    jaxCode: codeLines(bertJaxPythonSource),
   },
-  {
-    id: "gpt2",
-    label: "GPT-2 small",
+  gpt2: {
     breadcrumb: "GPT-2 / block.3 / attn / head.2",
     stats: "12 blocks · 12 heads/block · virtualized",
-    fileName: "gpt2_attention.py",
-    jaxFileName: "gpt2_attention_jax.py",
     paper: {
       title: "Language Models are Unsupervised Multitask Learners",
       authors: "Alec Radford, Jeffrey Wu, Rewon Child, David Luan, Dario Amodei, Ilya Sutskever",
-      year: "2019",
-      publishedLabel: "Feb 14, 2019",
-      publishedDate: "2019-02-14",
       venue: "OpenAI technical report",
-      url: "https://cdn.openai.com/better-language-models/language_models_are_unsupervised_multitask_learners.pdf",
-      pdfUrl: paperPdfUrl("gpt2"),
       focus: ["decoder-only transformers", "causal language modeling", "zero-shot transfer"],
     },
-    selectedId: "",
     nodes: [
       {
         id: "wte",
@@ -3868,28 +3609,16 @@ const models: ModelSpec[] = [
       },
       ...Array.from({ length: 12 }, (_, index) => makeGpt2Block(index, index === 3)),
     ],
-    code: codeLines(gpt2PythonSource),
-    jaxCode: codeLines(gpt2JaxPythonSource),
   },
-  {
-    id: "vit",
-    label: "ViT-B/16",
+  vit: {
     breadcrumb: "ViT-B/16 / encoder.block.3 / attn",
     stats: "196 patches · 12 encoder blocks · 12 heads",
-    fileName: "vit_b16.py",
-    jaxFileName: "vit_b16_jax.py",
     paper: {
       title: "An Image is Worth 16x16 Words: Transformers for Image Recognition at Scale",
       authors: "Alexey Dosovitskiy, Lucas Beyer, Alexander Kolesnikov, Dirk Weissenborn, Xiaohua Zhai, Thomas Unterthiner, Mostafa Dehghani, Matthias Minderer, Georg Heigold, Sylvain Gelly, Jakob Uszkoreit, Neil Houlsby",
-      year: "2020",
-      publishedLabel: "Oct 22, 2020",
-      publishedDate: "2020-10-22",
       venue: "arXiv / ICLR 2021",
-      url: "https://arxiv.org/abs/2010.11929",
-      pdfUrl: paperPdfUrl("vit"),
       focus: ["image patches as tokens", "class token", "Transformer encoders for vision"],
     },
-    selectedId: "",
     nodes: [
       {
         id: "input",
@@ -3981,28 +3710,16 @@ const models: ModelSpec[] = [
         codeLines: [126],
       },
     ],
-    code: codeLines(vitPythonSource),
-    jaxCode: codeLines(vitJaxPythonSource),
   },
-  {
-    id: "clip",
-    label: "CLIP",
+  clip: {
     breadcrumb: "CLIP / contrastive logits / image-text similarity",
     stats: "dual encoders · shared embedding space · contrastive logits",
-    fileName: "clip.py",
-    jaxFileName: "clip_jax.py",
     paper: {
       title: "Learning Transferable Visual Models From Natural Language Supervision",
       authors: "Alec Radford, Jong Wook Kim, Chris Hallacy, Aditya Ramesh, Gabriel Goh, Sandhini Agarwal, Girish Sastry, Amanda Askell, Pamela Mishkin, Jack Clark, Gretchen Krueger, Ilya Sutskever",
-      year: "2021",
-      publishedLabel: "Feb 26, 2021",
-      publishedDate: "2021-02-26",
       venue: "arXiv / ICML 2021",
-      url: "https://arxiv.org/abs/2103.00020",
-      pdfUrl: paperPdfUrl("clip"),
       focus: ["natural language supervision", "dual encoders", "contrastive image-text pretraining"],
     },
-    selectedId: "",
     nodes: [
       {
         id: "image_input",
@@ -4161,28 +3878,16 @@ const models: ModelSpec[] = [
         ],
       },
     ],
-    code: codeLines(clipPythonSource),
-    jaxCode: codeLines(clipJaxPythonSource),
   },
-  {
-    id: "ddpm",
-    label: "DDPM",
+  ddpm: {
     breadcrumb: "DDPM / U-Net denoiser / predicted noise",
     stats: "forward noising · timestep-conditioned U-Net · reverse denoising",
-    fileName: "ddpm.py",
-    jaxFileName: "ddpm_jax.py",
     paper: {
       title: "Denoising Diffusion Probabilistic Models",
       authors: "Jonathan Ho, Ajay Jain, Pieter Abbeel",
-      year: "2020",
-      publishedLabel: "Jun 19, 2020",
-      publishedDate: "2020-06-19",
       venue: "arXiv / NeurIPS 2020",
-      url: "https://arxiv.org/abs/2006.11239",
-      pdfUrl: paperPdfUrl("ddpm"),
       focus: ["forward diffusion", "noise prediction", "iterative denoising"],
     },
-    selectedId: "",
     nodes: [
       {
         id: "clean_input",
@@ -4369,29 +4074,17 @@ const models: ModelSpec[] = [
         ],
       },
     ],
-    code: codeLines(ddpmPythonSource),
-    jaxCode: codeLines(ddpmJaxPythonSource),
   },
-  {
-    id: "resnet18",
-    label: "ResNet",
+  resnet18: {
     breadcrumb: "ResNet / layer2 / block.0 / conv1",
     stats: resnetVariants[0].stats,
-    fileName: "resnet18.py",
-    jaxFileName: "resnet18_jax.py",
     variants: resnetVariants,
     paper: {
       title: "Deep Residual Learning for Image Recognition",
       authors: "Kaiming He, Xiangyu Zhang, Shaoqing Ren, Jian Sun",
-      year: "2015",
-      publishedLabel: "Dec 10, 2015",
-      publishedDate: "2015-12-10",
       venue: "arXiv / CVPR 2016",
-      url: "https://arxiv.org/abs/1512.03385",
-      pdfUrl: paperPdfUrl("resnet18"),
       focus: ["identity shortcuts", "residual blocks", "very deep CNNs"],
     },
-    selectedId: "",
     nodes: [
       {
         id: "input",
@@ -4908,28 +4601,16 @@ const models: ModelSpec[] = [
         codeLines: [67, 94],
       },
     ],
-    code: codeLines(resnet18PythonSource),
-    jaxCode: codeLines(resnet18JaxPythonSource),
   },
-  {
-    id: "widenet",
-    label: "WideNet",
+  widenet: {
     breadcrumb: "WideNet / layer2 / block.0 / conv1",
     stats: "WRN-28-10 · width factor 10 · pre-activation residual blocks",
-    fileName: "widenet.py",
-    jaxFileName: "widenet_jax.py",
     paper: {
       title: "Wide Residual Networks",
       authors: "Sergey Zagoruyko, Nikos Komodakis",
-      year: "2016",
-      publishedLabel: "May 23, 2016",
-      publishedDate: "2016-05-23",
       venue: "arXiv / BMVC 2016",
-      url: "https://arxiv.org/abs/1605.07146",
-      pdfUrl: paperPdfUrl("widenet"),
       focus: ["widened residual blocks", "feature reuse", "CIFAR image classification"],
     },
-    selectedId: "",
     nodes: [
       {
         id: "input",
@@ -5133,28 +4814,16 @@ const models: ModelSpec[] = [
         ],
       },
     ],
-    code: codeLines(widenetPythonSource),
-    jaxCode: codeLines(widenetJaxPythonSource),
   },
-  {
-    id: "densenet",
-    label: "DenseNet-121",
+  densenet: {
     breadcrumb: "DenseNet-121 / denseblock2 / layer.1 / concat",
     stats: "4 dense blocks · 58 dense layers · feature concatenation",
-    fileName: "densenet.py",
-    jaxFileName: "densenet_jax.py",
     paper: {
       title: "Densely Connected Convolutional Networks",
       authors: "Gao Huang, Zhuang Liu, Laurens van der Maaten, Kilian Q. Weinberger",
-      year: "2016",
-      publishedLabel: "Aug 25, 2016",
-      publishedDate: "2016-08-25",
       venue: "arXiv / CVPR 2017",
-      url: "https://arxiv.org/abs/1608.06993",
-      pdfUrl: paperPdfUrl("densenet"),
       focus: ["dense connectivity", "feature reuse", "vanishing-gradient mitigation"],
     },
-    selectedId: "",
     nodes: [
       {
         id: "input",
@@ -5401,28 +5070,16 @@ const models: ModelSpec[] = [
         ],
       },
     ],
-    code: codeLines(densenetPythonSource),
-    jaxCode: codeLines(densenetJaxPythonSource),
   },
-  {
-    id: "mobilenetv2",
-    label: "MobileNetV2",
+  mobilenetv2: {
     breadcrumb: "MobileNetV2 / blocks / inverted residual / linear bottleneck",
     stats: "17 inverted residual blocks · depthwise separable convs · linear bottlenecks",
-    fileName: "mobilenetv2.py",
-    jaxFileName: "mobilenetv2_jax.py",
     paper: {
       title: "MobileNetV2: Inverted Residuals and Linear Bottlenecks",
       authors: "Mark Sandler, Andrew Howard, Menglong Zhu, Andrey Zhmoginov, Liang-Chieh Chen",
-      year: "2018",
-      publishedLabel: "Jan 13, 2018",
-      publishedDate: "2018-01-13",
       venue: "arXiv / CVPR 2018",
-      url: "https://arxiv.org/abs/1801.04381",
-      pdfUrl: paperPdfUrl("mobilenetv2"),
       focus: ["inverted residuals", "linear bottlenecks", "mobile-efficient CNNs"],
     },
-    selectedId: "",
     nodes: [
       {
         id: "input",
@@ -5430,8 +5087,8 @@ const models: ModelSpec[] = [
         type: "Image",
         kind: "input",
         badges: ["3 x 224 x 224"],
-        codeLines: [108, 122, 132],
-        jaxCodeLines: [80, 113, 125],
+        codeLines: [110, 125, 135],
+        jaxCodeLines: [81, 115, 127, 129],
       },
       {
         id: "stem",
@@ -5440,8 +5097,8 @@ const models: ModelSpec[] = [
         kind: "group",
         summary: "3x3 stride 2",
         badges: ["3->32", "112x112"],
-        codeLines: [75, 76, 77, 78, 79, 80, 108],
-        jaxCodeLines: [72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82],
+        codeLines: [76, 77, 78, 79, 80, 81, 110],
+        jaxCodeLines: [73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83],
         children: [
           {
             id: "stem.conv",
@@ -5449,16 +5106,16 @@ const models: ModelSpec[] = [
             type: "Conv2d",
             kind: "conv",
             badges: ["3->32", "k=3", "s=2"],
-            codeLines: [77, 108],
-            jaxCodeLines: [73, 74, 75, 76, 77, 78, 79, 80],
+            codeLines: [78, 110],
+            jaxCodeLines: [74, 75, 76, 77, 78, 79, 80, 81],
           },
           {
             id: "stem.relu6",
             label: "relu6",
             type: "ClippedReLU",
             kind: "activation",
-            codeLines: [79, 108],
-            jaxCodeLines: [82],
+            codeLines: [80, 110],
+            jaxCodeLines: [83],
           },
         ],
       },
@@ -5469,8 +5126,8 @@ const models: ModelSpec[] = [
         kind: "group",
         summary: "expand -> depthwise -> linear project",
         defaultExpanded: true,
-        codeLines: [15, 16, 17, ...lineRange(19, 46), 50, 53, 54, 88, 89, 90, 91, 92, 93],
-        jaxCodeLines: [12, 13, 14, 15, ...lineRange(17, 53), 90, 91, 92, 93, 94, 95],
+        codeLines: [15, 16, 17, ...lineRange(19, 46), 50, 53, 54, 89, 90, 91, 92, 93, 94],
+        jaxCodeLines: [12, 13, 14, 15, ...lineRange(17, 53), 91, 92, 93, 94, 95, 96],
         children: [
           {
             id: "inverted_residual.expand",
@@ -5517,8 +5174,8 @@ const models: ModelSpec[] = [
         kind: "group",
         summary: "1 block",
         badges: ["32->16", "112x112"],
-        codeLines: [66, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 111],
-        jaxCodeLines: [63, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95],
+        codeLines: [67, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 113],
+        jaxCodeLines: [64, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96],
       },
       {
         id: "stage2",
@@ -5527,8 +5184,8 @@ const models: ModelSpec[] = [
         kind: "group",
         summary: "downsample then residual",
         badges: ["16->24", "56x56"],
-        codeLines: [67, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 111],
-        jaxCodeLines: [64, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95],
+        codeLines: [68, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 113],
+        jaxCodeLines: [65, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96],
       },
       {
         id: "stage3",
@@ -5537,8 +5194,8 @@ const models: ModelSpec[] = [
         kind: "group",
         summary: "32-channel bottlenecks",
         badges: ["24->32", "28x28"],
-        codeLines: [68, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 111],
-        jaxCodeLines: [65, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95],
+        codeLines: [69, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 113],
+        jaxCodeLines: [66, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96],
       },
       {
         id: "stage4",
@@ -5547,8 +5204,8 @@ const models: ModelSpec[] = [
         kind: "group",
         summary: "64-channel bottlenecks",
         badges: ["32->64", "14x14"],
-        codeLines: [69, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 111],
-        jaxCodeLines: [66, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95],
+        codeLines: [70, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 113],
+        jaxCodeLines: [67, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96],
       },
       {
         id: "stage5_7",
@@ -5557,18 +5214,18 @@ const models: ModelSpec[] = [
         kind: "group",
         summary: "96/160/320 bottlenecks",
         badges: ["7x7 final"],
-        codeLines: [70, 71, 72, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 111],
-        jaxCodeLines: [67, 68, 69, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95],
+        codeLines: [71, 72, 73, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 113],
+        jaxCodeLines: [68, 69, 70, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96],
       },
       {
         id: "head",
         label: "head",
-        type: "Conv-Pool-FC",
+        type: "Conv-Pool-Dropout-FC",
         kind: "group",
         summary: "1280 expansion",
         defaultExpanded: true,
-        codeLines: [98, 99, 100, 101, 102, 103, 104, 114, 115, 116, 117],
-        jaxCodeLines: [98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108],
+        codeLines: [99, 100, 101, 102, 103, 104, 105, 106, 116, 117, 118, 119, 120],
+        jaxCodeLines: [99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110],
         children: [
           {
             id: "head.expand",
@@ -5576,8 +5233,8 @@ const models: ModelSpec[] = [
             type: "PointwiseConv",
             kind: "conv",
             badges: ["320->1280"],
-            codeLines: [100, 114],
-            jaxCodeLines: [99, 100, 101, 102, 103, 104],
+            codeLines: [101, 116],
+            jaxCodeLines: [100, 101, 102, 103, 104, 105],
           },
           {
             id: "head.pool",
@@ -5585,8 +5242,17 @@ const models: ModelSpec[] = [
             type: "GlobalAveragePool",
             kind: "pool",
             badges: ["1x1"],
-            codeLines: [115, 116],
-            jaxCodeLines: [107],
+            codeLines: [117, 118],
+            jaxCodeLines: [108],
+          },
+          {
+            id: "head.dropout",
+            label: "dropout",
+            type: "Dropout",
+            kind: "activation",
+            badges: ["p=0.2"],
+            codeLines: [61, 105, 119],
+            jaxCodeLines: [58, 109],
           },
           {
             id: "head.classifier",
@@ -5594,34 +5260,22 @@ const models: ModelSpec[] = [
             type: "Linear",
             kind: "linear",
             badges: ["1280->1000"],
-            codeLines: [104, 117],
-            jaxCodeLines: [108],
+            codeLines: [106, 120],
+            jaxCodeLines: [110],
           },
         ],
       },
     ],
-    code: codeLines(mobilenetv2PythonSource),
-    jaxCode: codeLines(mobilenetv2JaxPythonSource),
   },
-  {
-    id: "efficientnet",
-    label: "EfficientNet-B0",
+  efficientnet: {
     breadcrumb: "EfficientNet-B0 / blocks / stage.2 / mbconv.0 / depthwise",
     stats: "MBConv stages · depthwise convs · squeeze-excitation · compound scaling",
-    fileName: "efficientnet.py",
-    jaxFileName: "efficientnet_jax.py",
     paper: {
       title: "EfficientNet: Rethinking Model Scaling for Convolutional Neural Networks",
       authors: "Mingxing Tan, Quoc V. Le",
-      year: "2019",
-      publishedLabel: "May 28, 2019",
-      publishedDate: "2019-05-28",
       venue: "arXiv / ICML 2019",
-      url: "https://arxiv.org/abs/1905.11946",
-      pdfUrl: paperPdfUrl("efficientnet"),
       focus: ["compound scaling", "mobile inverted bottlenecks", "squeeze-and-excitation"],
     },
-    selectedId: "",
     nodes: [
       {
         id: "input",
@@ -5863,10 +5517,24 @@ const models: ModelSpec[] = [
         ],
       },
     ],
-    code: codeLines(efficientnetPythonSource),
-    jaxCode: codeLines(efficientnetJaxPythonSource),
   },
-];
+};
+
+const models: ModelSpec[] = modelRouteSummaries.map((route) => {
+  const definition = modelDefinitions[route.id];
+
+  return {
+    ...definition,
+    ...modelSourcePair(sourceBaseNameByModel[route.id] ?? route.id),
+    id: route.id,
+    label: route.label,
+    paper: {
+      ...definition.paper,
+      publishedDate: route.publishedDate,
+      pdfUrl: paperPdfUrl(route.id),
+    },
+  };
+});
 
 const modelsByPublicationDate = [...models].sort((first, second) =>
   first.paper.publishedDate.localeCompare(second.paper.publishedDate),
@@ -6028,26 +5696,6 @@ function SendIcon() {
   );
 }
 
-function findNodeById(nodes: ArchNode[], id: string): ArchNode | null {
-  for (const node of nodes) {
-    if (node.id === id) {
-      return node;
-    }
-
-    const children = node.children ?? node.lazyChildren?.();
-    if (!children) {
-      continue;
-    }
-
-    const match = findNodeById(children, id);
-    if (match) {
-      return match;
-    }
-  }
-
-  return null;
-}
-
 function getCodeForLanguage(model: ModelSpec, language: CodeLanguage) {
   if (language === "jax") {
     return {
@@ -6079,7 +5727,6 @@ function resolveModelVariant(model: ModelSpec, variantId: string | undefined) {
     stats: variant.stats,
     fileName: variant.fileName,
     jaxFileName: variant.jaxFileName,
-    selectedId: variant.selectedId,
     nodes: variant.nodes,
     code: variant.code,
     jaxCode: variant.jaxCode,
@@ -6146,25 +5793,10 @@ function selectedCodeContext(model: ModelSpec, selected: ArchNode | null, langua
     }));
 }
 
-function agentSelectedCodeContext(model: ModelSpec, selection: AgentCodeSelection | null) {
-  if (!selection || selection.modelId !== model.id) {
-    return [];
-  }
-
-  const currentFile = getCodeForLanguage(model, selection.language);
-  if (selection.fileName !== currentFile.fileName) {
-    return [];
-  }
-
-  return selection.lines
-    .filter((lineNumber) => currentFile.code[lineNumber - 1] !== undefined)
-    .map((lineNumber) => ({
-      lineNumber,
-      text: currentFile.code[lineNumber - 1],
-    }));
-}
-
-function userSelectedCodeContext(model: ModelSpec, selection: UserCodeSelection | null) {
+function referencedCodeContext(
+  model: ModelSpec,
+  selection: AgentCodeSelection | UserCodeSelection | null,
+) {
   if (!selection || selection.modelId !== model.id) {
     return [];
   }
@@ -6206,11 +5838,7 @@ function normalizeAgentCodeSelection(
   const candidate = value as Partial<AgentCodeSelection>;
   const language = coerceCodeLanguage(candidate.language, fallbackLanguage);
   const currentFile = getCodeForLanguage(model, language);
-  const lines = Array.isArray(candidate.lines)
-    ? [...new Set(candidate.lines)]
-        .filter((lineNumber) => Number.isInteger(lineNumber) && lineNumber >= 1 && lineNumber <= currentFile.code.length)
-        .sort((left, right) => left - right)
-    : [];
+  const lines = normalizeLineNumbers(candidate, currentFile.code.length);
 
   if (lines.length === 0) {
     return null;
@@ -6769,8 +6397,8 @@ function ChatPanel({
   const scrollRef = useRef<HTMLDivElement>(null);
   const currentFile = getCodeForLanguage(model, language);
   const selectedLines = selectedCodeContext(model, selected, language);
-  const agentSelectedLines = agentSelectedCodeContext(model, agentCodeSelection);
-  const userSelectedLines = userSelectedCodeContext(model, userCodeSelection);
+  const agentSelectedLines = referencedCodeContext(model, agentCodeSelection);
+  const userSelectedLines = referencedCodeContext(model, userCodeSelection);
   const activeUserCodeSelection =
     userCodeSelection &&
     userCodeSelection.modelId === model.id &&
@@ -6822,7 +6450,7 @@ function ChatPanel({
             paper: {
               title: model.paper.title,
               authors: model.paper.authors,
-              year: model.paper.year,
+              year: model.paper.publishedDate.slice(0, 4),
               venue: model.paper.venue,
               focus: model.paper.focus,
             },
@@ -6857,11 +6485,7 @@ function ChatPanel({
           },
         }),
       });
-      const payload = (await response.json()) as {
-        message?: string;
-        error?: string;
-        codeSelection?: unknown;
-      };
+      const payload = (await response.json()) as ChatResponse;
 
       if (!response.ok || !payload.message) {
         throw new Error(payload.error ?? "Chat request failed");
@@ -7859,7 +7483,7 @@ export default function ModelArchVizApp({ initialModelId }: ModelArchVizAppProps
     setPaperSelection(null);
     setQuery("");
 
-    const nextPath = `/models/${nextModelId}`;
+    const nextPath = modelRoutePath(nextModelId);
     if (pathname !== nextPath) {
       router.push(nextPath);
     }

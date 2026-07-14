@@ -82,6 +82,7 @@ print("block_output shape:", example_block_output.shape)
 # %%
 class MobileNetV2(nn.Module):
     num_classes: int = 1000
+    dropout_rate: float = 0.2
 
     @nn.compact
     def __call__(self, x, train=False):
@@ -122,7 +123,7 @@ class MobileNetV2(nn.Module):
                 )(x, train=train)  # (batch, height, width, channels) -> (batch, out_h, out_w, out_channels)
                 block_index = block_index + 1
 
-        # Expand final channels, pool, and classify.
+        # Expand final channels, pool, regularize, and classify.
         x = nn.Conv(
             1280,
             (1, 1),
@@ -132,6 +133,7 @@ class MobileNetV2(nn.Module):
         x = nn.BatchNorm(use_running_average=not train, name='head_bn')(x)  # (batch, 7, 7, 1280)
         x = nn.relu6(x)  # (batch, 7, 7, 1280)
         x = jnp.mean(x, axis=(1, 2))  # (batch, 7, 7, 1280) -> (batch, 1280)
+        x = nn.Dropout(rate=self.dropout_rate, deterministic=not train, name='dropout')(x)  # (batch, 1280)
         logits = nn.Dense(self.num_classes, name='classifier')(x)  # (batch, 1280) -> (batch, num_classes)
         return logits
 
@@ -156,23 +158,39 @@ params = variables['params']
 batch_stats = variables['batch_stats']
 
 
-def train_step(params, batch_stats, inputs, targets, learning_rate=0.01):
+def train_step(params, batch_stats, inputs, targets, dropout_key, learning_rate=0.01):
     def loss_fn(current_params):
         current_variables = {'params': current_params, 'batch_stats': batch_stats}
-        logits = model.apply(current_variables, inputs, train=False)  # (batch, 224, 224, 3) -> (batch, num_classes)
+        logits, updated_variables = model.apply(
+            current_variables,
+            inputs,
+            train=True,
+            rngs={'dropout': dropout_key},
+            mutable=['batch_stats'],
+        )  # (batch, 224, 224, 3) -> (batch, num_classes)
         one_hot_targets = jax.nn.one_hot(targets, logits.shape[-1])  # (batch) -> (batch, num_classes)
         log_probs = jax.nn.log_softmax(logits, axis=-1)  # (batch, num_classes)
         loss = -jnp.mean(jnp.sum(one_hot_targets * log_probs, axis=-1))  # (batch, num_classes) -> scalar
-        return loss
+        updated_batch_stats = updated_variables['batch_stats']
+        return loss, updated_batch_stats
 
-    loss, grads = jax.value_and_grad(loss_fn)(params)
+    loss_and_grad_fn = jax.value_and_grad(loss_fn, has_aux=True)
+    (loss, updated_batch_stats), grads = loss_and_grad_fn(params)
     params = jax.tree_util.tree_map(lambda p, g: p - learning_rate * g, params, grads)
-    return params, loss
+    return params, updated_batch_stats, loss
 
 
 # Fit the model for a few steps on the tiny dataset.
+training_key = jax.random.PRNGKey(3)
 for step in range(3):
-    params, loss = train_step(params, batch_stats, train_images, train_targets)
+    training_key, dropout_key = jax.random.split(training_key)
+    params, batch_stats, loss = train_step(
+        params,
+        batch_stats,
+        train_images,
+        train_targets,
+        dropout_key,
+    )
 
 # Keep the final scalar loss for inspection.
 final_loss = loss

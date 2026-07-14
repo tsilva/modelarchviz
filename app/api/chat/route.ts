@@ -1,68 +1,13 @@
 import { NextResponse } from "next/server";
+import {
+  normalizeLineNumbers,
+  type ChatContext,
+  type ChatMessage,
+  type CodeSelection,
+  type SourceLine,
+} from "../../chat-contract";
 
 export const runtime = "nodejs";
-
-type ChatMessage = {
-  role: "user" | "assistant";
-  content: string;
-};
-
-type SourceLine = {
-  lineNumber: number;
-  text: string;
-};
-
-type CodeLineRange = {
-  start?: number;
-  end?: number;
-};
-
-type CodeSelection = {
-  language?: string;
-  fileName?: string;
-  lines?: number[];
-  ranges?: CodeLineRange[];
-  reason?: string;
-};
-
-type ChatContext = {
-  model?: {
-    id?: string;
-    label?: string;
-    breadcrumb?: string;
-    stats?: string;
-  };
-  paper?: {
-    title?: string;
-    authors?: string;
-    year?: string;
-    venue?: string;
-    focus?: string[];
-  };
-  paperSelection?: {
-    pageNumber?: number;
-    text?: string;
-  } | null;
-  selection?: {
-    id?: string;
-    label?: string;
-    type?: string;
-    kind?: string;
-    summary?: string | null;
-    badges?: string[];
-    codeLines?: number[];
-  } | null;
-  source?: {
-    language?: string;
-    fileName?: string;
-    code?: string[];
-    selectedLines?: SourceLine[];
-    userSelectedLines?: SourceLine[];
-    userSelectedText?: string;
-    agentSelectedLines?: SourceLine[];
-  };
-  searchQuery?: string;
-};
 
 const defaultModel = "openai/gpt-4o-mini";
 const maxMessages = 16;
@@ -204,41 +149,6 @@ function parseAssistantPayload(content: string): { message: string; codeSelectio
     message: message || content,
     codeSelection: codeSelection && typeof codeSelection === "object" ? (codeSelection as CodeSelection) : null,
   };
-}
-
-function normalizeLineNumbers(selection: CodeSelection, lineCount: number) {
-  const lines = new Set<number>();
-
-  if (Array.isArray(selection.lines)) {
-    for (const line of selection.lines) {
-      if (Number.isInteger(line) && line >= 1 && line <= lineCount) {
-        lines.add(line);
-      }
-    }
-  }
-
-  if (Array.isArray(selection.ranges)) {
-    for (const range of selection.ranges) {
-      const rangeStart = range.start;
-      const rangeEnd = range.end;
-      if (
-        typeof rangeStart !== "number" ||
-        typeof rangeEnd !== "number" ||
-        !Number.isInteger(rangeStart) ||
-        !Number.isInteger(rangeEnd)
-      ) {
-        continue;
-      }
-
-      const start = Math.max(1, Math.min(rangeStart, rangeEnd));
-      const end = Math.min(lineCount, Math.max(rangeStart, rangeEnd));
-      for (let line = start; line <= end; line += 1) {
-        lines.add(line);
-      }
-    }
-  }
-
-  return [...lines].sort((left, right) => left - right);
 }
 
 function sanitizeCodeSelection(selection: CodeSelection | null, context: ChatContext) {

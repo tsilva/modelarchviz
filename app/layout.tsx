@@ -1,11 +1,12 @@
 import type { Metadata, Viewport } from "next";
 import Script from "next/script";
 import "./globals.css";
+import { siteUrl } from "./model-routes";
 
 const googleAnalyticsId = "G-ZLX68EG942";
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "https://modelarch.tsilva.eu"),
+  metadataBase: siteUrl(),
   title: {
     default: "ModelArchViz",
     template: "%s",
