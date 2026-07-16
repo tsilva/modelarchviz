@@ -17,9 +17,8 @@ import {
   type ChatMessage,
   type ChatResponse,
 } from "./chat-contract";
-import { modelSources } from "./generated/model-sources";
+import { modelSources, resnetVariantDefinitions } from "./generated/model-sources";
 import { modelCatalog, modelRoutePath, type ModelId } from "./model-routes";
-import resnetTemplateVariants from "./model-templates/resnet.variants.json";
 
 type NodeKind =
   | "input"
@@ -83,7 +82,7 @@ type ModelVariantSpec = {
   depth: number;
   blockClass: "BasicBlock" | "Bottleneck";
   blockLabel: string;
-  stageBlocks: [number, number, number, number];
+  stageBlocks: readonly [number, number, number, number];
   expansion: 1 | 4;
   stats: string;
   fileName: string;
@@ -198,15 +197,7 @@ function colabUrl(notebookName: string) {
   return `https://colab.research.google.com/github/${githubRepository}/blob/${githubBranch}/public/notebooks/${notebookName}`;
 }
 
-type ResNetTemplateVariant = {
-  id: string;
-  label: string;
-  depth: number;
-  blockClass: "BasicBlock" | "Bottleneck";
-  blockLabel: string;
-  stageBlocks: [number, number, number, number];
-  expansion: 1 | 4;
-};
+type ResNetTemplateVariant = (typeof resnetVariantDefinitions)[number];
 
 function resnetVariantStats(variant: ResNetTemplateVariant) {
   const blockCount = variant.stageBlocks.reduce((total, blocks) => total + blocks, 0);
@@ -230,6 +221,7 @@ function makeResNetBlockNode(
   const stride = blockIndex === 0 && stageIndex > 0 ? 2 : 1;
   const needsProjection = stride !== 1 || inputChannels !== outputChannels;
   const blockCodeLines = variant.blockClass === "BasicBlock" ? [4, 17, 25, 27, 28, 36, 37, 38, 39, 40, 45, 46] : [49, 63, 65, 74, 75, 84, 85, 86, 87, 88, 89, 90, 91, 96, 97];
+  const blockJaxCodeLines = variant.blockClass === "BasicBlock" ? [5, 17, 18, 19, 20, 21, 27, 28] : [31, 44, 45, 46, 47, 48, 49, 50, 51, 57, 58];
   const blockNode: ArchNode = {
     id: `${stageName}.${blockIndex}`,
     label: `block.${blockIndex}`,
@@ -238,6 +230,7 @@ function makeResNetBlockNode(
     summary: needsProjection ? `stride ${stride} + projection` : "identity skip",
     defaultExpanded,
     codeLines: [...blockCodeLines, 134, 137],
+    jaxCodeLines: [...blockJaxCodeLines, 88, 90],
   };
 
   if (variant.blockClass === "BasicBlock") {
@@ -249,6 +242,7 @@ function makeResNetBlockNode(
         kind: "conv",
         badges: [`${inputChannels}->${stageBaseChannels}`, "k=3", ...(stride > 1 ? [`s=${stride}`] : [])],
         codeLines: [17, 36, 134, 137],
+        jaxCodeLines: [17, 88, 90],
       },
       {
         id: `${stageName}.${blockIndex}.bn1`,
@@ -257,6 +251,7 @@ function makeResNetBlockNode(
         kind: "norm",
         badges: [`${stageBaseChannels}`],
         codeLines: [25, 37],
+        jaxCodeLines: [18],
       },
       {
         id: `${stageName}.${blockIndex}.relu1`,
@@ -264,6 +259,7 @@ function makeResNetBlockNode(
         type: "ReLU",
         kind: "activation",
         codeLines: [26, 38],
+        jaxCodeLines: [19],
       },
       {
         id: `${stageName}.${blockIndex}.conv2`,
@@ -272,6 +268,7 @@ function makeResNetBlockNode(
         kind: "conv",
         badges: [`${stageBaseChannels}->${outputChannels}`, "k=3"],
         codeLines: [27, 39],
+        jaxCodeLines: [20],
       },
       {
         id: `${stageName}.${blockIndex}.bn2`,
@@ -280,6 +277,7 @@ function makeResNetBlockNode(
         kind: "norm",
         badges: [`${outputChannels}`],
         codeLines: [28, 40],
+        jaxCodeLines: [21],
       },
     ];
 
@@ -291,6 +289,7 @@ function makeResNetBlockNode(
         kind: "group",
         summary: `1x1 stride ${stride}`,
         codeLines: [127, 128, 129, 130, 134, 41, 42],
+        jaxCodeLines: [22, 23, 24, 87, 88],
         children: [
           {
             id: `${stageName}.${blockIndex}.downsample.conv`,
@@ -299,6 +298,7 @@ function makeResNetBlockNode(
             kind: "conv",
             badges: [`${inputChannels}->${outputChannels}`, `s=${stride}`],
             codeLines: [129, 42],
+            jaxCodeLines: [23, 88],
           },
           {
             id: `${stageName}.${blockIndex}.downsample.bn`,
@@ -307,6 +307,7 @@ function makeResNetBlockNode(
             kind: "norm",
             badges: [`${outputChannels}`],
             codeLines: [130, 42],
+            jaxCodeLines: [24],
           },
         ],
       });
@@ -318,6 +319,7 @@ function makeResNetBlockNode(
       type: "ResidualAdd",
       kind: "residual",
       codeLines: [45],
+      jaxCodeLines: [27],
     });
 
     return {
@@ -334,6 +336,7 @@ function makeResNetBlockNode(
       kind: "conv",
       badges: [`${inputChannels}->${stageBaseChannels}`, "k=1"],
       codeLines: [63, 84],
+      jaxCodeLines: [44],
     },
     {
       id: `${stageName}.${blockIndex}.conv2`,
@@ -342,6 +345,7 @@ function makeResNetBlockNode(
       kind: "conv",
       badges: [`${stageBaseChannels}->${stageBaseChannels}`, "k=3", ...(stride > 1 ? [`s=${stride}`] : [])],
       codeLines: [65, 87],
+      jaxCodeLines: [47],
     },
     {
       id: `${stageName}.${blockIndex}.conv3`,
@@ -350,6 +354,7 @@ function makeResNetBlockNode(
       kind: "conv",
       badges: [`${stageBaseChannels}->${outputChannels}`, "k=1"],
       codeLines: [74, 90],
+      jaxCodeLines: [50],
     },
   ];
 
@@ -361,6 +366,7 @@ function makeResNetBlockNode(
       kind: "group",
       summary: `1x1 stride ${stride}`,
       codeLines: [127, 128, 129, 130, 134, 92, 93],
+      jaxCodeLines: [52, 53, 54, 87, 88],
       children: [
         {
           id: `${stageName}.${blockIndex}.downsample.conv`,
@@ -369,6 +375,7 @@ function makeResNetBlockNode(
           kind: "conv",
           badges: [`${inputChannels}->${outputChannels}`, `s=${stride}`],
           codeLines: [129, 93],
+          jaxCodeLines: [53, 88],
         },
         {
           id: `${stageName}.${blockIndex}.downsample.bn`,
@@ -377,6 +384,7 @@ function makeResNetBlockNode(
           kind: "norm",
           badges: [`${outputChannels}`],
           codeLines: [130, 93],
+          jaxCodeLines: [54],
         },
       ],
     });
@@ -388,6 +396,7 @@ function makeResNetBlockNode(
     type: "ResidualAdd",
     kind: "residual",
     codeLines: [96],
+    jaxCodeLines: [57],
   });
 
   return {
@@ -508,8 +517,6 @@ function makeResNetNodes(variant: ResNetTemplateVariant): ArchNode[] {
   ];
 }
 
-const resnetVariantDefinitions = resnetTemplateVariants as unknown as ResNetTemplateVariant[];
-
 const resnetVariants: ModelVariantSpec[] = resnetVariantDefinitions.map((variant) => {
   return {
     ...variant,
@@ -521,31 +528,13 @@ const resnetVariants: ModelVariantSpec[] = resnetVariantDefinitions.map((variant
 
 const completedPdfPrefetches = new Set<string>();
 const pendingPdfPrefetches = new Map<string, Promise<void>>();
-const pdfPrefetchHints = new Set<string>();
 const paperPdfAssetVersion = "20260604";
 
 function paperPdfUrl(modelId: string) {
   return `/papers/${modelId}.pdf?v=${paperPdfAssetVersion}`;
 }
 
-function addPdfPrefetchHint(pdfUrl: string) {
-  if (typeof document === "undefined" || pdfPrefetchHints.has(pdfUrl)) {
-    return;
-  }
-
-  const hint = document.createElement("link");
-  hint.rel = "prefetch";
-  hint.as = "fetch";
-  hint.href = pdfUrl;
-  hint.type = "application/pdf";
-  hint.dataset.modelarchvizPdfPrefetch = pdfUrl;
-  document.head.appendChild(hint);
-  pdfPrefetchHints.add(pdfUrl);
-}
-
 function prefetchPdf(pdfUrl: string, signal: AbortSignal) {
-  addPdfPrefetchHint(pdfUrl);
-
   if (completedPdfPrefetches.has(pdfUrl) || pendingPdfPrefetches.has(pdfUrl)) {
     return;
   }
@@ -587,6 +576,7 @@ function makeTransformerEncoderBlock(index: number, defaultExpanded = false): Ar
       35, 43, 46, 47, 48, 49, 51, 56, 57, 58, 61, 62, 63, 64, 65, 66, 69, 70, 71, 72, 76, 79, 80, 82,
       83, 84, 87, 96, 97, 98, 99, 100, 101, 103, 104, 106, 108, 109, 110, 113, 114, 115, 116, 172, 173,
     ],
+    jaxCodeLines: lineRange(67, 85),
     lazyChildren: () => [
       {
         id: `encoder.${index}.self_attn`,
@@ -598,6 +588,7 @@ function makeTransformerEncoderBlock(index: number, defaultExpanded = false): Ar
           46, 47, 48, 49, 56, 57, 58, 61, 62, 63, 64, 65, 66, 69, 70, 71, 72, 74, 75, 76, 79, 80, 81, 82,
           83, 97, 108,
         ],
+        jaxCodeLines: lineRange(28, 66),
       },
       {
         id: `encoder.${index}.norm1`,
@@ -819,6 +810,7 @@ function makeTransformerDecoderBlock(index: number, defaultExpanded = false): Ar
       83, 84, 119, 128, 129, 130, 131, 132, 133, 134, 136, 137, 138, 140, 142, 143, 144, 147, 148, 149,
       152, 153, 154, 155, 172, 173,
     ],
+    jaxCodeLines: lineRange(86, 109),
     lazyChildren: () => [
       {
         id: `decoder.${index}.masked_self_attn`,
@@ -1078,6 +1070,7 @@ function makeInceptionNode(config: InceptionNodeConfig): ArchNode {
     badges: [`${config.inputChannels}->${outputChannels}`],
     defaultExpanded: config.defaultExpanded,
     codeLines: [20, 21, 24, 25, 27, 30, 31, 33, 36, 37, 38, 44, 45, 46, 47, 50, 51, config.callLine, config.forwardLine],
+    jaxCodeLines: lineRange(5, 37),
     lazyChildren: () => [
       {
         id: `${config.id}.branch1`,
@@ -1171,6 +1164,7 @@ function makeVitBlock(index: number, defaultExpanded = false): ArchNode {
       30, 38, 41, 42, 43, 44, 46, 50, 51, 52, 55, 56, 57, 58, 59, 60, 63, 64, 65, 66, 67, 70, 71, 73,
       74, 75, 78, 87, 88, 89, 90, 91, 92, 93, 94, 97, 99, 100, 101, 104, 105, 106, 107, 124, 137, 138,
     ],
+    jaxCodeLines: lineRange(59, 78),
     lazyChildren: () => [
       {
         id: `encoder.block.${index}.ln1`,
@@ -1190,6 +1184,7 @@ function makeVitBlock(index: number, defaultExpanded = false): ArchNode {
           41, 42, 43, 44, 50, 51, 52, 55, 56, 57, 58, 59, 60, 63, 64, 65, 66, 67, 70, 71, 72, 73, 74, 75,
           89, 100,
         ],
+        jaxCodeLines: lineRange(21, 58),
       },
       {
         id: `encoder.block.${index}.resid1`,
@@ -1964,6 +1959,7 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
             summary: "i/f/g/o gates",
             defaultExpanded: true,
             codeLines: [23, 24, 25, 27, 28, 29, 30, 31, 33, 34, 35, 36, 37, 39, 40, 41, 42, 43, 45, 46, 47, 48, 49, 51, 52, 53, 54, 56, 57, 58, 59, 90, 91, 92, 93],
+            jaxCodeLines: lineRange(5, 47),
             children: [
               {
                 id: "step.0.input_gate",
@@ -2022,6 +2018,7 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
             kind: "recurrent" as NodeKind,
             summary: "same gates",
             codeLines: [87, 88, 89, 90, 91, 92, 93],
+            jaxCodeLines: lineRange(5, 47),
           })),
         ],
       },
@@ -2946,6 +2943,7 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
         summary: "4 DoubleConv blocks",
         defaultExpanded: true,
         codeLines: [24, 28, 31, 32, 33, 34, 35, 36, 49, 50, 52, 53],
+        jaxCodeLines: [23, 28, 29, 30, 31, 32, 33, 34, 35, 36],
         children: [
           {
             id: "contracting.down1",
@@ -2954,6 +2952,7 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
             kind: "conv",
             badges: ["1->64", "572x572"],
             codeLines: [10, 11, 12, 13, 14, 19, 24, 49],
+            jaxCodeLines: [5, 11, 12, 13, 14, 29],
           },
           {
             id: "contracting.pool1",
@@ -2962,6 +2961,7 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
             kind: "pool",
             badges: ["2x2"],
             codeLines: [28, 50],
+            jaxCodeLines: [30],
           },
           {
             id: "contracting.down2",
@@ -2970,6 +2970,7 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
             kind: "conv",
             badges: ["64->128"],
             codeLines: [31, 50],
+            jaxCodeLines: [31],
           },
           {
             id: "contracting.pool2",
@@ -2978,6 +2979,7 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
             kind: "pool",
             badges: ["2x2"],
             codeLines: [32, 52],
+            jaxCodeLines: [32],
           },
           {
             id: "contracting.down3",
@@ -2986,6 +2988,7 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
             kind: "conv",
             badges: ["128->256"],
             codeLines: [33, 52],
+            jaxCodeLines: [33],
           },
           {
             id: "contracting.pool3",
@@ -2994,6 +2997,7 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
             kind: "pool",
             badges: ["2x2"],
             codeLines: [34, 53],
+            jaxCodeLines: [34],
           },
           {
             id: "contracting.down4",
@@ -3002,6 +3006,7 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
             kind: "conv",
             badges: ["256->512"],
             codeLines: [35, 53],
+            jaxCodeLines: [35],
           },
           {
             id: "contracting.pool4",
@@ -3010,6 +3015,7 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
             kind: "pool",
             badges: ["2x2"],
             codeLines: [36, 54],
+            jaxCodeLines: [36],
           },
         ],
       },
@@ -3020,6 +3026,7 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
         kind: "conv",
         badges: ["512->1024"],
         codeLines: [37, 54],
+        jaxCodeLines: [5, 11, 12, 13, 14, 39],
       },
       {
         id: "expansive",
@@ -3029,6 +3036,7 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
         summary: "upsample + concat skips",
         defaultExpanded: true,
         codeLines: [38, 39, 40, 41, 42, 43, 44, 45, 55, 56, 57, 58, 59, 62, 65, 66, 67, 68, 69, 70],
+        jaxCodeLines: [23, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53],
         children: [
           {
             id: "expansive.up4",
@@ -3037,6 +3045,7 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
             kind: "reshape",
             badges: ["1024->512", "x2"],
             codeLines: [38, 55],
+            jaxCodeLines: [17, 18, 19, 20, 21, 42],
           },
           {
             id: "expansive.up4.skip",
@@ -3045,6 +3054,7 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
             kind: "residual",
             badges: ["encoder features"],
             codeLines: [56],
+            jaxCodeLines: [43],
           },
           {
             id: "expansive.dec4",
@@ -3053,6 +3063,7 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
             kind: "conv",
             badges: ["1024->512"],
             codeLines: [39, 57],
+            jaxCodeLines: [5, 11, 12, 13, 14, 44],
           },
           {
             id: "expansive.up3",
@@ -3061,6 +3072,7 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
             kind: "reshape",
             badges: ["512->256", "x2"],
             codeLines: [40, 58],
+            jaxCodeLines: [17, 18, 19, 20, 21, 45],
           },
           {
             id: "expansive.up3.skip",
@@ -3069,6 +3081,7 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
             kind: "residual",
             badges: ["encoder features"],
             codeLines: [59],
+            jaxCodeLines: [46],
           },
           {
             id: "expansive.dec3",
@@ -3077,6 +3090,7 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
             kind: "conv",
             badges: ["512->256"],
             codeLines: [41, 62],
+            jaxCodeLines: [5, 11, 12, 13, 14, 47],
           },
           {
             id: "expansive.up2",
@@ -3085,6 +3099,7 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
             kind: "reshape",
             badges: ["256->128", "x2"],
             codeLines: [42, 65],
+            jaxCodeLines: [17, 18, 19, 20, 21, 48],
           },
           {
             id: "expansive.up2.skip",
@@ -3093,6 +3108,7 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
             kind: "residual",
             badges: ["encoder features"],
             codeLines: [66],
+            jaxCodeLines: [49],
           },
           {
             id: "expansive.dec2",
@@ -3101,6 +3117,7 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
             kind: "conv",
             badges: ["256->128"],
             codeLines: [43, 67],
+            jaxCodeLines: [5, 11, 12, 13, 14, 50],
           },
           {
             id: "expansive.up1",
@@ -3109,6 +3126,7 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
             kind: "reshape",
             badges: ["128->64", "x2"],
             codeLines: [44, 68],
+            jaxCodeLines: [17, 18, 19, 20, 21, 51],
           },
           {
             id: "expansive.up1.skip",
@@ -3117,6 +3135,7 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
             kind: "residual",
             badges: ["encoder features"],
             codeLines: [69],
+            jaxCodeLines: [52],
           },
           {
             id: "expansive.dec1",
@@ -3125,6 +3144,7 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
             kind: "conv",
             badges: ["128->64"],
             codeLines: [45, 70],
+            jaxCodeLines: [5, 11, 12, 13, 14, 53],
           },
         ],
       },
@@ -3135,6 +3155,7 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
         kind: "conv",
         badges: ["64->2", "1x1"],
         codeLines: [46, 71],
+        jaxCodeLines: [56],
       },
     ],
   },
@@ -3958,522 +3979,7 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
     breadcrumb: "ResNet / layer2 / block.0 / conv1",
     stats: resnetVariants[0].stats,
     variants: resnetVariants,
-    nodes: [
-      {
-        id: "input",
-        label: "input",
-        type: "Input",
-        kind: "input",
-        badges: ["3 x 224 x 224"],
-        codeLines: [144],
-        jaxCodeLines: [67],
-      },
-      {
-        id: "stem",
-        label: "stem",
-        type: "Conv-BN-ReLU",
-        kind: "group",
-        summary: "7x7 stride 2",
-        defaultExpanded: true,
-        codeLines: [51, 52, 56, 59, 60, 86],
-        children: [
-          {
-            id: "stem.conv",
-            label: "conv",
-            type: "Conv2d",
-            kind: "conv",
-            badges: ["3->64", "k=7", "s=2"],
-            codeLines: [52, 86],
-          },
-          {
-            id: "stem.bn",
-            label: "bn",
-            type: "BatchNorm2d",
-            kind: "norm",
-            badges: ["64"],
-            codeLines: [56, 86],
-          },
-          {
-            id: "stem.relu",
-            label: "relu",
-            type: "ReLU",
-            kind: "activation",
-            codeLines: [59, 86],
-          },
-        ],
-      },
-      {
-        id: "maxpool",
-        label: "maxpool",
-        type: "MaxPool2d",
-        kind: "pool",
-        badges: ["k=3", "s=2"],
-        codeLines: [61, 87],
-      },
-      {
-        id: "layer1",
-        label: "layer1",
-        type: "ResidualStage",
-        kind: "group",
-        summary: "2 BasicBlocks",
-        badges: ["64 ch", "56x56"],
-        codeLines: [62, 88],
-        children: [
-          {
-            id: "layer1.0",
-            label: "block.0",
-            type: "BasicBlock",
-            kind: "residual",
-            summary: "identity skip",
-            codeLines: [77, 88],
-          },
-          {
-            id: "layer1.1",
-            label: "block.1",
-            type: "BasicBlock",
-            kind: "residual",
-            summary: "identity skip",
-            codeLines: [79, 80, 88],
-          },
-        ],
-      },
-      {
-        id: "layer2",
-        label: "layer2",
-        type: "ResidualStage",
-        kind: "group",
-        summary: "2 BasicBlocks",
-        badges: ["128 ch", "28x28"],
-        defaultExpanded: true,
-        codeLines: [63, 89],
-        children: [
-          {
-            id: "layer2.0",
-            label: "block.0",
-            type: "BasicBlock",
-            kind: "residual",
-            summary: "stride 2 + projection",
-            defaultExpanded: true,
-            codeLines: [16, 26, 27, 28, 29, 30, 32, 34, 37, 38, 39, 40, 41, 77, 89],
-            children: [
-              {
-                id: "layer2.0.conv1",
-                label: "conv1",
-                type: "Conv2d",
-                kind: "conv",
-                badges: ["64->128", "k=3", "s=2"],
-                codeLines: [16, 37, 77],
-              },
-              {
-                id: "layer2.0.bn1",
-                label: "bn1",
-                type: "BatchNorm2d",
-                kind: "norm",
-                badges: ["128"],
-                codeLines: [26, 37],
-              },
-              {
-                id: "layer2.0.relu1",
-                label: "relu",
-                type: "ReLU",
-                kind: "activation",
-                codeLines: [27, 37],
-              },
-              {
-                id: "layer2.0.conv2",
-                label: "conv2",
-                type: "Conv2d",
-                kind: "conv",
-                badges: ["128->128", "k=3"],
-                codeLines: [28, 38],
-              },
-              {
-                id: "layer2.0.bn2",
-                label: "bn2",
-                type: "BatchNorm2d",
-                kind: "norm",
-                badges: ["128"],
-                codeLines: [29, 38],
-              },
-              {
-                id: "layer2.0.downsample",
-                label: "downsample",
-                type: "ProjectionSkip",
-                kind: "group",
-                summary: "1x1 stride 2",
-                defaultExpanded: true,
-                codeLines: [30, 39, 40, 72, 73, 75, 76],
-                children: [
-                  {
-                    id: "layer2.0.downsample.conv",
-                    label: "conv1x1",
-                    type: "Conv2d",
-                    kind: "conv",
-                    badges: ["64->128", "s=2"],
-                    codeLines: [73, 40],
-                  },
-                  {
-                    id: "layer2.0.downsample.bn",
-                    label: "bn",
-                    type: "BatchNorm2d",
-                    kind: "norm",
-                    badges: ["128"],
-                    codeLines: [75, 40],
-                  },
-                ],
-              },
-              {
-                id: "layer2.0.add",
-                label: "add",
-                type: "ResidualAdd",
-                kind: "residual",
-                codeLines: [41],
-              },
-            ],
-          },
-          {
-            id: "layer2.1",
-            label: "block.1",
-            type: "BasicBlock",
-            kind: "residual",
-            summary: "identity skip",
-            codeLines: [79, 80, 89],
-          },
-        ],
-      },
-      {
-        id: "layer3",
-        label: "layer3",
-        type: "ResidualStage",
-        kind: "group",
-        summary: "2 BasicBlocks",
-        badges: ["256 ch", "14x14"],
-        codeLines: [64, 90],
-        children: [
-          {
-            id: "layer3.0",
-            label: "block.0",
-            type: "BasicBlock",
-            kind: "residual",
-            summary: "stride 2 + projection",
-            codeLines: [16, 26, 27, 28, 29, 30, 32, 34, 37, 38, 39, 40, 41, 77, 90],
-            children: [
-              {
-                id: "layer3.0.conv1",
-                label: "conv1",
-                type: "Conv2d",
-                kind: "conv",
-                badges: ["128->256", "k=3", "s=2"],
-                codeLines: [16, 37, 77],
-              },
-              {
-                id: "layer3.0.bn1",
-                label: "bn1",
-                type: "BatchNorm2d",
-                kind: "norm",
-                badges: ["256"],
-                codeLines: [26, 37],
-              },
-              {
-                id: "layer3.0.relu1",
-                label: "relu",
-                type: "ReLU",
-                kind: "activation",
-                codeLines: [27, 37],
-              },
-              {
-                id: "layer3.0.conv2",
-                label: "conv2",
-                type: "Conv2d",
-                kind: "conv",
-                badges: ["256->256", "k=3"],
-                codeLines: [28, 38],
-              },
-              {
-                id: "layer3.0.bn2",
-                label: "bn2",
-                type: "BatchNorm2d",
-                kind: "norm",
-                badges: ["256"],
-                codeLines: [29, 38],
-              },
-              {
-                id: "layer3.0.downsample",
-                label: "downsample",
-                type: "ProjectionSkip",
-                kind: "group",
-                summary: "1x1 stride 2",
-                codeLines: [30, 39, 40, 72, 73, 75, 76],
-                children: [
-                  {
-                    id: "layer3.0.downsample.conv",
-                    label: "conv1x1",
-                    type: "Conv2d",
-                    kind: "conv",
-                    badges: ["128->256", "s=2"],
-                    codeLines: [73, 40],
-                  },
-                  {
-                    id: "layer3.0.downsample.bn",
-                    label: "bn",
-                    type: "BatchNorm2d",
-                    kind: "norm",
-                    badges: ["256"],
-                    codeLines: [75, 40],
-                  },
-                ],
-              },
-              {
-                id: "layer3.0.add",
-                label: "add",
-                type: "ResidualAdd",
-                kind: "residual",
-                codeLines: [41],
-              },
-            ],
-          },
-          {
-            id: "layer3.1",
-            label: "block.1",
-            type: "BasicBlock",
-            kind: "residual",
-            summary: "identity skip",
-            codeLines: [16, 26, 27, 28, 29, 32, 34, 37, 38, 41, 79, 80, 90],
-            children: [
-              {
-                id: "layer3.1.conv1",
-                label: "conv1",
-                type: "Conv2d",
-                kind: "conv",
-                badges: ["256->256", "k=3"],
-                codeLines: [16, 37, 79],
-              },
-              {
-                id: "layer3.1.bn1",
-                label: "bn1",
-                type: "BatchNorm2d",
-                kind: "norm",
-                badges: ["256"],
-                codeLines: [26, 37],
-              },
-              {
-                id: "layer3.1.relu1",
-                label: "relu",
-                type: "ReLU",
-                kind: "activation",
-                codeLines: [27, 37],
-              },
-              {
-                id: "layer3.1.conv2",
-                label: "conv2",
-                type: "Conv2d",
-                kind: "conv",
-                badges: ["256->256", "k=3"],
-                codeLines: [28, 38],
-              },
-              {
-                id: "layer3.1.bn2",
-                label: "bn2",
-                type: "BatchNorm2d",
-                kind: "norm",
-                badges: ["256"],
-                codeLines: [29, 38],
-              },
-              {
-                id: "layer3.1.add",
-                label: "add",
-                type: "ResidualAdd",
-                kind: "residual",
-                codeLines: [41],
-              },
-            ],
-          },
-        ],
-      },
-      {
-        id: "layer4",
-        label: "layer4",
-        type: "ResidualStage",
-        kind: "group",
-        summary: "2 BasicBlocks",
-        badges: ["512 ch", "7x7"],
-        codeLines: [65, 91],
-        children: [
-          {
-            id: "layer4.0",
-            label: "block.0",
-            type: "BasicBlock",
-            kind: "residual",
-            summary: "stride 2 + projection",
-            codeLines: [16, 26, 27, 28, 29, 30, 32, 34, 37, 38, 39, 40, 41, 77, 91],
-            children: [
-              {
-                id: "layer4.0.conv1",
-                label: "conv1",
-                type: "Conv2d",
-                kind: "conv",
-                badges: ["256->512", "k=3", "s=2"],
-                codeLines: [16, 37, 77],
-              },
-              {
-                id: "layer4.0.bn1",
-                label: "bn1",
-                type: "BatchNorm2d",
-                kind: "norm",
-                badges: ["512"],
-                codeLines: [26, 37],
-              },
-              {
-                id: "layer4.0.relu1",
-                label: "relu",
-                type: "ReLU",
-                kind: "activation",
-                codeLines: [27, 37],
-              },
-              {
-                id: "layer4.0.conv2",
-                label: "conv2",
-                type: "Conv2d",
-                kind: "conv",
-                badges: ["512->512", "k=3"],
-                codeLines: [28, 38],
-              },
-              {
-                id: "layer4.0.bn2",
-                label: "bn2",
-                type: "BatchNorm2d",
-                kind: "norm",
-                badges: ["512"],
-                codeLines: [29, 38],
-              },
-              {
-                id: "layer4.0.downsample",
-                label: "downsample",
-                type: "ProjectionSkip",
-                kind: "group",
-                summary: "1x1 stride 2",
-                codeLines: [30, 39, 40, 72, 73, 75, 76],
-                children: [
-                  {
-                    id: "layer4.0.downsample.conv",
-                    label: "conv1x1",
-                    type: "Conv2d",
-                    kind: "conv",
-                    badges: ["256->512", "s=2"],
-                    codeLines: [73, 40],
-                  },
-                  {
-                    id: "layer4.0.downsample.bn",
-                    label: "bn",
-                    type: "BatchNorm2d",
-                    kind: "norm",
-                    badges: ["512"],
-                    codeLines: [75, 40],
-                  },
-                ],
-              },
-              {
-                id: "layer4.0.add",
-                label: "add",
-                type: "ResidualAdd",
-                kind: "residual",
-                codeLines: [41],
-              },
-            ],
-          },
-          {
-            id: "layer4.1",
-            label: "block.1",
-            type: "BasicBlock",
-            kind: "residual",
-            summary: "identity skip",
-            codeLines: [16, 26, 27, 28, 29, 32, 34, 37, 38, 41, 79, 80, 91],
-            children: [
-              {
-                id: "layer4.1.conv1",
-                label: "conv1",
-                type: "Conv2d",
-                kind: "conv",
-                badges: ["512->512", "k=3"],
-                codeLines: [16, 37, 79],
-              },
-              {
-                id: "layer4.1.bn1",
-                label: "bn1",
-                type: "BatchNorm2d",
-                kind: "norm",
-                badges: ["512"],
-                codeLines: [26, 37],
-              },
-              {
-                id: "layer4.1.relu1",
-                label: "relu",
-                type: "ReLU",
-                kind: "activation",
-                codeLines: [27, 37],
-              },
-              {
-                id: "layer4.1.conv2",
-                label: "conv2",
-                type: "Conv2d",
-                kind: "conv",
-                badges: ["512->512", "k=3"],
-                codeLines: [28, 38],
-              },
-              {
-                id: "layer4.1.bn2",
-                label: "bn2",
-                type: "BatchNorm2d",
-                kind: "norm",
-                badges: ["512"],
-                codeLines: [29, 38],
-              },
-              {
-                id: "layer4.1.add",
-                label: "add",
-                type: "ResidualAdd",
-                kind: "residual",
-                codeLines: [41],
-              },
-            ],
-          },
-        ],
-      },
-      {
-        id: "pool-flatten",
-        label: "pool + flatten",
-        type: "ClassifierPrep",
-        kind: "group",
-        summary: "global avg",
-        codeLines: [66, 93],
-        children: [
-          {
-            id: "avgpool",
-            label: "avgpool",
-            type: "AdaptiveAvgPool2d",
-            kind: "pool",
-            badges: ["1x1"],
-            codeLines: [66, 93],
-          },
-          {
-            id: "flatten",
-            label: "flatten",
-            type: "Flatten",
-            kind: "reshape",
-            badges: ["512"],
-            codeLines: [93],
-          },
-        ],
-      },
-      {
-        id: "fc",
-        label: "fc",
-        type: "Linear",
-        kind: "linear",
-        badges: ["512->1000"],
-        codeLines: [67, 94],
-      },
-    ],
+    nodes: resnetVariants[0].nodes,
   },
   widenet: {
     breadcrumb: "WideNet / layer2 / block.0 / conv1",
@@ -4521,6 +4027,7 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
             kind: "residual",
             summary: "16->160 projection",
             codeLines: [19, 20, 21, 37, 38, 39, 47, 48, 49, 50, 51, 54, 56, 63, 64, 126, 149],
+            jaxCodeLines: lineRange(5, 53),
           },
           {
             id: "layer1.1-3",
@@ -4550,6 +4057,7 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
             summary: "stride 2 + projection",
             defaultExpanded: true,
             codeLines: [16, 17, 18, 19, 27, 29, 37, 38, 39, 40, 41, 42, 43, 44, 45, 47, 48, 49, 50, 51, 53, 54, 55, 56, 57, 58, 61, 63, 64, 65, 126, 150],
+            jaxCodeLines: lineRange(5, 53),
             children: [
               {
                 id: "layer2.0.bn1",
@@ -4618,6 +4126,7 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
             kind: "residual",
             summary: "stride 2 + projection",
             codeLines: [19, 29, 37, 38, 39, 47, 54, 56, 61, 64, 126, 151],
+            jaxCodeLines: lineRange(5, 53),
           },
           {
             id: "layer3.1-3",
@@ -4712,6 +4221,7 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
         summary: "7x7 stride 2",
         badges: ["3->64", "56x56"],
         codeLines: [128, 129, 130, 131, 132, 133, 134, 135, 136, 137, 138, 139, 140, 166, 167],
+        jaxCodeLines: [59, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80],
         children: [
           {
             id: "stem.conv",
@@ -4720,6 +4230,7 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
             kind: "conv",
             badges: ["3->64", "k=7", "s=2"],
             codeLines: [130, 131, 132, 133, 134, 135, 136, 137, 167],
+            jaxCodeLines: [70, 71, 72, 73, 74, 75, 76, 77],
           },
           {
             id: "stem.pool",
@@ -4728,6 +4239,7 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
             kind: "pool",
             badges: ["56x56"],
             codeLines: [140, 167],
+            jaxCodeLines: [80],
           },
         ],
       },
@@ -4739,6 +4251,7 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
         summary: "6 dense layers",
         badges: ["64->256", "56x56"],
         codeLines: [...lineRange(56, 85), 147, 148, 149, 150, 151, 152, 153, 154, 169, 170],
+        jaxCodeLines: [82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92],
         children: [
           {
             id: "denseblock1.layer1",
@@ -4748,6 +4261,7 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
             summary: "append growth features",
             badges: ["64+32"],
             codeLines: [16, 17, 18, 20, 27, 29, 40, 41, 43, 46, 50, 51, 52, 70, 84],
+            jaxCodeLines: [5, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 37, 38, 39, 40, 84, 85, 86, 87, 88, 89, 90, 91, 92],
           },
           {
             id: "denseblock1.layer2-6",
@@ -4756,6 +4270,7 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
             kind: "concat",
             summary: "repeat concatenation",
             codeLines: [69, 70, 71, 72, 73, 74, 75, 76, 83, 84],
+            jaxCodeLines: [84, 85, 86, 87, 88, 89, 90, 91, 92],
           },
         ],
       },
@@ -4767,6 +4282,7 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
         summary: "compress + downsample",
         badges: ["256->128", "28x28"],
         codeLines: [88, 96, 97, 99, 107, 108, 109, 110, 111, 112, 156, 157, 158, 159, 160],
+        jaxCodeLines: [42, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 94, 95, 96, 97, 98],
         children: [
           {
             id: "transition1.conv",
@@ -4775,6 +4291,7 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
             kind: "conv",
             badges: ["256->128"],
             codeLines: [99, 100, 101, 102, 103, 104, 105, 111, 158],
+            jaxCodeLines: [50, 51, 52, 53, 54, 55, 98],
           },
           {
             id: "transition1.pool",
@@ -4783,6 +4300,7 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
             kind: "pool",
             badges: ["stride 2"],
             codeLines: [112],
+            jaxCodeLines: [56],
           },
         ],
       },
@@ -4795,6 +4313,7 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
         badges: ["128->512", "28x28"],
         defaultExpanded: true,
         codeLines: [...lineRange(56, 85), 147, 148, 149, 150, 151, 152, 153, 154, 169, 170],
+        jaxCodeLines: [82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92],
         children: [
           {
             id: "denseblock2.layer1",
@@ -4804,6 +4323,7 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
             summary: "BN-ReLU-conv x2",
             defaultExpanded: true,
             codeLines: [16, 17, 18, 20, 27, 29, 40, 41, 42, 43, 44, 45, 46, 50, 51, 52, 53, 70, 84],
+            jaxCodeLines: [5, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 37, 38, 39, 40, 84, 85, 86, 87, 88, 89, 90, 91, 92],
             children: [
               {
                 id: "denseblock2.layer1.bottleneck",
@@ -4812,6 +4332,7 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
                 kind: "conv",
                 badges: ["128->128"],
                 codeLines: [17, 18, 20, 21, 22, 23, 24, 25, 26, 41, 42, 43],
+                jaxCodeLines: [14, 15, 16, 17, 18, 19, 20, 21],
               },
               {
                 id: "denseblock2.layer1.growth",
@@ -4820,6 +4341,7 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
                 kind: "conv",
                 badges: ["128->32"],
                 codeLines: [27, 29, 30, 31, 32, 33, 34, 35, 36, 44, 45, 46],
+                jaxCodeLines: [22, 23, 24, 25, 26, 27, 28, 29, 30],
               },
               {
                 id: "denseblock2.layer1.concat",
@@ -4828,6 +4350,7 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
                 kind: "concat",
                 badges: ["128+32"],
                 codeLines: [50, 51, 52],
+                jaxCodeLines: [37, 38, 39, 40],
               },
             ],
           },
@@ -4838,6 +4361,7 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
             kind: "concat",
             summary: "same pattern",
             codeLines: [69, 70, 71, 72, 73, 74, 75, 76, 83, 84],
+            jaxCodeLines: [84, 85, 86, 87, 88, 89, 90, 91, 92],
           },
         ],
       },
@@ -4849,6 +4373,7 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
         summary: "compress + downsample",
         badges: ["512->256", "14x14"],
         codeLines: [88, 96, 97, 99, 107, 108, 109, 110, 111, 112, 156, 157, 158, 159, 160],
+        jaxCodeLines: [42, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 94, 95, 96, 97, 98],
       },
       {
         id: "denseblock3",
@@ -4858,6 +4383,7 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
         summary: "24 dense layers",
         badges: ["256->1024", "14x14"],
         codeLines: [...lineRange(56, 85), 147, 148, 149, 150, 151, 152, 153, 154, 169, 170],
+        jaxCodeLines: [82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92],
         children: [
           {
             id: "denseblock3.layer1",
@@ -4867,6 +4393,7 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
             summary: "append growth features",
             badges: ["256+32"],
             codeLines: [40, 41, 43, 46, 50, 51, 52, 84],
+            jaxCodeLines: [5, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 37, 38, 39, 40, 84, 85, 86, 87, 88, 89, 90, 91, 92],
           },
           {
             id: "denseblock3.layer2-24",
@@ -4875,6 +4402,7 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
             kind: "concat",
             summary: "repeat concatenation",
             codeLines: [69, 70, 76, 83, 84],
+            jaxCodeLines: [84, 85, 86, 87, 88, 89, 90, 91, 92],
           },
         ],
       },
@@ -4886,6 +4414,7 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
         summary: "compress + downsample",
         badges: ["1024->512", "7x7"],
         codeLines: [88, 96, 97, 99, 107, 108, 109, 110, 111, 112, 156, 157, 158, 159, 160],
+        jaxCodeLines: [42, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 94, 95, 96, 97, 98],
       },
       {
         id: "denseblock4",
@@ -4895,6 +4424,7 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
         summary: "16 dense layers",
         badges: ["512->1024", "7x7"],
         codeLines: [...lineRange(56, 85), 147, 148, 149, 150, 151, 152, 153, 154, 169, 170],
+        jaxCodeLines: [82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92],
       },
       {
         id: "head",
@@ -4903,6 +4433,7 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
         kind: "group",
         summary: "global average pool",
         codeLines: [162, 163, 172, 173, 174],
+        jaxCodeLines: [100, 101, 102, 103, 104, 105],
         children: [
           {
             id: "head.norm",
@@ -4911,6 +4442,7 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
             kind: "norm",
             badges: ["1024"],
             codeLines: [162, 173],
+            jaxCodeLines: [101],
           },
           {
             id: "head.pool",
@@ -4919,6 +4451,7 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
             kind: "pool",
             badges: ["1x1"],
             codeLines: [171],
+            jaxCodeLines: [103],
           },
           {
             id: "head.classifier",
@@ -4927,6 +4460,7 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
             kind: "linear",
             badges: ["1024->1000"],
             codeLines: [163],
+            jaxCodeLines: [104],
           },
         ],
       },
@@ -5186,6 +4720,7 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
             kind: "group",
             summary: "depthwise + SE",
             codeLines: [31, 43, 44, 45, 46, 47, 49, 57, 70, 71, 72, 77, 81, 85, 87, 88, 89, 104, 105, 135, 164],
+            jaxCodeLines: lineRange(22, 76),
           },
         ],
       },
@@ -5207,6 +4742,7 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
             summary: "stride 2",
             defaultExpanded: true,
             codeLines: [31, 43, 44, 45, 46, 47, 49, 51, 52, 57, 70, 71, 72, 77, 81, 83, 85, 87, 88, 89, 90, 104, 106, 135, 164],
+            jaxCodeLines: lineRange(22, 76),
             children: [
               {
                 id: "stage2.mbconv0.expand",
@@ -5231,6 +4767,7 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
                 kind: "attention",
                 badges: ["channel gate"],
                 codeLines: [6, 14, 15, 16, 18, 20, 22, 23, 24, 25, 26, 27, 70, 71, 87, 88],
+                jaxCodeLines: lineRange(5, 21),
               },
               {
                 id: "stage2.mbconv0.project",
@@ -5249,6 +4786,7 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
             kind: "residual",
             summary: "same-shape residual",
             codeLines: [47, 77, 78, 91, 92, 93, 133, 134, 135, 164],
+            jaxCodeLines: lineRange(22, 76),
           },
         ],
       },
@@ -5268,6 +4806,7 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
             kind: "group",
             summary: "stride 2 + SE",
             codeLines: [57, 61, 62, 63, 64, 70, 71, 87, 88, 135, 164],
+            jaxCodeLines: lineRange(22, 76),
           },
           {
             id: "stage3.mbconv1",
@@ -5276,6 +4815,7 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
             kind: "residual",
             summary: "identity add",
             codeLines: [91, 92, 93, 133, 134, 135, 164],
+            jaxCodeLines: lineRange(22, 76),
           },
         ],
       },
@@ -5583,58 +5123,18 @@ function resolveModelVariant(model: ModelSpec, variantId: string | undefined) {
   };
 }
 
-function classNameForNode(node: ArchNode) {
-  const match = node.type.match(/^([A-Z][A-Za-z0-9_]*)(?:\s+x\d+)?$/);
-
-  return match?.[1] ?? null;
-}
-
-function classLineRange(code: string[], className: string) {
-  const startIndex = code.findIndex((line) => line.match(new RegExp(`^class\\s+${className}\\b`)));
-  if (startIndex === -1) {
-    return [];
-  }
-
-  let endExclusiveIndex = code.length;
-  for (let index = startIndex + 1; index < code.length; index += 1) {
-    const line = code[index];
-    if (line.trim().length === 0) {
-      continue;
-    }
-
-    const isTopLevelLine = !line.startsWith(" ") && !line.startsWith("\t");
-    if (isTopLevelLine) {
-      endExclusiveIndex = index;
-      break;
-    }
-  }
-
-  let endLineNumber = endExclusiveIndex;
-  while (endLineNumber > startIndex + 1 && code[endLineNumber - 1].trim().length === 0) {
-    endLineNumber -= 1;
-  }
-
-  return lineRange(startIndex + 1, endLineNumber);
-}
-
-function selectedLineNumbers(model: ModelSpec, selected: ArchNode | null, language: CodeLanguage) {
+function selectedLineNumbers(selected: ArchNode | null, language: CodeLanguage) {
   if (!selected) {
     return [];
   }
 
-  const currentFile = getCodeForLanguage(model, language);
-  const className = classNameForNode(selected);
-  const classLines = className ? classLineRange(currentFile.code, className) : [];
-
-  const nodeLines = language === "jax" && selected.jaxCodeLines ? selected.jaxCodeLines : selected.codeLines;
-
-  return classLines.length > 0 ? classLines : nodeLines;
+  return language === "jax" && selected.jaxCodeLines ? selected.jaxCodeLines : selected.codeLines;
 }
 
 function selectedCodeContext(model: ModelSpec, selected: ArchNode | null, language: CodeLanguage) {
   const currentFile = getCodeForLanguage(model, language);
 
-  return selectedLineNumbers(model, selected, language)
+  return selectedLineNumbers(selected, language)
     .filter((lineNumber) => currentFile.code[lineNumber - 1] !== undefined)
     .map((lineNumber) => ({
       lineNumber,
@@ -6027,7 +5527,7 @@ function CodeEditor({
     ...source,
     notebookName: notebookFileName(source.fileName),
   };
-  const selectedLineNumbersForLanguage = selectedLineNumbers(model, selected, language);
+  const selectedLineNumbersForLanguage = selectedLineNumbers(selected, language);
   const defaultLineNumbersForLanguage =
     language === "jax" && model.jaxDefaultCodeLines ? model.jaxDefaultCodeLines : (model.defaultCodeLines ?? []);
   const activeAgentSelection =
@@ -6311,7 +5811,6 @@ function ChatPanel({
                   kind: selected.kind,
                   summary: selected.summary ?? null,
                   badges: selected.badges ?? [],
-                  codeLines: selected.codeLines,
                 }
               : null,
             source: {

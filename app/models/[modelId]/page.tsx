@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import ModelArchVizApp from "../../model-arch-viz-app";
-import { getModelRoute, modelCatalog, modelRoutePath } from "../../model-routes";
+import { getModelRoute, modelCatalog, modelRoutePath, siteConfig } from "../../model-routes";
 
 type ModelPageProps = {
   params: {
@@ -23,7 +23,7 @@ export function generateMetadata({ params }: ModelPageProps): Metadata {
   }
 
   const path = modelRoutePath(model.id);
-  const title = `${model.title} | ModelArchViz`;
+  const title = `${model.title} | ${siteConfig.name}`;
 
   return {
     title,
@@ -37,10 +37,10 @@ export function generateMetadata({ params }: ModelPageProps): Metadata {
       url: path,
       images: [
         {
-          url: "/brand/web-seo/og-image-1200x630.png",
-          width: 1200,
-          height: 630,
-          alt: `${model.label} architecture in ModelArchViz`,
+          url: siteConfig.socialImagePath,
+          width: siteConfig.socialImageWidth,
+          height: siteConfig.socialImageHeight,
+          alt: `${model.label} architecture in ${siteConfig.name}`,
         },
       ],
     },
@@ -48,7 +48,7 @@ export function generateMetadata({ params }: ModelPageProps): Metadata {
       card: "summary_large_image",
       title,
       description: model.description,
-      images: ["/brand/web-seo/og-image-1200x630.png"],
+      images: [siteConfig.socialImagePath],
     },
   };
 }

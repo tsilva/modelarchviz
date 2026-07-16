@@ -368,6 +368,14 @@ export const modelCatalog = [
 
 export type ModelId = (typeof modelCatalog)[number]["id"];
 
+export const siteConfig = {
+  name: "ModelArchViz",
+  description: "Explore neural network architecture blocks alongside PyTorch, JAX, and source-paper context.",
+  socialImagePath: "/brand/web-seo/og-image-1200x630.png",
+  socialImageWidth: 1200,
+  socialImageHeight: 630,
+} as const;
+
 export function getModelRoute(modelId: string) {
   return modelCatalog.find((model) => model.id === modelId);
 }

@@ -207,8 +207,7 @@ ${
 - Type: ${safeString(selection.type)}
 - Kind: ${safeString(selection.kind)}
 - Summary: ${safeString(selection.summary, "none")}
-- Badges: ${Array.isArray(selection.badges) && selection.badges.length > 0 ? selection.badges.join(", ") : "none"}
-- Highlighted code lines: ${Array.isArray(selection.codeLines) ? selection.codeLines.join(", ") : "none"}`
+- Badges: ${Array.isArray(selection.badges) && selection.badges.length > 0 ? selection.badges.join(", ") : "none"}`
     : "- No selected node."
 }
 

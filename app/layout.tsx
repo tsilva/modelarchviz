@@ -1,17 +1,17 @@
 import type { Metadata, Viewport } from "next";
 import Script from "next/script";
 import "./globals.css";
-import { siteUrl } from "./model-routes";
+import { siteConfig, siteUrl } from "./model-routes";
 
 const googleAnalyticsId = "G-ZLX68EG942";
 
 export const metadata: Metadata = {
   metadataBase: siteUrl(),
   title: {
-    default: "ModelArchViz",
+    default: siteConfig.name,
     template: "%s",
   },
-  description: "Explore neural network architecture blocks alongside PyTorch, JAX, and source-paper context.",
+  description: siteConfig.description,
   manifest: "/brand/web-seo/site.webmanifest",
   alternates: {
     canonical: "/",
@@ -25,25 +25,25 @@ export const metadata: Metadata = {
     apple: [{ url: "/brand/web-seo/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
   },
   openGraph: {
-    title: "ModelArchViz",
-    description: "Explore neural network architecture blocks alongside PyTorch, JAX, and source-paper context.",
+    title: siteConfig.name,
+    description: siteConfig.description,
     url: "/",
-    siteName: "ModelArchViz",
+    siteName: siteConfig.name,
     type: "website",
     images: [
       {
-        url: "/brand/web-seo/og-image-1200x630.png",
-        width: 1200,
-        height: 630,
+        url: siteConfig.socialImagePath,
+        width: siteConfig.socialImageWidth,
+        height: siteConfig.socialImageHeight,
         alt: "ModelArchViz architecture and code visualization",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "ModelArchViz",
-    description: "Explore neural network architecture blocks alongside PyTorch, JAX, and source-paper context.",
-    images: ["/brand/web-seo/og-image-1200x630.png"],
+    title: siteConfig.name,
+    description: siteConfig.description,
+    images: [siteConfig.socialImagePath],
   },
 };
 

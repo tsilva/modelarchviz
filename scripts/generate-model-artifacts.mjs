@@ -12,22 +12,9 @@ const notebookDir = path.join(repoRoot, "public", "notebooks");
 const pdfWorkerSourcePath = require.resolve("pdfjs-dist/build/pdf.worker.min.mjs");
 const pdfWorkerPath = path.join(repoRoot, "public", "pdf.worker.min.mjs");
 
-function stripJupytextHeader(lines) {
-  if (lines[0] !== "# ---") {
-    return lines;
-  }
-
-  const headerEnd = lines.findIndex((line, index) => index > 0 && line === "# ---");
-  if (headerEnd === -1) {
-    return lines;
-  }
-
-  return lines.slice(headerEnd + 1);
-}
-
 function parseNotebookSource(source) {
   const normalizedSource = source.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
-  const lines = stripJupytextHeader(normalizedSource.split("\n"));
+  const lines = normalizedSource.split("\n");
   const cells = [];
   let currentCell = null;
 
@@ -212,14 +199,19 @@ async function pruneUnexpectedArtifacts(directory, extension, expectedNames) {
   );
 }
 
-function modelSourceManifest(sources) {
+function modelSourceManifest(sources, variantDefinitions) {
   const entries = [...sources.entries()]
     .sort(([left], [right]) => left.localeCompare(right))
     .map(
       ([fileName, source]) => `  ${JSON.stringify(fileName)}: ${JSON.stringify(source)},`,
     );
 
-  return `export const modelSources: Readonly<Record<string, string>> = {\n${entries.join("\n")}\n};\n`;
+  const resnetVariants = variantDefinitions.get("resnet");
+  if (!resnetVariants) {
+    throw new Error("Missing ResNet variant definitions");
+  }
+
+  return `export const modelSources: Readonly<Record<string, string>> = {\n${entries.join("\n")}\n};\n\nexport const resnetVariantDefinitions = ${JSON.stringify(resnetVariants, null, 2)} as const;\n`;
 }
 
 async function main() {
@@ -228,6 +220,7 @@ async function main() {
 
   const generatedSources = new Map();
   const generatedNotebookNames = new Set();
+  const variantDefinitions = new Map();
 
   async function generateAndTrack(options) {
     const artifact = await writeArtifacts(options);
@@ -261,6 +254,7 @@ async function main() {
     const family = variantFile.replace(/\.variants\.json$/, "");
     const variantsPath = path.join(templateDir, variantFile);
     const variants = JSON.parse(await readFile(variantsPath, "utf8"));
+    variantDefinitions.set(family, variants);
     const pytorchTemplateName = `${family}.py.template`;
     const jaxTemplateName = `${family}_jax.py.template`;
     const pytorchTemplate = await readFile(path.join(templateDir, pytorchTemplateName), "utf8");
@@ -294,7 +288,7 @@ async function main() {
   }
 
   await pruneUnexpectedArtifacts(notebookDir, ".ipynb", generatedNotebookNames);
-  await writeFile(generatedManifestPath, modelSourceManifest(generatedSources), "utf8");
+  await writeFile(generatedManifestPath, modelSourceManifest(generatedSources, variantDefinitions), "utf8");
   await copyFile(pdfWorkerSourcePath, pdfWorkerPath);
 
   console.log(`Generated model artifacts from ${sourceFiles.length} notebook sources and ${variantFiles.length} variant families.`);

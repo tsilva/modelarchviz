@@ -8,39 +8,15 @@ Always use the official OpenAI Browser Use plugin for browser testing unless exp
 
 Do not create new branches by default. Work on the current branch unless the user explicitly asks you to create or switch branches; when branching is appropriate, the user will create the branch.
 
+## Product Specifications
+
+Before any task in this repository, use the `$specs-author` skill to read the root `SPECS.md`. Use `$specs-author` whenever reading or writing `SPECS.md`.
+
 ## Model File Code Style
 
 Use the `$model-code-author` skill when creating, editing, reviewing, or normalizing model implementation files, including canonical notebook-source files under `app/model-notebooks/*.py` and their generated UI source map under `app/generated/model-sources.ts`.
 
 Edit `app/model-notebooks/*.py` as the source of truth. Do not hand-edit `app/generated/model-sources.ts` or `public/notebooks/*.ipynb`; regenerate them with `pnpm generate:model-artifacts`.
-
-Structure canonical notebook sources for both site previews and notebook consumption. Use `# %%` cells for imports and implementation blocks, especially one top-level class or function per cell where practical.
-
-Use `# %% [notebook-only]` for example construction, smoke-test, shape-inspection, or tiny training cells that should appear in generated notebooks but be excluded from generated site preview code.
-
-For major model components, prefer a class or function implementation cell followed by a small `# %% [notebook-only]` cell that constructs the component and verifies a representative output shape.
-
-For model implementation files such as `mlp.py`, avoid performing multiple operations in a single line. Split indexing, function calls, arithmetic, assignments, and returns into separate named steps where practical.
-
-Add an empty line before each standalone line comment.
-
-Do not force an empty line after a standalone line comment.
-
-Do not add an empty line between a method signature and the first explanatory comment inside that method.
-
-When several consecutive code lines form one logical block, keep them together and use one block-level comment.
-
-Prefer one comment per logical block, especially when the block keeps tensor shapes unchanged or changes shape only once.
-
-Use multiline method signatures when parameter comments are useful.
-
-Put parameter explanations as inline comments on the parameter lines.
-
-Represent tensor shapes in comments with parentheses, for example `(batch, steps, features)`, not square brackets.
-
-Do not add comments above import statements.
-
-Do not add comments above base initializer calls such as `super().__init__()`.
 
 ## Model Route SEO
 

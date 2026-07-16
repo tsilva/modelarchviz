@@ -48,7 +48,6 @@ export type ChatContext = {
     kind?: string;
     summary?: string | null;
     badges?: string[];
-    codeLines?: number[];
   } | null;
   source?: {
     language?: string;
