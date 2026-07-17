@@ -233,8 +233,12 @@ class EfficientNet(nn.Module):
         # @arch efficientnet.code.4:end
 
         # Register the convolutional stem.
+        # @arch efficientnet.stem:start
         self.stem = nn.Sequential(
+        # @arch efficientnet.stem:end
+            # @arch efficientnet.stem-conv:start
             nn.Conv2d(
+            # @arch efficientnet.stem-conv:end
                 # @arch efficientnet.n:start
                 3,
                 # @arch efficientnet.n:end
@@ -312,8 +316,12 @@ class EfficientNet(nn.Module):
         # @arch efficientnet.self-blocks-nn-sequential-blocks:end
 
         # Register the final expansion head and classifier.
+        # @arch efficientnet.head:start
         self.head = nn.Sequential(
+        # @arch efficientnet.head:end
+            # @arch efficientnet.head-conv:start
             nn.Conv2d(
+            # @arch efficientnet.head-conv:end
                 # @arch efficientnet.in_channels.2:start
                 in_channels,
                 # @arch efficientnet.in_channels.2:end
@@ -342,11 +350,11 @@ class EfficientNet(nn.Module):
         self.classifier = nn.Linear(1280, num_classes)
         # @arch efficientnet.self-classifier-nn-linear-n-num_classes:end
 
-    # @arch efficientnet.def-forward-self-x:start
     def forward(self, x):
-    # @arch efficientnet.def-forward-self-x:end
         # Convert image input into stem features: (batch, 3, 224, 224) -> (batch, 32, 112, 112).
+        # @arch efficientnet.forward.stem:start
         x = self.stem(x)  # (batch, 3, 224, 224) -> (batch, 32, 112, 112)
+        # @arch efficientnet.forward.stem:end
 
         # Run compound-scaled MBConv stages with depthwise filters and SE gates.
         # @arch efficientnet.forward.x-self-blocks-x:start

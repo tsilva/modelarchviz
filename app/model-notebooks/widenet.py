@@ -52,7 +52,9 @@ class WideBasicBlock(nn.Module):
         # @arch widebasicblock.self-dropout_rate-dropout_rate:start
         self.dropout_rate = dropout_rate
         # @arch widebasicblock.self-dropout_rate-dropout_rate:end
+        # @arch widebasicblock.self-conv2:start
         self.conv2 = nn.Conv2d(
+        # @arch widebasicblock.self-conv2:end
             # @arch widebasicblock.out_channels.3:start
             out_channels,
             # @arch widebasicblock.out_channels.3:end
@@ -134,7 +136,9 @@ class WideBasicBlock(nn.Module):
         if self.dropout_rate > 0:
         # @arch widebasicblock.forward.if-self-dropout_rate-n:end
             out = F.dropout(out, p=self.dropout_rate, training=self.training)  # (batch, out_channels, out_h, out_w)
+        # @arch widebasicblock.forward.conv2:start
         out = self.conv2(out)  # (batch, out_channels, out_h, out_w)
+        # @arch widebasicblock.forward.conv2:end
 
         # Merge shortcut and residual features.
         # @arch widebasicblock.forward.out-out-shortcut:start
@@ -175,7 +179,9 @@ class WideNet(nn.Module):
         ]
 
         # Register the shallow stem, three widened residual stages, and classifier.
+        # @arch widenet.stem-conv:start
         self.conv1 = nn.Conv2d(
+        # @arch widenet.stem-conv:end
             3,
             # @arch widenet.widths-n:start
             widths[0],

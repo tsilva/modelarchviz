@@ -52,8 +52,12 @@ class UNet(nn.Module):
         super().__init__()
 
         # Register encoder, bottleneck, decoder, and segmentation head.
+        # @arch unet.self-down1:start
         self.down1 = DoubleConv(1, 64)
+        # @arch unet.self-down1:end
+        # @arch unet.self-pool1:start
         self.pool1 = nn.MaxPool2d(2)
+        # @arch unet.self-pool1:end
         # @arch unet.self-downn-doubleconv-n-n.2:start
         self.down2 = DoubleConv(64, 128)
         # @arch unet.self-downn-doubleconv-n-n.2:end
@@ -108,7 +112,9 @@ class UNet(nn.Module):
         # @arch unet.forward.dn-self-downn-x:start
         d1 = self.down1(x)  # (batch, 1, height, width) -> (batch, 64, height, width)
         # @arch unet.forward.dn-self-downn-x:end
+        # @arch unet.forward.p1:start
         p1 = self.pool1(d1)  # (batch, 64, height, width) -> (batch, 64, height/2, width/2)
+        # @arch unet.forward.p1:end
         # @arch unet.forward.dn-self-downn-pn:start
         d2 = self.down2(p1)  # (batch, 64, height/2, width/2) -> (batch, 128, height/2, width/2)
         # @arch unet.forward.dn-self-downn-pn:end
@@ -129,11 +135,17 @@ class UNet(nn.Module):
         # @arch unet.forward.pn-self-pooln-dn.4:end
 
         # Process the bottleneck at the smallest spatial resolution.
+        # @arch unet.forward.bottleneck:start
         b = self.bottleneck(p4)  # (batch, 512, height/16, width/16) -> (batch, 1024, height/16, width/16)
+        # @arch unet.forward.bottleneck:end
 
         # Decode and concatenate skip features back to full resolution.
+        # @arch unet.forward.up4:start
         x = self.up4(b)  # (batch, 1024, height/16, width/16) -> (batch, 512, height/8, width/8)
+        # @arch unet.forward.up4:end
+        # @arch unet.forward.concat4:start
         x = torch.cat([x, d4], dim=1)  # (batch, 512, height/8, width/8) -> (batch, 1024, height/8, width/8)
+        # @arch unet.forward.concat4:end
         # @arch unet.forward.x-self-decn-x:start
         x = self.dec4(x)  # (batch, 1024, height/8, width/8) -> (batch, 512, height/8, width/8)
         # @arch unet.forward.x-self-decn-x:end
@@ -155,12 +167,20 @@ class UNet(nn.Module):
         # @arch unet.forward.x-self-decn-x.3:start
         x = self.dec2(x)  # (batch, 256, height/2, width/2) -> (batch, 128, height/2, width/2)
         # @arch unet.forward.x-self-decn-x.3:end
+        # @arch unet.forward.up1:start
         x = self.up1(x)  # (batch, 128, height/2, width/2) -> (batch, 64, height, width)
+        # @arch unet.forward.up1:end
+        # @arch unet.forward.concat1:start
         x = torch.cat([x, d1], dim=1)  # (batch, 64, height, width) -> (batch, 128, height, width)
+        # @arch unet.forward.concat1:end
+        # @arch unet.forward.dec1:start
         x = self.dec1(x)  # (batch, 128, height, width) -> (batch, 64, height, width)
+        # @arch unet.forward.dec1:end
 
         # Project decoder features to segmentation logits.
+        # @arch unet.forward.out-conv:start
         logits = self.out_conv(x)  # (batch, 64, height, width) -> (batch, num_classes, height, width)
+        # @arch unet.forward.out-conv:end
         return logits
 
 

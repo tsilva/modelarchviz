@@ -1535,7 +1535,7 @@ function makeGpt2Block(index: number, defaultExpanded = false): ArchNode {
             id: `block.${index}.attn.c_proj`,
             label: "c_proj",
             type: "Output Projection",
-            kind: "attention",
+            kind: "linear",
             badges: ["768->768"],
             sourceRefs: {
               pytorch: ["causalselfattention.self-c_proj-nn-linear-n_embd-n_embd","causalselfattention.forward.out-self-c_proj-y"],
@@ -1862,11 +1862,11 @@ function makeInceptionNode(config: InceptionNodeConfig): ArchNode {
             kind: "conv",
             badges: [`${config.branch3Reduce}->${config.branch3Channels}`],
             sourceRefs: {
-              pytorch: ["inceptionblock.nn-relu-inplace-true.3","inceptionblock.code.5"],
+              pytorch: ["inceptionblock.branch3-conv","inceptionblock.nn-relu-inplace-true.3"],
               jax: ["inceptionblock.__call__.branchn-nn-conv-self-branchn_channels-n-n-padding-same-name-branchn-bran","inceptionblock.__call__.branchn-nn-relu-branchn.3"],
             },
             focusRef: {
-              pytorch: "inceptionblock.nn-relu-inplace-true.3",
+              pytorch: "inceptionblock.branch3-conv",
               jax: "inceptionblock.__call__.branchn-nn-conv-self-branchn_channels-n-n-padding-same-name-branchn-bran",
             },
             includeChildRefs: false,
@@ -1960,11 +1960,11 @@ function makeInceptionNode(config: InceptionNodeConfig): ArchNode {
             kind: "conv",
             badges: [`${config.branch5Reduce}->${config.branch5Channels}`],
             sourceRefs: {
-              pytorch: ["inceptionblock.nn-relu-inplace-true.5","inceptionblock.code.6"],
+              pytorch: ["inceptionblock.branch5-conv","inceptionblock.nn-relu-inplace-true.5"],
               jax: ["inceptionblock.__call__.branchn-nn-conv-self-branchn_channels-n-n-padding-same-name-branchn-bran.2","inceptionblock.__call__.branchn-nn-relu-branchn.5"],
             },
             focusRef: {
-              pytorch: "inceptionblock.nn-relu-inplace-true.5",
+              pytorch: "inceptionblock.branch5-conv",
               jax: "inceptionblock.__call__.branchn-nn-conv-self-branchn_channels-n-n-padding-same-name-branchn-bran.2",
             },
             includeChildRefs: false,
@@ -4000,11 +4000,11 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
             kind: "conv",
             badges: ["3->96", "k=11", "s=4", "55x55"],
             sourceRefs: {
-              pytorch: ["alexnet.nn-relu-inplace-true"],
+              pytorch: ["alexnet.nn-convnd-n-n-kernel_size-n-stride-n"],
               jax: ["alexnet.__call__.x-nn-conv-features-n-kernel_size-n-n-strides-n-n-name-convn-x"],
             },
             focusRef: {
-              pytorch: "alexnet.nn-relu-inplace-true",
+              pytorch: "alexnet.nn-convnd-n-n-kernel_size-n-stride-n",
               jax: "alexnet.__call__.x-nn-conv-features-n-kernel_size-n-n-strides-n-n-name-convn-x",
             },
             includeChildRefs: false,
@@ -4015,11 +4015,11 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
             type: "ReLU",
             kind: "activation",
             sourceRefs: {
-              pytorch: ["alexnet.nn-localresponsenorm-size-n-alpha-ne-n-beta-n-k-n"],
+              pytorch: ["alexnet.nn-relu-inplace-true"],
               jax: ["alexnet.__call__.x-nn-relu-x"],
             },
             focusRef: {
-              pytorch: "alexnet.nn-localresponsenorm-size-n-alpha-ne-n-beta-n-k-n",
+              pytorch: "alexnet.nn-relu-inplace-true",
               jax: "alexnet.__call__.x-nn-relu-x",
             },
             includeChildRefs: false,
@@ -4031,11 +4031,11 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
             kind: "norm",
             badges: ["size=5"],
             sourceRefs: {
-              pytorch: ["alexnet.nn-maxpoolnd-kernel_size-n-stride-n"],
+              pytorch: ["alexnet.nn-localresponsenorm-size-n-alpha-ne-n-beta-n-k-n"],
               jax: ["def-local_response_norm-x-size-n-alpha-ne-n-beta-n-k-n","local_response_norm.half-size-n","local_response_norm.squared-jnp-square-x","local_response_norm.padded-jnp-pad-squared-n-n-n-n-n-n-half-half","local_response_norm.scale-k","local_response_norm.for-offset-in-range-size","local_response_norm.channel_end-offset-x-shape-n","local_response_norm.window-padded-offset-channel_end","local_response_norm.scale_step-alpha-size-window","local_response_norm.scale-scale-scale_step","local_response_norm.denominator-jnp-power-scale-beta","local_response_norm.normalized-x-denominator","local_response_norm.return-normalized","alexnet.__call__.x-local_response_norm-x"],
             },
             focusRef: {
-              pytorch: "alexnet.nn-maxpoolnd-kernel_size-n-stride-n",
+              pytorch: "alexnet.nn-localresponsenorm-size-n-alpha-ne-n-beta-n-k-n",
               jax: "def-local_response_norm-x-size-n-alpha-ne-n-beta-n-k-n",
             },
             includeChildRefs: false,
@@ -4047,11 +4047,11 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
             kind: "pool",
             badges: ["k=3", "s=2", "27x27"],
             sourceRefs: {
-              pytorch: ["alexnet.nn-convnd-n-n-kernel_size-n-padding-n"],
+              pytorch: ["alexnet.nn-maxpoolnd-kernel_size-n-stride-n"],
               jax: ["alexnet.__call__.x-nn-max_pool-x-window_shape-n-n-strides-n-n"],
             },
             focusRef: {
-              pytorch: "alexnet.nn-convnd-n-n-kernel_size-n-padding-n",
+              pytorch: "alexnet.nn-maxpoolnd-kernel_size-n-stride-n",
               jax: "alexnet.__call__.x-nn-max_pool-x-window_shape-n-n-strides-n-n",
             },
             includeChildRefs: false,
@@ -4063,11 +4063,11 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
             kind: "conv",
             badges: ["96->256", "k=5", "27x27"],
             sourceRefs: {
-              pytorch: ["alexnet.nn-relu-inplace-true.2"],
+              pytorch: ["alexnet.nn-convnd-n-n-kernel_size-n-padding-n"],
               jax: ["alexnet.__call__.x-nn-conv-features-n-kernel_size-n-n-padding-same-name-convn-x"],
             },
             focusRef: {
-              pytorch: "alexnet.nn-relu-inplace-true.2",
+              pytorch: "alexnet.nn-convnd-n-n-kernel_size-n-padding-n",
               jax: "alexnet.__call__.x-nn-conv-features-n-kernel_size-n-n-padding-same-name-convn-x",
             },
             includeChildRefs: false,
@@ -4078,11 +4078,11 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
             type: "ReLU",
             kind: "activation",
             sourceRefs: {
-              pytorch: ["alexnet.nn-localresponsenorm-size-n-alpha-ne-n-beta-n-k-n.2"],
+              pytorch: ["alexnet.nn-relu-inplace-true.2"],
               jax: ["alexnet.__call__.x-nn-relu-x.2"],
             },
             focusRef: {
-              pytorch: "alexnet.nn-localresponsenorm-size-n-alpha-ne-n-beta-n-k-n.2",
+              pytorch: "alexnet.nn-relu-inplace-true.2",
               jax: "alexnet.__call__.x-nn-relu-x.2",
             },
             includeChildRefs: false,
@@ -4094,11 +4094,11 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
             kind: "norm",
             badges: ["size=5"],
             sourceRefs: {
-              pytorch: ["alexnet.nn-maxpoolnd-kernel_size-n-stride-n.2"],
+              pytorch: ["alexnet.nn-localresponsenorm-size-n-alpha-ne-n-beta-n-k-n.2"],
               jax: ["def-local_response_norm-x-size-n-alpha-ne-n-beta-n-k-n","local_response_norm.half-size-n","local_response_norm.squared-jnp-square-x","local_response_norm.padded-jnp-pad-squared-n-n-n-n-n-n-half-half","local_response_norm.scale-k","local_response_norm.for-offset-in-range-size","local_response_norm.channel_end-offset-x-shape-n","local_response_norm.window-padded-offset-channel_end","local_response_norm.scale_step-alpha-size-window","local_response_norm.scale-scale-scale_step","local_response_norm.denominator-jnp-power-scale-beta","local_response_norm.normalized-x-denominator","local_response_norm.return-normalized","alexnet.__call__.x-local_response_norm-x.2"],
             },
             focusRef: {
-              pytorch: "alexnet.nn-maxpoolnd-kernel_size-n-stride-n.2",
+              pytorch: "alexnet.nn-localresponsenorm-size-n-alpha-ne-n-beta-n-k-n.2",
               jax: "def-local_response_norm-x-size-n-alpha-ne-n-beta-n-k-n",
             },
             includeChildRefs: false,
@@ -4110,11 +4110,11 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
             kind: "pool",
             badges: ["k=3", "s=2", "13x13"],
             sourceRefs: {
-              pytorch: ["alexnet.nn-convnd-n-n-kernel_size-n-padding-n.2"],
+              pytorch: ["alexnet.nn-maxpoolnd-kernel_size-n-stride-n.2"],
               jax: ["alexnet.__call__.x-nn-max_pool-x-window_shape-n-n-strides-n-n.2"],
             },
             focusRef: {
-              pytorch: "alexnet.nn-convnd-n-n-kernel_size-n-padding-n.2",
+              pytorch: "alexnet.nn-maxpoolnd-kernel_size-n-stride-n.2",
               jax: "alexnet.__call__.x-nn-max_pool-x-window_shape-n-n-strides-n-n.2",
             },
             includeChildRefs: false,
@@ -4126,11 +4126,11 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
             kind: "conv",
             badges: ["256->384", "k=3"],
             sourceRefs: {
-              pytorch: ["alexnet.nn-relu-inplace-true.3"],
+              pytorch: ["alexnet.nn-convnd-n-n-kernel_size-n-padding-n.2"],
               jax: ["alexnet.__call__.x-nn-conv-features-n-kernel_size-n-n-padding-same-name-convn-x.2"],
             },
             focusRef: {
-              pytorch: "alexnet.nn-relu-inplace-true.3",
+              pytorch: "alexnet.nn-convnd-n-n-kernel_size-n-padding-n.2",
               jax: "alexnet.__call__.x-nn-conv-features-n-kernel_size-n-n-padding-same-name-convn-x.2",
             },
             includeChildRefs: false,
@@ -4141,11 +4141,11 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
             type: "ReLU",
             kind: "activation",
             sourceRefs: {
-              pytorch: ["alexnet.nn-convnd-n-n-kernel_size-n-padding-n.3"],
+              pytorch: ["alexnet.nn-relu-inplace-true.3"],
               jax: ["alexnet.__call__.x-nn-relu-x.3"],
             },
             focusRef: {
-              pytorch: "alexnet.nn-convnd-n-n-kernel_size-n-padding-n.3",
+              pytorch: "alexnet.nn-relu-inplace-true.3",
               jax: "alexnet.__call__.x-nn-relu-x.3",
             },
             includeChildRefs: false,
@@ -4157,11 +4157,11 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
             kind: "conv",
             badges: ["384->384", "k=3"],
             sourceRefs: {
-              pytorch: ["alexnet.nn-relu-inplace-true.4"],
+              pytorch: ["alexnet.nn-convnd-n-n-kernel_size-n-padding-n.3"],
               jax: ["alexnet.__call__.x-nn-conv-features-n-kernel_size-n-n-padding-same-name-convn-x.3"],
             },
             focusRef: {
-              pytorch: "alexnet.nn-relu-inplace-true.4",
+              pytorch: "alexnet.nn-convnd-n-n-kernel_size-n-padding-n.3",
               jax: "alexnet.__call__.x-nn-conv-features-n-kernel_size-n-n-padding-same-name-convn-x.3",
             },
             includeChildRefs: false,
@@ -4172,11 +4172,11 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
             type: "ReLU",
             kind: "activation",
             sourceRefs: {
-              pytorch: ["alexnet.nn-convnd-n-n-kernel_size-n-padding-n.4"],
+              pytorch: ["alexnet.nn-relu-inplace-true.4"],
               jax: ["alexnet.__call__.x-nn-relu-x.4"],
             },
             focusRef: {
-              pytorch: "alexnet.nn-convnd-n-n-kernel_size-n-padding-n.4",
+              pytorch: "alexnet.nn-relu-inplace-true.4",
               jax: "alexnet.__call__.x-nn-relu-x.4",
             },
             includeChildRefs: false,
@@ -4188,11 +4188,11 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
             kind: "conv",
             badges: ["384->256", "k=3"],
             sourceRefs: {
-              pytorch: ["alexnet.nn-relu-inplace-true.5"],
+              pytorch: ["alexnet.nn-convnd-n-n-kernel_size-n-padding-n.4"],
               jax: ["alexnet.__call__.x-nn-conv-features-n-kernel_size-n-n-padding-same-name-convn-x.4"],
             },
             focusRef: {
-              pytorch: "alexnet.nn-relu-inplace-true.5",
+              pytorch: "alexnet.nn-convnd-n-n-kernel_size-n-padding-n.4",
               jax: "alexnet.__call__.x-nn-conv-features-n-kernel_size-n-n-padding-same-name-convn-x.4",
             },
             includeChildRefs: false,
@@ -4203,11 +4203,11 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
             type: "ReLU",
             kind: "activation",
             sourceRefs: {
-              pytorch: ["alexnet.nn-maxpoolnd-kernel_size-n-stride-n.3"],
+              pytorch: ["alexnet.nn-relu-inplace-true.5"],
               jax: ["alexnet.__call__.x-nn-relu-x.5"],
             },
             focusRef: {
-              pytorch: "alexnet.nn-maxpoolnd-kernel_size-n-stride-n.3",
+              pytorch: "alexnet.nn-relu-inplace-true.5",
               jax: "alexnet.__call__.x-nn-relu-x.5",
             },
             includeChildRefs: false,
@@ -4710,11 +4710,11 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
         summary: "7x7 + 1x1 + 3x3",
         defaultExpanded: true,
         sourceRefs: {
-          pytorch: ["googlenet.nn-relu-inplace-true","googlenet.nn-convnd-n-n-kernel_size-n","googlenet.nn-relu-inplace-true.3","googlenet.code.4"],
+          pytorch: ["googlenet.self-stem-nn-sequential","googlenet.code.4"],
           jax: [],
         },
         focusRef: {
-          pytorch: "googlenet.nn-relu-inplace-true",
+          pytorch: "googlenet.self-stem-nn-sequential",
           jax: "googlenet.__call__.x-nn-conv-n-n-n-strides-n-n-padding-same-name-stem_convn-x",
         },
         includeChildRefs: true,
@@ -4726,11 +4726,11 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
             kind: "conv",
             badges: ["3->64", "k=7", "s=2"],
             sourceRefs: {
-              pytorch: ["googlenet.nn-maxpoolnd-kernel_size-n-stride-n-padding-n"],
+              pytorch: ["googlenet.nn-convnd-n-n-kernel_size-n-stride-n-padding-n","googlenet.nn-relu-inplace-true"],
               jax: ["googlenet.__call__.x-nn-conv-n-n-n-strides-n-n-padding-same-name-stem_convn-x","googlenet.__call__.x-nn-relu-x"],
             },
             focusRef: {
-              pytorch: "googlenet.nn-maxpoolnd-kernel_size-n-stride-n-padding-n",
+              pytorch: "googlenet.nn-convnd-n-n-kernel_size-n-stride-n-padding-n",
               jax: "googlenet.__call__.x-nn-conv-n-n-n-strides-n-n-padding-same-name-stem_convn-x",
             },
             includeChildRefs: false,
@@ -4742,11 +4742,11 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
             kind: "pool",
             badges: ["s=2"],
             sourceRefs: {
-              pytorch: ["googlenet.nn-relu-inplace-true.2"],
+              pytorch: ["googlenet.nn-maxpoolnd-kernel_size-n-stride-n-padding-n"],
               jax: ["googlenet.__call__.x-nn-max_pool-x-window_shape-n-n-strides-n-n-padding-same"],
             },
             focusRef: {
-              pytorch: "googlenet.nn-relu-inplace-true.2",
+              pytorch: "googlenet.nn-maxpoolnd-kernel_size-n-stride-n-padding-n",
               jax: "googlenet.__call__.x-nn-max_pool-x-window_shape-n-n-strides-n-n-padding-same",
             },
             includeChildRefs: false,
@@ -4758,11 +4758,11 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
             kind: "conv",
             badges: ["64->64"],
             sourceRefs: {
-              pytorch: ["googlenet.nn-convnd-n-n-kernel_size-n-padding-n"],
+              pytorch: ["googlenet.nn-convnd-n-n-kernel_size-n","googlenet.nn-relu-inplace-true.2"],
               jax: ["googlenet.__call__.x-nn-conv-n-n-n-name-stem_convn-x","googlenet.__call__.x-nn-relu-x.2"],
             },
             focusRef: {
-              pytorch: "googlenet.nn-convnd-n-n-kernel_size-n-padding-n",
+              pytorch: "googlenet.nn-convnd-n-n-kernel_size-n",
               jax: "googlenet.__call__.x-nn-conv-n-n-n-name-stem_convn-x",
             },
             includeChildRefs: false,
@@ -4774,11 +4774,11 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
             kind: "conv",
             badges: ["64->192"],
             sourceRefs: {
-              pytorch: ["googlenet.nn-maxpoolnd-kernel_size-n-stride-n-padding-n.2"],
+              pytorch: ["googlenet.nn-convnd-n-n-kernel_size-n-padding-n","googlenet.nn-relu-inplace-true.3"],
               jax: ["googlenet.__call__.x-nn-conv-n-n-n-padding-same-name-stem_convn-x","googlenet.__call__.x-nn-relu-x.3"],
             },
             focusRef: {
-              pytorch: "googlenet.nn-maxpoolnd-kernel_size-n-stride-n-padding-n.2",
+              pytorch: "googlenet.nn-convnd-n-n-kernel_size-n-padding-n",
               jax: "googlenet.__call__.x-nn-conv-n-n-n-padding-same-name-stem_convn-x",
             },
             includeChildRefs: false,
@@ -4790,11 +4790,11 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
             kind: "pool",
             badges: ["s=2"],
             sourceRefs: {
-              pytorch: ["googlenet.self-inceptionna-inceptionblock-n-n-n-n-n-n-n"],
+              pytorch: ["googlenet.nn-maxpoolnd-kernel_size-n-stride-n-padding-n.2"],
               jax: ["googlenet.__call__.x-nn-max_pool-x-window_shape-n-n-strides-n-n-padding-same.2"],
             },
             focusRef: {
-              pytorch: "googlenet.self-inceptionna-inceptionblock-n-n-n-n-n-n-n",
+              pytorch: "googlenet.nn-maxpoolnd-kernel_size-n-stride-n-padding-n.2",
               jax: "googlenet.__call__.x-nn-max_pool-x-window_shape-n-n-strides-n-n-padding-same.2",
             },
             includeChildRefs: false,
@@ -5118,11 +5118,11 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
             kind: "conv",
             badges: ["1->64", "572x572"],
             sourceRefs: {
-              pytorch: ["doubleconv.__init__.nn-convnd-in_channels-out_channels-kernel_size-n-padding-n","doubleconv.__init__.nn-relu-inplace-true","doubleconv.__init__.nn-convnd-out_channels-out_channels-kernel_size-n-padding-n","doubleconv.__init__.nn-relu-inplace-true.2","doubleconv.__init__.code.3","doubleconv.forward.return-out","unet.num_classes-n"],
+              pytorch: ["doubleconv.__init__.nn-convnd-in_channels-out_channels-kernel_size-n-padding-n","doubleconv.__init__.nn-relu-inplace-true","doubleconv.__init__.nn-convnd-out_channels-out_channels-kernel_size-n-padding-n","doubleconv.__init__.nn-relu-inplace-true.2","doubleconv.__init__.code.3","doubleconv.forward.return-out","unet.self-down1","unet.forward.dn-self-downn-x"],
               jax: ["class-doubleconv-nn-module","doubleconv.__call__.x-nn-conv-self-out_channels-n-n-padding-same-x","doubleconv.__call__.x-nn-relu-x","doubleconv.__call__.x-nn-conv-self-out_channels-n-n-padding-same-x.2","doubleconv.__call__.x-nn-relu-x.2","unet.__call__.dn-doubleconv-n-x"],
             },
             focusRef: {
-              pytorch: "doubleconv.__init__.nn-convnd-in_channels-out_channels-kernel_size-n-padding-n",
+              pytorch: "unet.self-down1",
               jax: "class-doubleconv-nn-module",
             },
             includeChildRefs: false,
@@ -5134,11 +5134,11 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
             kind: "pool",
             badges: ["2x2"],
             sourceRefs: {
-              pytorch: ["unet.forward.dn-self-downn-x"],
+              pytorch: ["unet.self-pool1","unet.forward.p1"],
               jax: ["unet.__call__.pn-nn-max_pool-dn-n-n-n-n"],
             },
             focusRef: {
-              pytorch: "unet.forward.dn-self-downn-x",
+              pytorch: "unet.self-pool1",
               jax: "unet.__call__.pn-nn-max_pool-dn-n-n-n-n",
             },
             includeChildRefs: false,
@@ -5150,7 +5150,7 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
             kind: "conv",
             badges: ["64->128"],
             sourceRefs: {
-              pytorch: ["unet.self-downn-doubleconv-n-n.2","unet.forward.dn-self-downn-x"],
+              pytorch: ["unet.self-downn-doubleconv-n-n.2","unet.forward.dn-self-downn-pn"],
               jax: ["unet.__call__.dn-doubleconv-n-pn"],
             },
             focusRef: {
@@ -5182,7 +5182,7 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
             kind: "conv",
             badges: ["128->256"],
             sourceRefs: {
-              pytorch: ["unet.self-downn-doubleconv-n-n.3","unet.forward.dn-self-downn-pn"],
+              pytorch: ["unet.self-downn-doubleconv-n-n.3","unet.forward.dn-self-downn-pn.2"],
               jax: ["unet.__call__.dn-doubleconv-n-pn.2"],
             },
             focusRef: {
@@ -5214,7 +5214,7 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
             kind: "conv",
             badges: ["256->512"],
             sourceRefs: {
-              pytorch: ["unet.self-downn-doubleconv-n-n.4","unet.forward.pn-self-pooln-dn.2"],
+              pytorch: ["unet.self-downn-doubleconv-n-n.4","unet.forward.dn-self-downn-pn.3"],
               jax: ["unet.__call__.dn-doubleconv-n-pn.3"],
             },
             focusRef: {
@@ -5248,7 +5248,7 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
         kind: "conv",
         badges: ["512->1024"],
         sourceRefs: {
-          pytorch: ["unet.self-bottleneck-doubleconv-n-n","unet.forward.dn-self-downn-pn.2"],
+          pytorch: ["unet.self-bottleneck-doubleconv-n-n","unet.forward.bottleneck"],
           jax: ["class-doubleconv-nn-module","doubleconv.__call__.x-nn-conv-self-out_channels-n-n-padding-same-x","doubleconv.__call__.x-nn-relu-x","doubleconv.__call__.x-nn-conv-self-out_channels-n-n-padding-same-x.2","doubleconv.__call__.x-nn-relu-x.2","unet.__call__.b-doubleconv-n-pn"],
         },
         focusRef: {
@@ -5281,7 +5281,7 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
             kind: "reshape",
             badges: ["1024->512", "x2"],
             sourceRefs: {
-              pytorch: ["unet.self-upn-nn-convtransposend-n-n-kernel_size-n-stride-n","unet.forward.pn-self-pooln-dn.3"],
+              pytorch: ["unet.self-upn-nn-convtransposend-n-n-kernel_size-n-stride-n","unet.forward.up4"],
               jax: ["def-resize_like-x-skip","resize_like.resize_shape-x-shape-n-skip-shape-n-skip-shape-n-x-shape-n","resize_like.resized-jax-image-resize-x-resize_shape-method-nearest","resize_like.return-resized","unet.__call__.x-resize_like-b-dn"],
             },
             focusRef: {
@@ -5294,14 +5294,14 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
             id: "expansive.up4.skip",
             label: "skip d4",
             type: "Concat",
-            kind: "residual",
+            kind: "concat",
             badges: ["encoder features"],
             sourceRefs: {
-              pytorch: ["unet.forward.dn-self-downn-pn.3"],
+              pytorch: ["unet.forward.concat4"],
               jax: ["unet.__call__.x-jnp-concatenate-x-dn-axis-n"],
             },
             focusRef: {
-              pytorch: "unet.forward.dn-self-downn-pn.3",
+              pytorch: "unet.forward.concat4",
               jax: "unet.__call__.x-jnp-concatenate-x-dn-axis-n",
             },
             includeChildRefs: false,
@@ -5313,7 +5313,7 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
             kind: "conv",
             badges: ["1024->512"],
             sourceRefs: {
-              pytorch: ["unet.self-decn-doubleconv-n-n","unet.forward.pn-self-pooln-dn.4"],
+              pytorch: ["unet.self-decn-doubleconv-n-n","unet.forward.x-self-decn-x"],
               jax: ["class-doubleconv-nn-module","doubleconv.__call__.x-nn-conv-self-out_channels-n-n-padding-same-x","doubleconv.__call__.x-nn-relu-x","doubleconv.__call__.x-nn-conv-self-out_channels-n-n-padding-same-x.2","doubleconv.__call__.x-nn-relu-x.2","unet.__call__.x-doubleconv-n-x"],
             },
             focusRef: {
@@ -5329,7 +5329,7 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
             kind: "reshape",
             badges: ["512->256", "x2"],
             sourceRefs: {
-              pytorch: ["unet.self-upn-nn-convtransposend-n-n-kernel_size-n-stride-n.2"],
+              pytorch: ["unet.self-upn-nn-convtransposend-n-n-kernel_size-n-stride-n.2","unet.forward.x-self-upn-x"],
               jax: ["def-resize_like-x-skip","resize_like.resize_shape-x-shape-n-skip-shape-n-skip-shape-n-x-shape-n","resize_like.resized-jax-image-resize-x-resize_shape-method-nearest","resize_like.return-resized","unet.__call__.x-resize_like-x-dn"],
             },
             focusRef: {
@@ -5342,7 +5342,7 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
             id: "expansive.up3.skip",
             label: "skip d3",
             type: "Concat",
-            kind: "residual",
+            kind: "concat",
             badges: ["encoder features"],
             sourceRefs: {
               pytorch: ["unet.forward.x-torch-cat-x-dn-dim-n.2"],
@@ -5361,7 +5361,7 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
             kind: "conv",
             badges: ["512->256"],
             sourceRefs: {
-              pytorch: ["unet.self-decn-doubleconv-n-n.2"],
+              pytorch: ["unet.self-decn-doubleconv-n-n.2","unet.forward.x-self-decn-x.2"],
               jax: ["class-doubleconv-nn-module","doubleconv.__call__.x-nn-conv-self-out_channels-n-n-padding-same-x","doubleconv.__call__.x-nn-relu-x","doubleconv.__call__.x-nn-conv-self-out_channels-n-n-padding-same-x.2","doubleconv.__call__.x-nn-relu-x.2","unet.__call__.x-doubleconv-n-x.2"],
             },
             focusRef: {
@@ -5377,7 +5377,7 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
             kind: "reshape",
             badges: ["256->128", "x2"],
             sourceRefs: {
-              pytorch: ["unet.self-upn-nn-convtransposend-n-n-kernel_size-n-stride-n.3","unet.forward.x-self-decn-x"],
+              pytorch: ["unet.self-upn-nn-convtransposend-n-n-kernel_size-n-stride-n.3","unet.forward.x-self-upn-x.2"],
               jax: ["def-resize_like-x-skip","resize_like.resize_shape-x-shape-n-skip-shape-n-skip-shape-n-x-shape-n","resize_like.resized-jax-image-resize-x-resize_shape-method-nearest","resize_like.return-resized","unet.__call__.x-resize_like-x-dn.2"],
             },
             focusRef: {
@@ -5390,14 +5390,14 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
             id: "expansive.up2.skip",
             label: "skip d2",
             type: "Concat",
-            kind: "residual",
+            kind: "concat",
             badges: ["encoder features"],
             sourceRefs: {
-              pytorch: ["unet.forward.x-self-upn-x"],
+              pytorch: ["unet.forward.x-torch-cat-x-dn-dim-n.3"],
               jax: ["unet.__call__.x-jnp-concatenate-x-dn-axis-n.3"],
             },
             focusRef: {
-              pytorch: "unet.forward.x-self-upn-x",
+              pytorch: "unet.forward.x-torch-cat-x-dn-dim-n.3",
               jax: "unet.__call__.x-jnp-concatenate-x-dn-axis-n.3",
             },
             includeChildRefs: false,
@@ -5409,7 +5409,7 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
             kind: "conv",
             badges: ["256->128"],
             sourceRefs: {
-              pytorch: ["unet.self-decn-doubleconv-n-n.3","unet.forward.x-torch-cat-x-dn-dim-n.2"],
+              pytorch: ["unet.self-decn-doubleconv-n-n.3","unet.forward.x-self-decn-x.3"],
               jax: ["class-doubleconv-nn-module","doubleconv.__call__.x-nn-conv-self-out_channels-n-n-padding-same-x","doubleconv.__call__.x-nn-relu-x","doubleconv.__call__.x-nn-conv-self-out_channels-n-n-padding-same-x.2","doubleconv.__call__.x-nn-relu-x.2","unet.__call__.x-doubleconv-n-x.3"],
             },
             focusRef: {
@@ -5425,7 +5425,7 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
             kind: "reshape",
             badges: ["128->64", "x2"],
             sourceRefs: {
-              pytorch: ["unet.self-upn-nn-convtransposend-n-n-kernel_size-n-stride-n.4","unet.forward.x-self-decn-x.2"],
+              pytorch: ["unet.self-upn-nn-convtransposend-n-n-kernel_size-n-stride-n.4","unet.forward.up1"],
               jax: ["def-resize_like-x-skip","resize_like.resize_shape-x-shape-n-skip-shape-n-skip-shape-n-x-shape-n","resize_like.resized-jax-image-resize-x-resize_shape-method-nearest","resize_like.return-resized","unet.__call__.x-resize_like-x-dn.3"],
             },
             focusRef: {
@@ -5438,14 +5438,14 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
             id: "expansive.up1.skip",
             label: "skip d1",
             type: "Concat",
-            kind: "residual",
+            kind: "concat",
             badges: ["encoder features"],
             sourceRefs: {
-              pytorch: ["unet.forward.x-self-upn-x.2"],
+              pytorch: ["unet.forward.concat1"],
               jax: ["unet.__call__.x-jnp-concatenate-x-dn-axis-n.4"],
             },
             focusRef: {
-              pytorch: "unet.forward.x-self-upn-x.2",
+              pytorch: "unet.forward.concat1",
               jax: "unet.__call__.x-jnp-concatenate-x-dn-axis-n.4",
             },
             includeChildRefs: false,
@@ -5457,7 +5457,7 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
             kind: "conv",
             badges: ["128->64"],
             sourceRefs: {
-              pytorch: ["unet.self-decn-doubleconv-n-n.4","unet.forward.x-torch-cat-x-dn-dim-n.3"],
+              pytorch: ["unet.self-decn-doubleconv-n-n.4","unet.forward.dec1"],
               jax: ["class-doubleconv-nn-module","doubleconv.__call__.x-nn-conv-self-out_channels-n-n-padding-same-x","doubleconv.__call__.x-nn-relu-x","doubleconv.__call__.x-nn-conv-self-out_channels-n-n-padding-same-x.2","doubleconv.__call__.x-nn-relu-x.2","unet.__call__.x-doubleconv-n-x.4"],
             },
             focusRef: {
@@ -5475,7 +5475,7 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
         kind: "conv",
         badges: ["64->2", "1x1"],
         sourceRefs: {
-          pytorch: ["unet.self-out_conv-nn-convnd-n-num_classes-kernel_size-n","unet.forward.x-self-decn-x.3"],
+          pytorch: ["unet.self-out_conv-nn-convnd-n-num_classes-kernel_size-n","unet.forward.out-conv"],
           jax: ["unet.__call__.logits-nn-conv-self-num_classes-n-n-name-out_conv-x"],
         },
         focusRef: {
@@ -5529,11 +5529,11 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
         summary: "token + position",
         defaultExpanded: true,
         sourceRefs: {
-          pytorch: ["transformer.self-generator-nn-linear-d_model-vocab_size","transformer.def-forward-self-src_ids-tgt_ids-tgt_mask","transformer.forward.tgt_embeddings-self-tgt_embed-tgt_ids","transformer.forward.logits-self-generator-x"],
+          pytorch: ["transformer.self-src-embed","transformer.self-tgt_embed-nn-embedding-vocab_size-d_model","transformer.self-pos","transformer.forward.src_embeddings-self-src_embed-src_ids","transformer.forward.memory-self-pos-src_embeddings","transformer.forward.tgt_embeddings-self-tgt_embed-tgt_ids","transformer.forward.x-self-pos-tgt_embeddings"],
           jax: ["transformer.__call__.src_embedding-nn-embed-self-vocab_size-self-d_model-src_ids","transformer.__call__.memory-positionalencoding-self-d_model-src_embedding","transformer.__call__.tgt_embedding-nn-embed-self-vocab_size-self-d_model-tgt_ids","transformer.__call__.x-positionalencoding-self-d_model-tgt_embedding"],
         },
         focusRef: {
-          pytorch: "transformer.self-generator-nn-linear-d_model-vocab_size",
+          pytorch: "transformer.self-src-embed",
           jax: "transformer.__call__.src_embedding-nn-embed-self-vocab_size-self-d_model-src_ids",
         },
         includeChildRefs: false,
@@ -5545,11 +5545,11 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
             kind: "embedding",
             badges: ["vocab", "512"],
             sourceRefs: {
-              pytorch: ["transformer.self-generator-nn-linear-d_model-vocab_size"],
+              pytorch: ["transformer.self-src-embed","transformer.forward.src_embeddings-self-src_embed-src_ids"],
               jax: ["transformer.__call__.src_embedding-nn-embed-self-vocab_size-self-d_model-src_ids"],
             },
             focusRef: {
-              pytorch: "transformer.self-generator-nn-linear-d_model-vocab_size",
+              pytorch: "transformer.self-src-embed",
               jax: "transformer.__call__.src_embedding-nn-embed-self-vocab_size-self-d_model-src_ids",
             },
             includeChildRefs: false,
@@ -5561,7 +5561,7 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
             kind: "embedding",
             badges: ["vocab", "512"],
             sourceRefs: {
-              pytorch: ["transformer.self-tgt_embed-nn-embedding-vocab_size-d_model"],
+              pytorch: ["transformer.self-tgt_embed-nn-embedding-vocab_size-d_model","transformer.forward.tgt_embeddings-self-tgt_embed-tgt_ids"],
               jax: ["transformer.__call__.tgt_embedding-nn-embed-self-vocab_size-self-d_model-tgt_ids"],
             },
             focusRef: {
@@ -5577,7 +5577,7 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
             kind: "embedding",
             badges: ["absolute"],
             sourceRefs: {
-              pytorch: ["positionalencoding.def-__init__","positionalencoding.self","positionalencoding.positions-torch-arange-max_len","positionalencoding.position-positions-unsqueeze-n","positionalencoding.even_indices-torch-arange-n-d_model-n","positionalencoding.log_base-torch-log-torch-tensor-n","positionalencoding.scale-log_base-d_model","positionalencoding.div_term-torch-exp-even_indices-scale","positionalencoding.pe-torch-zeros-max_len-d_model","positionalencoding.sin_values-torch-sin-position-div_term","positionalencoding.cos_values-torch-cos-position-div_term","positionalencoding.pe-n-n-sin_values","positionalencoding.pe-n-n-cos_values","positionalencoding.self-register_buffer-pe-pe","positionalencoding.forward.position_encoding-self-pe-seq_len","positionalencoding.forward.encoded-x-position_encoding","positionalencoding.forward.return-encoded","transformer.def-forward-self-src_ids-tgt_ids-tgt_mask","transformer.forward.tgt_embeddings-self-tgt_embed-tgt_ids","transformer.forward.logits-self-generator-x"],
+              pytorch: ["positionalencoding.def-__init__","positionalencoding.self","positionalencoding.positions-torch-arange-max_len","positionalencoding.position-positions-unsqueeze-n","positionalencoding.even_indices-torch-arange-n-d_model-n","positionalencoding.log_base-torch-log-torch-tensor-n","positionalencoding.scale-log_base-d_model","positionalencoding.div_term-torch-exp-even_indices-scale","positionalencoding.pe-torch-zeros-max_len-d_model","positionalencoding.sin_values-torch-sin-position-div_term","positionalencoding.cos_values-torch-cos-position-div_term","positionalencoding.pe-n-n-sin_values","positionalencoding.pe-n-n-cos_values","positionalencoding.self-register_buffer-pe-pe","positionalencoding.forward.position_encoding-self-pe-seq_len","positionalencoding.forward.encoded-x-position_encoding","positionalencoding.forward.return-encoded","transformer.self-pos","transformer.forward.memory-self-pos-src_embeddings","transformer.forward.x-self-pos-tgt_embeddings"],
               jax: ["positionalencoding.__call__.seq_len-x-shape-n","positionalencoding.__call__.positions-jnp-arange-seq_len","positionalencoding.__call__.position-positions-none","positionalencoding.__call__.even_indices-jnp-arange-n-self-d_model-n","positionalencoding.__call__.scale-jnp-log-n-self-d_model","positionalencoding.__call__.div_term-jnp-exp-even_indices-scale","positionalencoding.__call__.pe-jnp-zeros-seq_len-self-d_model","positionalencoding.__call__.sin_values-jnp-sin-position-div_term","positionalencoding.__call__.cos_values-jnp-cos-position-div_term","positionalencoding.__call__.pe-pe-at-n-n-set-sin_values","positionalencoding.__call__.pe-pe-at-n-n-set-cos_values","positionalencoding.__call__.batch_pe-pe-none","positionalencoding.__call__.encoded-x-batch_pe","positionalencoding.__call__.return-encoded","transformer.__call__.memory-positionalencoding-self-d_model-src_embedding","transformer.__call__.x-positionalencoding-self-d_model-tgt_embedding"],
             },
             focusRef: {
@@ -5597,11 +5597,11 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
         badges: ["bidirectional"],
         defaultExpanded: true,
         sourceRefs: {
-          pytorch: ["transformer.forward.x-self-pos-tgt_embeddings","transformer.forward.for-layer-in-self-decoder"],
+          pytorch: ["transformer.self-encoder","transformer.forward.encoder-stack"],
           jax: ["transformer.__call__.for-_-in-range-self-num_layers","transformer.__call__.memory-encoderlayer-self-d_model-self-nhead-memory"],
         },
         focusRef: {
-          pytorch: "transformer.forward.x-self-pos-tgt_embeddings",
+          pytorch: "transformer.self-encoder",
           jax: "transformer.__call__.for-_-in-range-self-num_layers",
         },
         includeChildRefs: false,
@@ -5616,11 +5616,11 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
         badges: ["causal", "cross-attn"],
         defaultExpanded: true,
         sourceRefs: {
-          pytorch: ["transformer.forward.src_embeddings-self-src_embed-src_ids","transformer.forward.return-logits"],
+          pytorch: ["transformer.self-decoder","transformer.forward.for-layer-in-self-decoder"],
           jax: ["transformer.__call__.for-_-in-range-self-num_layers.2","transformer.__call__.x-decoderlayer-self-d_model-self-nhead-x-memory-tgt_mask"],
         },
         focusRef: {
-          pytorch: "transformer.forward.src_embeddings-self-src_embed-src_ids",
+          pytorch: "transformer.self-decoder",
           jax: "transformer.__call__.for-_-in-range-self-num_layers.2",
         },
         includeChildRefs: false,
@@ -5633,11 +5633,11 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
         kind: "linear",
         badges: ["512->vocab"],
         sourceRefs: {
-          pytorch: ["transformer.forward.memory-self-pos-src_embeddings"],
+          pytorch: ["transformer.self-generator-nn-linear-d_model-vocab_size","transformer.forward.logits-self-generator-x","transformer.forward.return-logits"],
           jax: ["transformer.__call__.logits-nn-dense-self-vocab_size-x"],
         },
         focusRef: {
-          pytorch: "transformer.forward.memory-self-pos-src_embeddings",
+          pytorch: "transformer.self-generator-nn-linear-d_model-vocab_size",
           jax: "transformer.__call__.logits-nn-dense-self-vocab_size-x",
         },
         includeChildRefs: false,
@@ -6910,11 +6910,11 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
         summary: "3x3 shallow stem",
         badges: ["3->16", "32x32"],
         sourceRefs: {
-          pytorch: ["widenet.widths-n","widenet.kernel_size-n","widenet.stride-n","widenet.padding-n","widenet.bias-false","widenet.code.7","widenet.self-layern-self-_make_layer","widenet.widths-n.2"],
+          pytorch: ["widenet.stem-conv","widenet.widths-n","widenet.kernel_size-n","widenet.stride-n","widenet.padding-n","widenet.bias-false","widenet.code.7"],
           jax: ["widenet.__call__.x-nn-conv","widenet.__call__.widths-n","widenet.__call__.n-n","widenet.__call__.padding-same","widenet.__call__.use_bias-false","widenet.__call__.name-convn","widenet.__call__.x"],
         },
         focusRef: {
-          pytorch: "widenet.widths-n",
+          pytorch: "widenet.stem-conv",
           jax: "widenet.__call__.x-nn-conv",
         },
         includeChildRefs: false,
@@ -6927,7 +6927,7 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
         summary: "4 widened blocks",
         badges: ["160 ch", "32x32"],
         sourceRefs: {
-          pytorch: ["widenet.widths-n.3","widenet.block_count","widenet.stride-n.2","widenet.dropout_rate-dropout_rate","widenet.code.8","widenet.self-layern-self-_make_layer.2","widenet.widths-n.4","widenet._make_layer.layers","widenet._make_layer.widebasicblock","widenet._make_layer.in_channels","widenet._make_layer.out_channels","widenet._make_layer.stride-stride","widenet._make_layer.dropout_rate-dropout_rate","widenet._make_layer.code.2","widenet._make_layer.code.3","widenet._make_layer.for-_-in-range-n-blocks","widenet.forward.x-self-layern-x.3"],
+          pytorch: ["widenet.self-layern-self-_make_layer","widenet.widths-n.2","widenet.widths-n.3","widenet.block_count","widenet.stride-n.2","widenet.dropout_rate-dropout_rate","widenet.code.8","widenet._make_layer.layers","widenet._make_layer.widebasicblock","widenet._make_layer.in_channels","widenet._make_layer.out_channels","widenet._make_layer.stride-stride","widenet._make_layer.dropout_rate-dropout_rate","widenet._make_layer.code.2","widenet._make_layer.code.3","widenet._make_layer.for-_-in-range-n-blocks","widenet.forward.x-self-layern-x.3"],
           jax: ["widenet.__call__.x-self-_stage","widenet.__call__.x.2","widenet.__call__.widths-n.2","widenet.__call__.block_count","widenet.__call__.stride-n","widenet.__call__.train-train","widenet.__call__.name-layern","widenet.__call__.code.7","widenet._stage.for-index-in-range-blocks","widenet._stage.block_stride-stride-if-index-n-else-n","widenet._stage.use_projection-index-n","widenet._stage.block_name-f-name-index","widenet._stage.x-widebasicblock","widenet._stage.channels","widenet._stage.stride-block_stride","widenet._stage.dropout_rate-self-dropout_rate","widenet._stage.use_projection-use_projection","widenet._stage.name-block_name","widenet._stage.x-train-train"],
         },
         focusRef: {
@@ -6979,11 +6979,11 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
         badges: ["320 ch", "16x16"],
         defaultExpanded: true,
         sourceRefs: {
-          pytorch: ["widenet.widths-n.5","widenet.block_count.2","widenet.stride-n.3","widenet.dropout_rate-dropout_rate.2","widenet.code.9","widenet.self-layern-self-_make_layer.3","widenet.widths-n.6","widenet._make_layer.layers","widenet._make_layer.widebasicblock","widenet._make_layer.in_channels","widenet._make_layer.out_channels","widenet._make_layer.stride-stride","widenet._make_layer.dropout_rate-dropout_rate","widenet._make_layer.code.2","widenet._make_layer.code.3","widenet._make_layer.for-_-in-range-n-blocks"],
+          pytorch: ["widenet.self-layern-self-_make_layer.2","widenet.widths-n.4","widenet.widths-n.5","widenet.block_count.2","widenet.stride-n.3","widenet.dropout_rate-dropout_rate.2","widenet.code.9","widenet._make_layer.layers","widenet._make_layer.widebasicblock","widenet._make_layer.in_channels","widenet._make_layer.out_channels","widenet._make_layer.stride-stride","widenet._make_layer.dropout_rate-dropout_rate","widenet._make_layer.code.2","widenet._make_layer.code.3","widenet._make_layer.for-_-in-range-n-blocks"],
           jax: ["widenet.__call__.x-self-_stage.2","widenet.__call__.x.3","widenet.__call__.widths-n.3","widenet.__call__.block_count.2","widenet.__call__.stride-n.2","widenet.__call__.train-train.2","widenet.__call__.name-layern.2","widenet.__call__.code.8","widenet._stage.for-index-in-range-blocks","widenet._stage.block_stride-stride-if-index-n-else-n","widenet._stage.use_projection-index-n","widenet._stage.block_name-f-name-index","widenet._stage.x-widebasicblock","widenet._stage.channels","widenet._stage.stride-block_stride","widenet._stage.dropout_rate-self-dropout_rate","widenet._stage.use_projection-use_projection","widenet._stage.name-block_name","widenet._stage.x-train-train"],
         },
         focusRef: {
-          pytorch: "widenet.widths-n.5",
+          pytorch: "widenet.self-layern-self-_make_layer.2",
           jax: "widenet.__call__.x-self-_stage.2",
         },
         includeChildRefs: false,
@@ -6996,7 +6996,7 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
             summary: "stride 2 + projection",
             defaultExpanded: true,
             sourceRefs: {
-              pytorch: ["widebasicblock.self-bnn-nn-batchnormnd-in_channels","widebasicblock.self-relu-nn-relu-inplace-true","widebasicblock.self-convn-nn-convnd","widebasicblock.in_channels.2","widebasicblock.self-dropout_rate-dropout_rate","widebasicblock.out_channels.3","widebasicblock.if-stride-n-or-in_channels-out_channels","widebasicblock.self-shortcut-nn-convnd","widebasicblock.in_channels.3","widebasicblock.out_channels.5","widebasicblock.kernel_size-n.3","widebasicblock.stride-stride.2","widebasicblock.bias-false.3","widebasicblock.code.6","widebasicblock.forward.shortcut-x","widebasicblock.forward.if-self-shortcut-is-not-none","widebasicblock.forward.shortcut-self-shortcut-x","widebasicblock.forward.out-self-bnn-x","widebasicblock.forward.out-self-relu-out","widebasicblock.forward.out-self-convn-out","widebasicblock.forward.out-self-bnn-out","widebasicblock.forward.out-self-relu-out.2","widebasicblock.forward.if-self-dropout_rate-n","widebasicblock.forward.out-out-shortcut","widebasicblock.forward.return-out","widenet._make_layer.out_channels"],
+              pytorch: ["widebasicblock.self-bnn-nn-batchnormnd-in_channels","widebasicblock.self-relu-nn-relu-inplace-true","widebasicblock.self-convn-nn-convnd","widebasicblock.in_channels.2","widebasicblock.self-bnn-nn-batchnormnd-out_channels","widebasicblock.self-dropout_rate-dropout_rate","widebasicblock.self-conv2","widebasicblock.out_channels.3","widebasicblock.if-stride-n-or-in_channels-out_channels","widebasicblock.self-shortcut-nn-convnd","widebasicblock.in_channels.3","widebasicblock.out_channels.5","widebasicblock.kernel_size-n.3","widebasicblock.stride-stride.2","widebasicblock.bias-false.3","widebasicblock.code.6","widebasicblock.forward.shortcut-x","widebasicblock.forward.if-self-shortcut-is-not-none","widebasicblock.forward.shortcut-self-shortcut-x","widebasicblock.forward.out-self-bnn-x","widebasicblock.forward.out-self-relu-out","widebasicblock.forward.out-self-convn-out","widebasicblock.forward.out-self-bnn-out","widebasicblock.forward.out-self-relu-out.2","widebasicblock.forward.if-self-dropout_rate-n","widebasicblock.forward.conv2","widebasicblock.forward.out-out-shortcut","widebasicblock.forward.return-out","widenet._make_layer.out_channels"],
               jax: ["class-widebasicblock-nn-module","widebasicblock.out_channels-int","widebasicblock.stride-int-n","widebasicblock.dropout_rate-float-n","widebasicblock.use_projection-bool-false","widebasicblock.nn-compact","widebasicblock.def-__call__-self-x-train-false","widebasicblock.__call__.shortcut-x","widebasicblock.__call__.if-self-use_projection","widebasicblock.__call__.shortcut-nn-conv","widebasicblock.__call__.self-out_channels","widebasicblock.__call__.n-n","widebasicblock.__call__.strides-self-stride-self-stride","widebasicblock.__call__.use_bias-false","widebasicblock.__call__.name-shortcut","widebasicblock.__call__.x","widebasicblock.__call__.y-nn-batchnorm-use_running_average-not-train-name-bnn-x","widebasicblock.__call__.y-nn-relu-y","widebasicblock.__call__.y-nn-conv","widebasicblock.__call__.self-out_channels.2","widebasicblock.__call__.n-n.2","widebasicblock.__call__.strides-self-stride-self-stride.2","widebasicblock.__call__.padding-same","widebasicblock.__call__.use_bias-false.2","widebasicblock.__call__.name-convn","widebasicblock.__call__.y","widebasicblock.__call__.y-nn-batchnorm-use_running_average-not-train-name-bnn-y","widebasicblock.__call__.y-nn-relu-y.2","widebasicblock.__call__.if-self-dropout_rate-n","widebasicblock.__call__.y-nn-dropout","widebasicblock.__call__.rate-self-dropout_rate","widebasicblock.__call__.name-dropout","widebasicblock.__call__.y-deterministic-not-train","widebasicblock.__call__.y-nn-conv.2","widebasicblock.__call__.self-out_channels.3","widebasicblock.__call__.n-n.3","widebasicblock.__call__.padding-same.2","widebasicblock.__call__.use_bias-false.3","widebasicblock.__call__.name-convn.2","widebasicblock.__call__.y.2","widebasicblock.__call__.y-y-shortcut","widebasicblock.__call__.return-y"],
             },
             focusRef: {
@@ -7012,11 +7012,11 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
                 kind: "norm",
                 badges: ["160"],
                 sourceRefs: {
-                  pytorch: ["widebasicblock.self-relu-nn-relu-inplace-true","widebasicblock.forward.out-self-relu-out"],
+                  pytorch: ["widebasicblock.self-bnn-nn-batchnormnd-in_channels","widebasicblock.forward.out-self-bnn-x"],
                   jax: ["widebasicblock.__call__.y-nn-batchnorm-use_running_average-not-train-name-bnn-x"],
                 },
                 focusRef: {
-                  pytorch: "widebasicblock.self-relu-nn-relu-inplace-true",
+                  pytorch: "widebasicblock.self-bnn-nn-batchnormnd-in_channels",
                   jax: "widebasicblock.__call__.y-nn-batchnorm-use_running_average-not-train-name-bnn-x",
                 },
                 includeChildRefs: false,
@@ -7028,11 +7028,11 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
                 kind: "conv",
                 badges: ["160->320", "k=3", "s=2"],
                 sourceRefs: {
-                  pytorch: ["widebasicblock.in_channels.2","widebasicblock.out_channels.2","widebasicblock.kernel_size-n","widebasicblock.stride-stride","widebasicblock.padding-n","widebasicblock.bias-false","widebasicblock.code.4","widebasicblock.self-bnn-nn-batchnormnd-out_channels","widebasicblock.forward.out-self-bnn-out"],
+                  pytorch: ["widebasicblock.self-convn-nn-convnd","widebasicblock.in_channels.2","widebasicblock.out_channels.2","widebasicblock.kernel_size-n","widebasicblock.stride-stride","widebasicblock.padding-n","widebasicblock.bias-false","widebasicblock.code.4","widebasicblock.forward.out-self-convn-out"],
                   jax: ["widebasicblock.__call__.y-nn-conv","widebasicblock.__call__.self-out_channels.2","widebasicblock.__call__.n-n.2","widebasicblock.__call__.strides-self-stride-self-stride.2","widebasicblock.__call__.padding-same","widebasicblock.__call__.use_bias-false.2","widebasicblock.__call__.name-convn","widebasicblock.__call__.y"],
                 },
                 focusRef: {
-                  pytorch: "widebasicblock.in_channels.2",
+                  pytorch: "widebasicblock.self-convn-nn-convnd",
                   jax: "widebasicblock.__call__.y-nn-conv",
                 },
                 includeChildRefs: false,
@@ -7044,11 +7044,11 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
                 kind: "conv",
                 badges: ["320->320", "k=3"],
                 sourceRefs: {
-                  pytorch: ["widebasicblock.out_channels.3","widebasicblock.out_channels.4","widebasicblock.kernel_size-n.2","widebasicblock.stride-n.2","widebasicblock.padding-n.2","widebasicblock.bias-false.2","widebasicblock.code.5","widebasicblock.self-shortcut-none"],
+                  pytorch: ["widebasicblock.self-conv2","widebasicblock.out_channels.3","widebasicblock.out_channels.4","widebasicblock.kernel_size-n.2","widebasicblock.stride-n.2","widebasicblock.padding-n.2","widebasicblock.bias-false.2","widebasicblock.code.5","widebasicblock.forward.conv2"],
                   jax: ["widebasicblock.__call__.y-nn-conv.2","widebasicblock.__call__.self-out_channels.3","widebasicblock.__call__.n-n.3","widebasicblock.__call__.padding-same.2","widebasicblock.__call__.use_bias-false.3","widebasicblock.__call__.name-convn.2","widebasicblock.__call__.y.2"],
                 },
                 focusRef: {
-                  pytorch: "widebasicblock.out_channels.3",
+                  pytorch: "widebasicblock.self-conv2",
                   jax: "widebasicblock.__call__.y-nn-conv.2",
                 },
                 includeChildRefs: false,
@@ -7060,7 +7060,7 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
                 kind: "conv",
                 badges: ["160->320", "s=2"],
                 sourceRefs: {
-                  pytorch: ["widebasicblock.if-stride-n-or-in_channels-out_channels","widebasicblock.self-shortcut-nn-convnd","widebasicblock.in_channels.3","widebasicblock.out_channels.5","widebasicblock.kernel_size-n.3","widebasicblock.stride-stride.2","widebasicblock.bias-false.3","widebasicblock.code.6","widebasicblock.forward.shortcut-self-shortcut-x"],
+                  pytorch: ["widebasicblock.self-shortcut-none","widebasicblock.if-stride-n-or-in_channels-out_channels","widebasicblock.self-shortcut-nn-convnd","widebasicblock.in_channels.3","widebasicblock.out_channels.5","widebasicblock.kernel_size-n.3","widebasicblock.stride-stride.2","widebasicblock.bias-false.3","widebasicblock.code.6","widebasicblock.forward.shortcut-self-shortcut-x"],
                   jax: ["widebasicblock.__call__.shortcut-x","widebasicblock.__call__.if-self-use_projection","widebasicblock.__call__.shortcut-nn-conv","widebasicblock.__call__.self-out_channels","widebasicblock.__call__.n-n","widebasicblock.__call__.strides-self-stride-self-stride","widebasicblock.__call__.use_bias-false","widebasicblock.__call__.name-shortcut","widebasicblock.__call__.x"],
                 },
                 focusRef: {
@@ -7112,11 +7112,11 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
         summary: "4 widened blocks",
         badges: ["640 ch", "8x8"],
         sourceRefs: {
-          pytorch: ["widenet.widths-n.7","widenet.block_count.3","widenet.stride-n.4","widenet.dropout_rate-dropout_rate.3","widenet.code.10","widenet.self-bn-nn-batchnormnd-widths-n","widenet.self-relu-nn-relu-inplace-true","widenet._make_layer.layers","widenet._make_layer.widebasicblock","widenet._make_layer.in_channels","widenet._make_layer.out_channels","widenet._make_layer.stride-stride","widenet._make_layer.dropout_rate-dropout_rate","widenet._make_layer.code.2","widenet._make_layer.code.3","widenet._make_layer.for-_-in-range-n-blocks"],
+          pytorch: ["widenet.self-layern-self-_make_layer.3","widenet.widths-n.6","widenet.widths-n.7","widenet.block_count.3","widenet.stride-n.4","widenet.dropout_rate-dropout_rate.3","widenet.code.10","widenet._make_layer.layers","widenet._make_layer.widebasicblock","widenet._make_layer.in_channels","widenet._make_layer.out_channels","widenet._make_layer.stride-stride","widenet._make_layer.dropout_rate-dropout_rate","widenet._make_layer.code.2","widenet._make_layer.code.3","widenet._make_layer.for-_-in-range-n-blocks"],
           jax: ["widenet.__call__.x-self-_stage.3","widenet.__call__.x.4","widenet.__call__.widths-n.4","widenet.__call__.block_count.3","widenet.__call__.stride-n.3","widenet.__call__.train-train.3","widenet.__call__.name-layern.3","widenet.__call__.code.9","widenet._stage.for-index-in-range-blocks","widenet._stage.block_stride-stride-if-index-n-else-n","widenet._stage.use_projection-index-n","widenet._stage.block_name-f-name-index","widenet._stage.x-widebasicblock","widenet._stage.channels","widenet._stage.stride-block_stride","widenet._stage.dropout_rate-self-dropout_rate","widenet._stage.use_projection-use_projection","widenet._stage.name-block_name","widenet._stage.x-train-train"],
         },
         focusRef: {
-          pytorch: "widenet.widths-n.7",
+          pytorch: "widenet.self-layern-self-_make_layer.3",
           jax: "widenet.__call__.x-self-_stage.3",
         },
         includeChildRefs: false,
@@ -7162,7 +7162,7 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
         kind: "group",
         summary: "global average pool",
         sourceRefs: {
-          pytorch: ["widenet.forward.x-self-relu-x","widenet.forward.x-torch-flatten-x-n"],
+          pytorch: ["widenet.self-relu-nn-relu-inplace-true","widenet.forward.x-self-relu-x","widenet.forward.x-torch-flatten-x-n"],
           jax: ["widenet.__call__.x-nn-relu-x"],
         },
         focusRef: {
@@ -7266,11 +7266,11 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
         summary: "7x7 stride 2",
         badges: ["3->64", "56x56"],
         sourceRefs: {
-          pytorch: ["densenet.num_init_features","densenet.kernel_size-n","densenet.forward.x-self-features-x"],
+          pytorch: ["densenet.stem","densenet.nn-batchnormnd-num_init_features","densenet.nn-relu-inplace-true","densenet.code.5"],
           jax: ["class-densenet-nn-module","densenet.__call__.x-nn-batchnorm-use_running_average-not-train-name-stem_norm-x","densenet.__call__.x-nn-relu-x"],
         },
         focusRef: {
-          pytorch: "densenet.num_init_features",
+          pytorch: "densenet.stem",
           jax: "class-densenet-nn-module",
         },
         includeChildRefs: true,
@@ -7282,11 +7282,11 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
             kind: "conv",
             badges: ["3->64", "k=7", "s=2"],
             sourceRefs: {
-              pytorch: ["densenet.stride-n","densenet.padding-n","densenet.bias-false","densenet.code.4","densenet.nn-batchnormnd-num_init_features","densenet.nn-relu-inplace-true","densenet.nn-maxpoolnd-kernel_size-n-stride-n-padding-n","densenet.code.5"],
+              pytorch: ["densenet.stem-conv","densenet.num_init_features","densenet.kernel_size-n","densenet.stride-n","densenet.padding-n","densenet.bias-false","densenet.code.4"],
               jax: ["densenet.__call__.x-nn-conv","densenet.__call__.self-num_init_features","densenet.__call__.n-n","densenet.__call__.strides-n-n","densenet.__call__.padding-same","densenet.__call__.use_bias-false","densenet.__call__.name-stem_conv","densenet.__call__.x"],
             },
             focusRef: {
-              pytorch: "densenet.stride-n",
+              pytorch: "densenet.stem-conv",
               jax: "densenet.__call__.x-nn-conv",
             },
             includeChildRefs: false,
@@ -7298,11 +7298,11 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
             kind: "pool",
             badges: ["56x56"],
             sourceRefs: {
-              pytorch: ["densenet.blocks"],
+              pytorch: ["densenet.nn-maxpoolnd-kernel_size-n-stride-n-padding-n"],
               jax: ["densenet.__call__.x-nn-max_pool-x-window_shape-n-n-strides-n-n-padding-same"],
             },
             focusRef: {
-              pytorch: "densenet.blocks",
+              pytorch: "densenet.nn-maxpoolnd-kernel_size-n-stride-n-padding-n",
               jax: "densenet.__call__.x-nn-max_pool-x-window_shape-n-n-strides-n-n-padding-same",
             },
             includeChildRefs: false,
@@ -7317,7 +7317,7 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
         summary: "6 dense layers",
         badges: ["64->256", "56x56"],
         sourceRefs: {
-          pytorch: ["denseblock.self","denseblock.layer_count","denseblock.in_channels","denseblock.growth_rate","denseblock.dropout_rate-n","denseblock.code","denseblock.super-__init__","denseblock.layers","denseblock.current_channels-in_channels","denseblock.for-_-in-range-layer_count","denseblock.layer-denselayer","denseblock.current_channels","denseblock.growth_rate.2","denseblock.dropout_rate-dropout_rate","denseblock.code.4","denseblock.layers-append-layer","denseblock.current_channels-current_channels-growth_rate","denseblock.self-layers-nn-modulelist-layers","denseblock.self-out_channels-current_channels","denseblock.def-forward-self-x","denseblock.forward.out-x","denseblock.forward.for-layer-in-self-layers","denseblock.forward.out-layer-out","denseblock.forward.return-out","class-transition-nn-module","densenet.dropout_rate-dropout_rate","densenet.code.8","densenet.blocks-append-dense_block","densenet.num_features-dense_block-out_channels","densenet.is_last_block-index-len-block_config-n","densenet.if-not-is_last_block","densenet.out_features-int-num_features-compression","densenet.transition-transition-num_features-out_features","densenet.forward.x-self-norm-x","densenet.forward.x-f-relu-x-inplace-true"],
+          pytorch: ["denseblock.self","denseblock.layer_count","denseblock.in_channels","denseblock.growth_rate","denseblock.dropout_rate-n","denseblock.code","denseblock.super-__init__","denseblock.layers","denseblock.current_channels-in_channels","denseblock.for-_-in-range-layer_count","denseblock.layer-denselayer","denseblock.current_channels","denseblock.growth_rate.2","denseblock.dropout_rate-dropout_rate","denseblock.code.4","denseblock.layers-append-layer","denseblock.current_channels-current_channels-growth_rate","denseblock.self-layers-nn-modulelist-layers","denseblock.self-out_channels-current_channels","denseblock.def-forward-self-x","denseblock.forward.out-x","denseblock.forward.for-layer-in-self-layers","denseblock.forward.out-layer-out","denseblock.forward.return-out","class-transition-nn-module","densenet.blocks","densenet.dropout_rate-dropout_rate","densenet.code.8","densenet.blocks-append-dense_block","densenet.num_features-dense_block-out_channels","densenet.is_last_block-index-len-block_config-n","densenet.if-not-is_last_block","densenet.out_features-int-num_features-compression","densenet.transition-transition-num_features-out_features","densenet.forward.x-self-features-x","densenet.forward.x-self-norm-x","densenet.forward.x-f-relu-x-inplace-true"],
           jax: ["densenet.__call__.num_features-self-num_init_features","densenet.__call__.for-block_index-layer_count-in-enumerate-self-block_config","densenet.__call__.for-layer_index-in-range-layer_count","densenet.__call__.layer_name-f-denseblock-block_index-n-layer-layer_index-n","densenet.__call__.x-denselayer","densenet.__call__.self-growth_rate","densenet.__call__.dropout_rate-self-dropout_rate","densenet.__call__.name-layer_name","densenet.__call__.x-train-train","densenet.__call__.num_features-num_features-self-growth_rate"],
         },
         focusRef: {
@@ -7350,8 +7350,8 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
             kind: "concat",
             summary: "repeat concatenation",
             sourceRefs: {
-              pytorch: ["denseblock.current_channels","denseblock.growth_rate.2","denseblock.dropout_rate-dropout_rate","denseblock.code.4","denseblock.layers-append-layer","denseblock.current_channels-current_channels-growth_rate","denseblock.self-layers-nn-modulelist-layers","denseblock.self-out_channels-current_channels","denseblock.forward.return-out"],
-              jax: ["densenet.__call__.for-block_index-layer_count-in-enumerate-self-block_config","densenet.__call__.for-layer_index-in-range-layer_count","densenet.__call__.layer_name-f-denseblock-block_index-n-layer-layer_index-n","densenet.__call__.x-denselayer","densenet.__call__.self-growth_rate","densenet.__call__.dropout_rate-self-dropout_rate","densenet.__call__.name-layer_name","densenet.__call__.x-train-train","densenet.__call__.num_features-num_features-self-growth_rate"],
+              pytorch: ["denseblock.current_channels","denseblock.growth_rate.2","denseblock.dropout_rate-dropout_rate","denseblock.code.4","denseblock.layers-append-layer","denseblock.current_channels-current_channels-growth_rate","denseblock.self-layers-nn-modulelist-layers","denseblock.self-out_channels-current_channels","denselayer.forward.features-x-out","denselayer.forward.out-torch-cat-features-dim-n","denseblock.forward.return-out"],
+              jax: ["denselayer.__call__.features-x-y","denselayer.__call__.y-jnp-concatenate-features-axis-n","densenet.__call__.for-block_index-layer_count-in-enumerate-self-block_config","densenet.__call__.for-layer_index-in-range-layer_count","densenet.__call__.layer_name-f-denseblock-block_index-n-layer-layer_index-n","densenet.__call__.x-denselayer","densenet.__call__.self-growth_rate","densenet.__call__.dropout_rate-self-dropout_rate","densenet.__call__.name-layer_name","densenet.__call__.x-train-train","densenet.__call__.num_features-num_features-self-growth_rate"],
             },
             focusRef: {
               pytorch: "denseblock.current_channels",
@@ -7369,7 +7369,7 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
         summary: "compress + downsample",
         badges: ["256->128", "28x28"],
         sourceRefs: {
-          pytorch: ["transition.in_channels","transition.self-conv-nn-convnd","transition.in_channels.2","transition.kernel_size-n","transition.forward.out-self-relu-out","transition.forward.out-self-conv-out","transition.forward.out-f-avg_poolnd-out-kernel_size-n-stride-n","transition.forward.return-out","class-densenet-nn-module","densenet.num_features-out_features","densenet.self-features-nn-sequential-blocks","densenet.self-norm-nn-batchnormnd-num_features","densenet.self-classifier-nn-linear-num_features-num_classes"],
+          pytorch: ["transition.in_channels","transition.self-conv-nn-convnd","transition.in_channels.2","transition.kernel_size-n","transition.def-forward-self-x","transition.forward.out-self-relu-out","transition.forward.out-self-conv-out","transition.forward.out-f-avg_poolnd-out-kernel_size-n-stride-n","transition.forward.return-out","class-densenet-nn-module","densenet.num_features-out_features","densenet.self-features-nn-sequential-blocks","densenet.self-norm-nn-batchnormnd-num_features","densenet.self-classifier-nn-linear-num_features-num_classes"],
           jax: ["class-transition-nn-module","transition.__call__.y-nn-batchnorm-use_running_average-not-train-name-norm-x","transition.__call__.y-nn-relu-y","transition.__call__.y-nn-conv","transition.__call__.self-out_channels","transition.__call__.n-n","transition.__call__.use_bias-false","transition.__call__.name-conv","transition.__call__.y","transition.__call__.y-nn-avg_pool-y-window_shape-n-n-strides-n-n-padding-valid","transition.__call__.return-y","densenet.__call__.is_last_block-block_index-len-self-block_config-n","densenet.__call__.if-not-is_last_block","densenet.__call__.num_features-int-num_features-self-compression","densenet.__call__.transition_name-f-transition-block_index-n","densenet.__call__.x-transition-num_features-name-transition_name-x-train-train"],
         },
         focusRef: {
@@ -7385,11 +7385,11 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
             kind: "conv",
             badges: ["256->128"],
             sourceRefs: {
-              pytorch: ["transition.kernel_size-n","transition.stride-n","transition.bias-false","transition.code.4","transition.def-forward-self-x","densenet.self-norm-nn-batchnormnd-num_features"],
+              pytorch: ["transition.self-conv-nn-convnd","transition.in_channels.2","transition.kernel_size-n","transition.stride-n","transition.bias-false","transition.code.4","transition.forward.out-self-conv-out"],
               jax: ["transition.__call__.y-nn-conv","transition.__call__.self-out_channels","transition.__call__.n-n","transition.__call__.use_bias-false","transition.__call__.name-conv","transition.__call__.y","densenet.__call__.x-transition-num_features-name-transition_name-x-train-train"],
             },
             focusRef: {
-              pytorch: "transition.kernel_size-n",
+              pytorch: "transition.self-conv-nn-convnd",
               jax: "transition.__call__.y-nn-conv",
             },
             includeChildRefs: false,
@@ -7504,8 +7504,8 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
             kind: "concat",
             summary: "same pattern",
             sourceRefs: {
-              pytorch: ["denseblock.current_channels","denseblock.growth_rate.2","denseblock.dropout_rate-dropout_rate","denseblock.code.4","denseblock.layers-append-layer","denseblock.current_channels-current_channels-growth_rate","denseblock.self-layers-nn-modulelist-layers","denseblock.self-out_channels-current_channels","denseblock.forward.return-out"],
-              jax: ["densenet.__call__.for-block_index-layer_count-in-enumerate-self-block_config","densenet.__call__.for-layer_index-in-range-layer_count","densenet.__call__.layer_name-f-denseblock-block_index-n-layer-layer_index-n","densenet.__call__.x-denselayer","densenet.__call__.self-growth_rate","densenet.__call__.dropout_rate-self-dropout_rate","densenet.__call__.name-layer_name","densenet.__call__.x-train-train","densenet.__call__.num_features-num_features-self-growth_rate"],
+              pytorch: ["denseblock.current_channels","denseblock.growth_rate.2","denseblock.dropout_rate-dropout_rate","denseblock.code.4","denseblock.layers-append-layer","denseblock.current_channels-current_channels-growth_rate","denseblock.self-layers-nn-modulelist-layers","denseblock.self-out_channels-current_channels","denselayer.forward.features-x-out","denselayer.forward.out-torch-cat-features-dim-n","denseblock.forward.return-out"],
+              jax: ["denselayer.__call__.features-x-y","denselayer.__call__.y-jnp-concatenate-features-axis-n","densenet.__call__.for-block_index-layer_count-in-enumerate-self-block_config","densenet.__call__.for-layer_index-in-range-layer_count","densenet.__call__.layer_name-f-denseblock-block_index-n-layer-layer_index-n","densenet.__call__.x-denselayer","densenet.__call__.self-growth_rate","densenet.__call__.dropout_rate-self-dropout_rate","densenet.__call__.name-layer_name","densenet.__call__.x-train-train","densenet.__call__.num_features-num_features-self-growth_rate"],
             },
             focusRef: {
               pytorch: "denseblock.current_channels",
@@ -7573,8 +7573,8 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
             kind: "concat",
             summary: "repeat concatenation",
             sourceRefs: {
-              pytorch: ["denseblock.current_channels","denseblock.growth_rate.2","denseblock.self-out_channels-current_channels","denseblock.forward.return-out"],
-              jax: ["densenet.__call__.for-block_index-layer_count-in-enumerate-self-block_config","densenet.__call__.for-layer_index-in-range-layer_count","densenet.__call__.layer_name-f-denseblock-block_index-n-layer-layer_index-n","densenet.__call__.x-denselayer","densenet.__call__.self-growth_rate","densenet.__call__.dropout_rate-self-dropout_rate","densenet.__call__.name-layer_name","densenet.__call__.x-train-train","densenet.__call__.num_features-num_features-self-growth_rate"],
+              pytorch: ["denseblock.current_channels","denseblock.growth_rate.2","denseblock.self-out_channels-current_channels","denselayer.forward.features-x-out","denselayer.forward.out-torch-cat-features-dim-n","denseblock.forward.return-out"],
+              jax: ["denselayer.__call__.features-x-y","denselayer.__call__.y-jnp-concatenate-features-axis-n","densenet.__call__.for-block_index-layer_count-in-enumerate-self-block_config","densenet.__call__.for-layer_index-in-range-layer_count","densenet.__call__.layer_name-f-denseblock-block_index-n-layer-layer_index-n","densenet.__call__.x-denselayer","densenet.__call__.self-growth_rate","densenet.__call__.dropout_rate-self-dropout_rate","densenet.__call__.name-layer_name","densenet.__call__.x-train-train","densenet.__call__.num_features-num_features-self-growth_rate"],
             },
             focusRef: {
               pytorch: "denseblock.current_channels",
@@ -7976,15 +7976,15 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
             id: "head.dropout",
             label: "dropout",
             type: "Dropout",
-            kind: "activation",
+            kind: "dropout",
             badges: ["p=0.2"],
             sourceRefs: {
               pytorch: ["mobilenetvn.dropout-n","mobilenetvn.self-dropout-nn-dropout-p-dropout","mobilenetvn.forward.x-self-dropout-x"],
               jax: ["mobilenetvn.dropout_rate-float-n","mobilenetvn.__call__.x-nn-dropout-rate-self-dropout_rate-deterministic-not-train-name-dropout"],
             },
             focusRef: {
-              pytorch: "mobilenetvn.dropout-n",
-              jax: "mobilenetvn.dropout_rate-float-n",
+              pytorch: "mobilenetvn.self-dropout-nn-dropout-p-dropout",
+              jax: "mobilenetvn.__call__.x-nn-dropout-rate-self-dropout_rate-deterministic-not-train-name-dropout",
             },
             includeChildRefs: false,
           },
@@ -8018,11 +8018,11 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
         kind: "input",
         badges: ["3 x 224 x 224"],
         sourceRefs: {
-          pytorch: ["efficientnet.forward.x-self-blocks-x"],
+          pytorch: ["efficientnet.forward.stem"],
           jax: ["efficientnet.__call__.strides-n-n","efficientnet.__call__.padding-same","efficientnet.__call__.use_bias-false","efficientnet.__call__.name-stem_conv","efficientnet.__call__.x","efficientnet.__call__.x-nn-batchnorm-use_running_average-not-train-name-stem_bn-x","efficientnet.__call__.x-nn-silu-x"],
         },
         focusRef: {
-          pytorch: "efficientnet.forward.x-self-blocks-x",
+          pytorch: "efficientnet.forward.stem",
           jax: "efficientnet.__call__.strides-n-n",
         },
         includeChildRefs: false,
@@ -8035,11 +8035,11 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
         summary: "3x3 stride 2",
         badges: ["3->32", "112x112"],
         sourceRefs: {
-          pytorch: ["efficientnet.n","efficientnet.n.2","efficientnet.blocks"],
+          pytorch: ["efficientnet.stem","efficientnet.nn-batchnormnd-n","efficientnet.nn-silu-inplace-true","efficientnet.code.8","efficientnet.forward.stem"],
           jax: [],
         },
         focusRef: {
-          pytorch: "efficientnet.n",
+          pytorch: "efficientnet.stem",
           jax: "efficientnet.__call__.x-nn-conv",
         },
         includeChildRefs: true,
@@ -8051,11 +8051,11 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
             kind: "conv",
             badges: ["3->32", "k=3", "s=2"],
             sourceRefs: {
-              pytorch: ["efficientnet.kernel_size-n","efficientnet.stride-n","efficientnet.padding-n","efficientnet.bias-false","efficientnet.code.7","efficientnet.nn-batchnormnd-n","efficientnet.nn-silu-inplace-true","efficientnet.code.8","efficientnet.forward.x-self-blocks-x"],
+              pytorch: ["efficientnet.stem-conv","efficientnet.n","efficientnet.n.2","efficientnet.kernel_size-n","efficientnet.stride-n","efficientnet.padding-n","efficientnet.bias-false","efficientnet.code.7","efficientnet.forward.stem"],
               jax: ["efficientnet.__call__.x-nn-conv","efficientnet.__call__.n","efficientnet.__call__.n-n","efficientnet.__call__.strides-n-n","efficientnet.__call__.padding-same","efficientnet.__call__.use_bias-false","efficientnet.__call__.name-stem_conv","efficientnet.__call__.x","efficientnet.__call__.x-nn-batchnorm-use_running_average-not-train-name-stem_bn-x"],
             },
             focusRef: {
-              pytorch: "efficientnet.kernel_size-n",
+              pytorch: "efficientnet.stem-conv",
               jax: "efficientnet.__call__.x-nn-conv",
             },
             includeChildRefs: false,
@@ -8066,11 +8066,11 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
             type: "Swish",
             kind: "activation",
             sourceRefs: {
-              pytorch: ["efficientnet.forward.x-self-blocks-x"],
+              pytorch: ["efficientnet.nn-silu-inplace-true","efficientnet.forward.stem"],
               jax: ["efficientnet.__call__.x-nn-silu-x"],
             },
             focusRef: {
-              pytorch: "efficientnet.forward.x-self-blocks-x",
+              pytorch: "efficientnet.nn-silu-inplace-true",
               jax: "efficientnet.__call__.x-nn-silu-x",
             },
             includeChildRefs: false,
@@ -8085,7 +8085,7 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
         summary: "1 block",
         badges: ["32->16", "112x112"],
         sourceRefs: {
-          pytorch: ["efficientnet.n-n-n-n-n.2","efficientnet.n-n-n-n-n.3","efficientnet.for-expand_ratio-out_channels-repeats-stride-kernel_size-in-settings","efficientnet.for-index-in-range-repeats","efficientnet.block_stride-stride-if-index-n-else-n","efficientnet.block-mbconv","efficientnet.in_channels","efficientnet.out_channels","efficientnet.expand_ratio","efficientnet.block_stride","efficientnet.kernel_size","efficientnet.code.11","efficientnet.blocks-append-block","efficientnet.in_channels-out_channels","efficientnet.self-blocks-nn-sequential-blocks","efficientnet.forward.x-self-head-x"],
+          pytorch: ["efficientnet.n-n-n-n-n.2","efficientnet.n-n-n-n-n.3","efficientnet.blocks","efficientnet.for-expand_ratio-out_channels-repeats-stride-kernel_size-in-settings","efficientnet.for-index-in-range-repeats","efficientnet.block_stride-stride-if-index-n-else-n","efficientnet.block-mbconv","efficientnet.in_channels","efficientnet.out_channels","efficientnet.expand_ratio","efficientnet.block_stride","efficientnet.kernel_size","efficientnet.code.11","efficientnet.blocks-append-block","efficientnet.in_channels-out_channels","efficientnet.self-blocks-nn-sequential-blocks","efficientnet.forward.x-self-blocks-x"],
           jax: ["efficientnet.__call__.n-n-n-n-n","efficientnet.__call__.for-expand_ratio-out_channels-repeats-stride-kernel_size-in-settings","efficientnet.__call__.for-repeat_index-in-range-repeats","efficientnet.__call__.block_stride-stride-if-repeat_index-n-else-n","efficientnet.__call__.block_name-f-blocks-block_index","efficientnet.__call__.x-mbconv","efficientnet.__call__.out_channels","efficientnet.__call__.expand_ratio","efficientnet.__call__.block_stride","efficientnet.__call__.kernel_size","efficientnet.__call__.name-block_name","efficientnet.__call__.x-train-train","efficientnet.__call__.block_index-block_index-n"],
         },
         focusRef: {
@@ -8101,7 +8101,7 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
             kind: "group",
             summary: "depthwise + SE",
             sourceRefs: {
-              pytorch: ["mbconv.self","mbconv.squeeze_channels-max-n-in_channels-n","mbconv.padding-kernel_size-n","mbconv.self-use_residual-stride-n-and-in_channels-out_channels","mbconv.if-expand_ratio-n","mbconv.expanded_channels","mbconv.self-project-nn-sequential","mbconv.nn-convnd-expanded_channels-out_channels-kernel_size-n-bias-false","mbconv.nn-batchnormnd-out_channels","mbconv.forward.identity-x","mbconv.forward.if-self-expand-is-not-none","mbconv.forward.out-self-project-out","efficientnet.n-n-n-n-n.2","efficientnet.n-n-n-n-n.3","efficientnet.expand_ratio","efficientnet.forward.x-self-head-x"],
+              pytorch: ["mbconv.self","mbconv.squeeze_channels-max-n-in_channels-n","mbconv.padding-kernel_size-n","mbconv.self-use_residual-stride-n-and-in_channels-out_channels","mbconv.if-expand_ratio-n","mbconv.expanded_channels","mbconv.self-project-nn-sequential","mbconv.nn-convnd-expanded_channels-out_channels-kernel_size-n-bias-false","mbconv.nn-batchnormnd-out_channels","mbconv.forward.identity-x","mbconv.forward.if-self-expand-is-not-none","mbconv.forward.out-self-project-out","efficientnet.n-n-n-n-n.2","efficientnet.n-n-n-n-n.3","efficientnet.expand_ratio","efficientnet.forward.x-self-blocks-x"],
               jax: ["class-mbconv-nn-module","mbconv.out_channels-int","mbconv.expand_ratio-int","mbconv.stride-int","mbconv.kernel_size-int","mbconv.se_ratio-float-n","mbconv.nn-compact","mbconv.def-__call__-self-x-train-false","mbconv.__call__.in_channels-x-shape-n","mbconv.__call__.expanded_channels-in_channels-self-expand_ratio","mbconv.__call__.squeeze_channels-max-n-int-expanded_channels-self-se_ratio","mbconv.__call__.use_residual-self-stride-n-and-in_channels-self-out_channels","mbconv.__call__.y-x","mbconv.__call__.if-self-expand_ratio-n","mbconv.__call__.y-nn-conv","mbconv.__call__.expanded_channels","mbconv.__call__.n-n","mbconv.__call__.use_bias-false","mbconv.__call__.name-expand_conv","mbconv.__call__.y","mbconv.__call__.y-nn-batchnorm-use_running_average-not-train-name-expand_bn-y","mbconv.__call__.y-nn-silu-y","mbconv.__call__.y-nn-conv.2","mbconv.__call__.expanded_channels.2","mbconv.__call__.self-kernel_size-self-kernel_size","mbconv.__call__.strides-self-stride-self-stride","mbconv.__call__.padding-same","mbconv.__call__.feature_group_count-expanded_channels","mbconv.__call__.use_bias-false.2","mbconv.__call__.name-depthwise_conv","mbconv.__call__.y.2","mbconv.__call__.y-nn-batchnorm-use_running_average-not-train-name-depthwise_bn-y","mbconv.__call__.y-nn-silu-y.2","mbconv.__call__.y-squeezeexcite-squeeze_channels-name-se-y","mbconv.__call__.y-nn-conv.3","mbconv.__call__.self-out_channels","mbconv.__call__.n-n.2","mbconv.__call__.use_bias-false.3","mbconv.__call__.name-project_conv","mbconv.__call__.y.3","mbconv.__call__.y-nn-batchnorm-use_running_average-not-train-name-project_bn-y","mbconv.__call__.if-use_residual","mbconv.__call__.y-y-x","mbconv.__call__.return-y"],
             },
             focusRef: {
@@ -8121,7 +8121,7 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
         badges: ["16->24", "56x56"],
         defaultExpanded: true,
         sourceRefs: {
-          pytorch: ["efficientnet.n-n-n-n-n.2","efficientnet.n-n-n-n-n.4","efficientnet.for-expand_ratio-out_channels-repeats-stride-kernel_size-in-settings","efficientnet.for-index-in-range-repeats","efficientnet.block_stride-stride-if-index-n-else-n","efficientnet.block-mbconv","efficientnet.in_channels","efficientnet.out_channels","efficientnet.expand_ratio","efficientnet.block_stride","efficientnet.kernel_size","efficientnet.code.11","efficientnet.blocks-append-block","efficientnet.in_channels-out_channels","efficientnet.self-blocks-nn-sequential-blocks","efficientnet.forward.x-self-head-x"],
+          pytorch: ["efficientnet.n-n-n-n-n.2","efficientnet.n-n-n-n-n.4","efficientnet.for-expand_ratio-out_channels-repeats-stride-kernel_size-in-settings","efficientnet.for-index-in-range-repeats","efficientnet.block_stride-stride-if-index-n-else-n","efficientnet.block-mbconv","efficientnet.in_channels","efficientnet.out_channels","efficientnet.expand_ratio","efficientnet.block_stride","efficientnet.kernel_size","efficientnet.code.11","efficientnet.blocks-append-block","efficientnet.in_channels-out_channels","efficientnet.self-blocks-nn-sequential-blocks","efficientnet.forward.x-self-blocks-x"],
           jax: ["efficientnet.__call__.n-n-n-n-n.2","efficientnet.__call__.for-expand_ratio-out_channels-repeats-stride-kernel_size-in-settings","efficientnet.__call__.for-repeat_index-in-range-repeats","efficientnet.__call__.block_stride-stride-if-repeat_index-n-else-n","efficientnet.__call__.block_name-f-blocks-block_index","efficientnet.__call__.x-mbconv","efficientnet.__call__.out_channels","efficientnet.__call__.expand_ratio","efficientnet.__call__.block_stride","efficientnet.__call__.kernel_size","efficientnet.__call__.name-block_name","efficientnet.__call__.x-train-train","efficientnet.__call__.block_index-block_index-n"],
         },
         focusRef: {
@@ -8138,7 +8138,7 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
             summary: "stride 2",
             defaultExpanded: true,
             sourceRefs: {
-              pytorch: ["mbconv.self","mbconv.squeeze_channels-max-n-in_channels-n","mbconv.padding-kernel_size-n","mbconv.self-use_residual-stride-n-and-in_channels-out_channels","mbconv.if-expand_ratio-n","mbconv.nn-convnd-in_channels-expanded_channels-kernel_size-n-bias-false","mbconv.nn-batchnormnd-expanded_channels","mbconv.expanded_channels","mbconv.self-project-nn-sequential","mbconv.nn-convnd-expanded_channels-out_channels-kernel_size-n-bias-false","mbconv.nn-batchnormnd-out_channels","mbconv.forward.identity-x","mbconv.forward.if-self-expand-is-not-none","mbconv.forward.out-self-depthwise-out","mbconv.forward.out-self-project-out","mbconv.forward.if-self-use_residual","efficientnet.n-n-n-n-n.2","efficientnet.n-n-n-n-n.4","efficientnet.expand_ratio","efficientnet.forward.x-self-head-x"],
+              pytorch: ["mbconv.self","mbconv.squeeze_channels-max-n-in_channels-n","mbconv.padding-kernel_size-n","mbconv.self-use_residual-stride-n-and-in_channels-out_channels","mbconv.if-expand_ratio-n","mbconv.nn-convnd-in_channels-expanded_channels-kernel_size-n-bias-false","mbconv.nn-batchnormnd-expanded_channels","mbconv.expanded_channels","mbconv.self-project-nn-sequential","mbconv.nn-convnd-expanded_channels-out_channels-kernel_size-n-bias-false","mbconv.nn-batchnormnd-out_channels","mbconv.forward.identity-x","mbconv.forward.if-self-expand-is-not-none","mbconv.forward.out-self-depthwise-out","mbconv.forward.out-self-project-out","mbconv.forward.if-self-use_residual","efficientnet.n-n-n-n-n.2","efficientnet.n-n-n-n-n.4","efficientnet.expand_ratio","efficientnet.forward.x-self-blocks-x"],
               jax: ["class-mbconv-nn-module","mbconv.out_channels-int","mbconv.expand_ratio-int","mbconv.stride-int","mbconv.kernel_size-int","mbconv.se_ratio-float-n","mbconv.nn-compact","mbconv.def-__call__-self-x-train-false","mbconv.__call__.in_channels-x-shape-n","mbconv.__call__.expanded_channels-in_channels-self-expand_ratio","mbconv.__call__.squeeze_channels-max-n-int-expanded_channels-self-se_ratio","mbconv.__call__.use_residual-self-stride-n-and-in_channels-self-out_channels","mbconv.__call__.y-x","mbconv.__call__.if-self-expand_ratio-n","mbconv.__call__.y-nn-conv","mbconv.__call__.expanded_channels","mbconv.__call__.n-n","mbconv.__call__.use_bias-false","mbconv.__call__.name-expand_conv","mbconv.__call__.y","mbconv.__call__.y-nn-batchnorm-use_running_average-not-train-name-expand_bn-y","mbconv.__call__.y-nn-silu-y","mbconv.__call__.y-nn-conv.2","mbconv.__call__.expanded_channels.2","mbconv.__call__.self-kernel_size-self-kernel_size","mbconv.__call__.strides-self-stride-self-stride","mbconv.__call__.padding-same","mbconv.__call__.feature_group_count-expanded_channels","mbconv.__call__.use_bias-false.2","mbconv.__call__.name-depthwise_conv","mbconv.__call__.y.2","mbconv.__call__.y-nn-batchnorm-use_running_average-not-train-name-depthwise_bn-y","mbconv.__call__.y-nn-silu-y.2","mbconv.__call__.y-squeezeexcite-squeeze_channels-name-se-y","mbconv.__call__.y-nn-conv.3","mbconv.__call__.self-out_channels","mbconv.__call__.n-n.2","mbconv.__call__.use_bias-false.3","mbconv.__call__.name-project_conv","mbconv.__call__.y.3","mbconv.__call__.y-nn-batchnorm-use_running_average-not-train-name-project_bn-y","mbconv.__call__.if-use_residual","mbconv.__call__.y-y-x","mbconv.__call__.return-y"],
             },
             focusRef: {
@@ -8154,7 +8154,7 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
                 kind: "conv",
                 badges: ["16->96"],
                 sourceRefs: {
-                  pytorch: ["mbconv.nn-convnd-in_channels-expanded_channels-kernel_size-n-bias-false","mbconv.nn-batchnormnd-expanded_channels","mbconv.nn-silu-inplace-true","mbconv.code.6","mbconv.self-depthwise-nn-sequential","mbconv.nn-convnd","mbconv.forward.if-self-expand-is-not-none","mbconv.forward.out-self-expand-out","mbconv.forward.out-self-depthwise-out"],
+                  pytorch: ["mbconv.nn-convnd-in_channels-expanded_channels-kernel_size-n-bias-false","mbconv.nn-batchnormnd-expanded_channels","mbconv.nn-silu-inplace-true","mbconv.code.6","mbconv.forward.if-self-expand-is-not-none","mbconv.forward.out-self-expand-out"],
                   jax: ["mbconv.__call__.expanded_channels-in_channels-self-expand_ratio","mbconv.__call__.if-self-expand_ratio-n","mbconv.__call__.y-nn-conv","mbconv.__call__.expanded_channels","mbconv.__call__.n-n","mbconv.__call__.use_bias-false","mbconv.__call__.name-expand_conv","mbconv.__call__.y","mbconv.__call__.y-nn-batchnorm-use_running_average-not-train-name-expand_bn-y","mbconv.__call__.y-nn-silu-y"],
                 },
                 focusRef: {
@@ -8170,11 +8170,11 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
                 kind: "conv",
                 badges: ["k=3", "s=2", "groups=96"],
                 sourceRefs: {
-                  pytorch: ["mbconv.expanded_channels","mbconv.expanded_channels.2","mbconv.kernel_size-kernel_size","mbconv.stride-stride","mbconv.padding-padding","mbconv.groups-expanded_channels","mbconv.bias-false","mbconv.code.7","mbconv.nn-batchnormnd-expanded_channels.2","mbconv.nn-silu-inplace-true.2","mbconv.code.8","mbconv.se_channels-int-expanded_channels-se_ratio-or-squeeze_channels"],
+                  pytorch: ["mbconv.self-depthwise-nn-sequential","mbconv.nn-convnd","mbconv.expanded_channels","mbconv.expanded_channels.2","mbconv.kernel_size-kernel_size","mbconv.stride-stride","mbconv.padding-padding","mbconv.groups-expanded_channels","mbconv.bias-false","mbconv.code.7","mbconv.nn-batchnormnd-expanded_channels.2","mbconv.nn-silu-inplace-true.2","mbconv.code.8","mbconv.forward.out-self-depthwise-out"],
                   jax: ["mbconv.__call__.y-nn-conv.2","mbconv.__call__.expanded_channels.2","mbconv.__call__.self-kernel_size-self-kernel_size","mbconv.__call__.strides-self-stride-self-stride","mbconv.__call__.padding-same","mbconv.__call__.feature_group_count-expanded_channels","mbconv.__call__.use_bias-false.2","mbconv.__call__.name-depthwise_conv","mbconv.__call__.y.2","mbconv.__call__.y-nn-batchnorm-use_running_average-not-train-name-depthwise_bn-y","mbconv.__call__.y-nn-silu-y.2"],
                 },
                 focusRef: {
-                  pytorch: "mbconv.expanded_channels",
+                  pytorch: "mbconv.nn-convnd",
                   jax: "mbconv.__call__.y-nn-conv.2",
                 },
                 includeChildRefs: false,
@@ -8186,7 +8186,7 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
                 kind: "attention",
                 badges: ["channel gate"],
                 sourceRefs: {
-                  pytorch: ["squeezeexcite.def-__init__","squeezeexcite.self-reduce-nn-convnd-channels-squeeze_channels-kernel_size-n","squeezeexcite.self-expand-nn-convnd-squeeze_channels-channels-kernel_size-n","squeezeexcite.forward.scale-self-reduce-scale","squeezeexcite.forward.scale-f-silu-scale","squeezeexcite.forward.scale-self-expand-scale","squeezeexcite.forward.scale-torch-sigmoid-scale","squeezeexcite.forward.out-x-scale","squeezeexcite.forward.return-out","mbconv.self-project-nn-sequential","mbconv.nn-convnd-expanded_channels-out_channels-kernel_size-n-bias-false","mbconv.forward.out-self-project-out"],
+                  pytorch: ["mbconv.se_channels-int-expanded_channels-se_ratio-or-squeeze_channels","squeezeexcite.def-__init__","squeezeexcite.self-reduce-nn-convnd-channels-squeeze_channels-kernel_size-n","squeezeexcite.self-expand-nn-convnd-squeeze_channels-channels-kernel_size-n","squeezeexcite.forward.scale-self-reduce-scale","squeezeexcite.forward.scale-f-silu-scale","squeezeexcite.forward.scale-self-expand-scale","squeezeexcite.forward.scale-torch-sigmoid-scale","squeezeexcite.forward.out-x-scale","squeezeexcite.forward.return-out"],
                   jax: ["class-squeezeexcite-nn-module","squeezeexcite.squeeze_channels-int","squeezeexcite.nn-compact","squeezeexcite.def-__call__-self-x","squeezeexcite.__call__.scale-jnp-mean-x-axis-n-n-keepdims-true","squeezeexcite.__call__.scale-nn-conv-self-squeeze_channels-n-n-name-reduce-scale","squeezeexcite.__call__.scale-nn-silu-scale","squeezeexcite.__call__.channel_count-x-shape-n","squeezeexcite.__call__.scale-nn-conv-channel_count-n-n-name-expand-scale","squeezeexcite.__call__.scale-nn-sigmoid-scale","squeezeexcite.__call__.y-x-scale","squeezeexcite.__call__.return-y"],
                 },
                 focusRef: {
@@ -8202,11 +8202,11 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
                 kind: "conv",
                 badges: ["96->24"],
                 sourceRefs: {
-                  pytorch: ["mbconv.nn-batchnormnd-out_channels","mbconv.code.9"],
+                  pytorch: ["mbconv.self-project-nn-sequential","mbconv.nn-convnd-expanded_channels-out_channels-kernel_size-n-bias-false","mbconv.nn-batchnormnd-out_channels","mbconv.code.9","mbconv.forward.out-self-project-out"],
                   jax: ["mbconv.__call__.y-nn-conv.3","mbconv.__call__.self-out_channels","mbconv.__call__.n-n.2","mbconv.__call__.use_bias-false.3","mbconv.__call__.name-project_conv","mbconv.__call__.y.3","mbconv.__call__.y-nn-batchnorm-use_running_average-not-train-name-project_bn-y"],
                 },
                 focusRef: {
-                  pytorch: "mbconv.nn-batchnormnd-out_channels",
+                  pytorch: "mbconv.nn-convnd-expanded_channels-out_channels-kernel_size-n-bias-false",
                   jax: "mbconv.__call__.y-nn-conv.3",
                 },
                 includeChildRefs: false,
@@ -8220,7 +8220,7 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
             kind: "residual",
             summary: "same-shape residual",
             sourceRefs: {
-              pytorch: ["mbconv.forward.identity-x","mbconv.forward.out-out-identity","mbconv.forward.return-out","efficientnet.in_channels","efficientnet.out_channels","efficientnet.expand_ratio","efficientnet.forward.x-self-head-x"],
+              pytorch: ["mbconv.forward.identity-x","mbconv.forward.out-out-identity","mbconv.forward.return-out","efficientnet.in_channels","efficientnet.out_channels","efficientnet.expand_ratio","efficientnet.forward.x-self-blocks-x"],
               jax: ["class-mbconv-nn-module","mbconv.out_channels-int","mbconv.expand_ratio-int","mbconv.stride-int","mbconv.kernel_size-int","mbconv.se_ratio-float-n","mbconv.nn-compact","mbconv.def-__call__-self-x-train-false","mbconv.__call__.in_channels-x-shape-n","mbconv.__call__.expanded_channels-in_channels-self-expand_ratio","mbconv.__call__.squeeze_channels-max-n-int-expanded_channels-self-se_ratio","mbconv.__call__.use_residual-self-stride-n-and-in_channels-self-out_channels","mbconv.__call__.y-x","mbconv.__call__.if-self-expand_ratio-n","mbconv.__call__.y-nn-conv","mbconv.__call__.expanded_channels","mbconv.__call__.n-n","mbconv.__call__.use_bias-false","mbconv.__call__.name-expand_conv","mbconv.__call__.y","mbconv.__call__.y-nn-batchnorm-use_running_average-not-train-name-expand_bn-y","mbconv.__call__.y-nn-silu-y","mbconv.__call__.y-nn-conv.2","mbconv.__call__.expanded_channels.2","mbconv.__call__.self-kernel_size-self-kernel_size","mbconv.__call__.strides-self-stride-self-stride","mbconv.__call__.padding-same","mbconv.__call__.feature_group_count-expanded_channels","mbconv.__call__.use_bias-false.2","mbconv.__call__.name-depthwise_conv","mbconv.__call__.y.2","mbconv.__call__.y-nn-batchnorm-use_running_average-not-train-name-depthwise_bn-y","mbconv.__call__.y-nn-silu-y.2","mbconv.__call__.y-squeezeexcite-squeeze_channels-name-se-y","mbconv.__call__.y-nn-conv.3","mbconv.__call__.self-out_channels","mbconv.__call__.n-n.2","mbconv.__call__.use_bias-false.3","mbconv.__call__.name-project_conv","mbconv.__call__.y.3","mbconv.__call__.y-nn-batchnorm-use_running_average-not-train-name-project_bn-y","mbconv.__call__.if-use_residual","mbconv.__call__.y-y-x","mbconv.__call__.return-y"],
             },
             focusRef: {
@@ -8239,7 +8239,7 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
         summary: "2 blocks",
         badges: ["24->40", "28x28", "k=5"],
         sourceRefs: {
-          pytorch: ["efficientnet.n-n-n-n-n.2","efficientnet.n-n-n-n-n.5","efficientnet.for-expand_ratio-out_channels-repeats-stride-kernel_size-in-settings","efficientnet.block-mbconv","efficientnet.in_channels","efficientnet.out_channels","efficientnet.expand_ratio","efficientnet.block_stride","efficientnet.kernel_size","efficientnet.code.11","efficientnet.blocks-append-block","efficientnet.in_channels-out_channels","efficientnet.forward.x-self-head-x"],
+          pytorch: ["efficientnet.n-n-n-n-n.2","efficientnet.n-n-n-n-n.5","efficientnet.for-expand_ratio-out_channels-repeats-stride-kernel_size-in-settings","efficientnet.block-mbconv","efficientnet.in_channels","efficientnet.out_channels","efficientnet.expand_ratio","efficientnet.block_stride","efficientnet.kernel_size","efficientnet.code.11","efficientnet.blocks-append-block","efficientnet.in_channels-out_channels","efficientnet.forward.x-self-blocks-x"],
           jax: ["efficientnet.__call__.n-n-n-n-n.3","efficientnet.__call__.for-expand_ratio-out_channels-repeats-stride-kernel_size-in-settings","efficientnet.__call__.for-repeat_index-in-range-repeats","efficientnet.__call__.block_stride-stride-if-repeat_index-n-else-n","efficientnet.__call__.block_name-f-blocks-block_index","efficientnet.__call__.x-mbconv","efficientnet.__call__.out_channels","efficientnet.__call__.expand_ratio","efficientnet.__call__.block_stride","efficientnet.__call__.kernel_size","efficientnet.__call__.name-block_name","efficientnet.__call__.x-train-train","efficientnet.__call__.block_index-block_index-n"],
         },
         focusRef: {
@@ -8255,7 +8255,7 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
             kind: "group",
             summary: "stride 2 + SE",
             sourceRefs: {
-              pytorch: ["mbconv.expanded_channels","mbconv.padding-padding","mbconv.groups-expanded_channels","mbconv.bias-false","mbconv.code.7","mbconv.self-project-nn-sequential","mbconv.nn-convnd-expanded_channels-out_channels-kernel_size-n-bias-false","mbconv.forward.out-self-project-out","efficientnet.expand_ratio","efficientnet.forward.x-self-head-x"],
+              pytorch: ["mbconv.expanded_channels","mbconv.padding-padding","mbconv.groups-expanded_channels","mbconv.bias-false","mbconv.code.7","mbconv.self-project-nn-sequential","mbconv.nn-convnd-expanded_channels-out_channels-kernel_size-n-bias-false","mbconv.forward.out-self-project-out","efficientnet.expand_ratio","efficientnet.forward.x-self-blocks-x"],
               jax: ["class-mbconv-nn-module","mbconv.out_channels-int","mbconv.expand_ratio-int","mbconv.stride-int","mbconv.kernel_size-int","mbconv.se_ratio-float-n","mbconv.nn-compact","mbconv.def-__call__-self-x-train-false","mbconv.__call__.in_channels-x-shape-n","mbconv.__call__.expanded_channels-in_channels-self-expand_ratio","mbconv.__call__.squeeze_channels-max-n-int-expanded_channels-self-se_ratio","mbconv.__call__.use_residual-self-stride-n-and-in_channels-self-out_channels","mbconv.__call__.y-x","mbconv.__call__.if-self-expand_ratio-n","mbconv.__call__.y-nn-conv","mbconv.__call__.expanded_channels","mbconv.__call__.n-n","mbconv.__call__.use_bias-false","mbconv.__call__.name-expand_conv","mbconv.__call__.y","mbconv.__call__.y-nn-batchnorm-use_running_average-not-train-name-expand_bn-y","mbconv.__call__.y-nn-silu-y","mbconv.__call__.y-nn-conv.2","mbconv.__call__.expanded_channels.2","mbconv.__call__.self-kernel_size-self-kernel_size","mbconv.__call__.strides-self-stride-self-stride","mbconv.__call__.padding-same","mbconv.__call__.feature_group_count-expanded_channels","mbconv.__call__.use_bias-false.2","mbconv.__call__.name-depthwise_conv","mbconv.__call__.y.2","mbconv.__call__.y-nn-batchnorm-use_running_average-not-train-name-depthwise_bn-y","mbconv.__call__.y-nn-silu-y.2","mbconv.__call__.y-squeezeexcite-squeeze_channels-name-se-y","mbconv.__call__.y-nn-conv.3","mbconv.__call__.self-out_channels","mbconv.__call__.n-n.2","mbconv.__call__.use_bias-false.3","mbconv.__call__.name-project_conv","mbconv.__call__.y.3","mbconv.__call__.y-nn-batchnorm-use_running_average-not-train-name-project_bn-y","mbconv.__call__.if-use_residual","mbconv.__call__.y-y-x","mbconv.__call__.return-y"],
             },
             focusRef: {
@@ -8271,7 +8271,7 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
             kind: "residual",
             summary: "identity add",
             sourceRefs: {
-              pytorch: ["mbconv.forward.out-out-identity","mbconv.forward.return-out","efficientnet.in_channels","efficientnet.out_channels","efficientnet.expand_ratio","efficientnet.forward.x-self-head-x"],
+              pytorch: ["mbconv.forward.out-out-identity","mbconv.forward.return-out","efficientnet.in_channels","efficientnet.out_channels","efficientnet.expand_ratio","efficientnet.forward.x-self-blocks-x"],
               jax: ["class-mbconv-nn-module","mbconv.out_channels-int","mbconv.expand_ratio-int","mbconv.stride-int","mbconv.kernel_size-int","mbconv.se_ratio-float-n","mbconv.nn-compact","mbconv.def-__call__-self-x-train-false","mbconv.__call__.in_channels-x-shape-n","mbconv.__call__.expanded_channels-in_channels-self-expand_ratio","mbconv.__call__.squeeze_channels-max-n-int-expanded_channels-self-se_ratio","mbconv.__call__.use_residual-self-stride-n-and-in_channels-self-out_channels","mbconv.__call__.y-x","mbconv.__call__.if-self-expand_ratio-n","mbconv.__call__.y-nn-conv","mbconv.__call__.expanded_channels","mbconv.__call__.n-n","mbconv.__call__.use_bias-false","mbconv.__call__.name-expand_conv","mbconv.__call__.y","mbconv.__call__.y-nn-batchnorm-use_running_average-not-train-name-expand_bn-y","mbconv.__call__.y-nn-silu-y","mbconv.__call__.y-nn-conv.2","mbconv.__call__.expanded_channels.2","mbconv.__call__.self-kernel_size-self-kernel_size","mbconv.__call__.strides-self-stride-self-stride","mbconv.__call__.padding-same","mbconv.__call__.feature_group_count-expanded_channels","mbconv.__call__.use_bias-false.2","mbconv.__call__.name-depthwise_conv","mbconv.__call__.y.2","mbconv.__call__.y-nn-batchnorm-use_running_average-not-train-name-depthwise_bn-y","mbconv.__call__.y-nn-silu-y.2","mbconv.__call__.y-squeezeexcite-squeeze_channels-name-se-y","mbconv.__call__.y-nn-conv.3","mbconv.__call__.self-out_channels","mbconv.__call__.n-n.2","mbconv.__call__.use_bias-false.3","mbconv.__call__.name-project_conv","mbconv.__call__.y.3","mbconv.__call__.y-nn-batchnorm-use_running_average-not-train-name-project_bn-y","mbconv.__call__.if-use_residual","mbconv.__call__.y-y-x","mbconv.__call__.return-y"],
             },
             focusRef: {
@@ -8290,7 +8290,7 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
         summary: "3 blocks",
         badges: ["40->80", "14x14"],
         sourceRefs: {
-          pytorch: ["efficientnet.n-n-n-n-n.2","efficientnet.n-n-n-n-n.6","efficientnet.for-expand_ratio-out_channels-repeats-stride-kernel_size-in-settings","efficientnet.block-mbconv","efficientnet.in_channels","efficientnet.out_channels","efficientnet.expand_ratio","efficientnet.block_stride","efficientnet.kernel_size","efficientnet.code.11","efficientnet.blocks-append-block","efficientnet.in_channels-out_channels","efficientnet.forward.x-self-head-x"],
+          pytorch: ["efficientnet.n-n-n-n-n.2","efficientnet.n-n-n-n-n.6","efficientnet.for-expand_ratio-out_channels-repeats-stride-kernel_size-in-settings","efficientnet.block-mbconv","efficientnet.in_channels","efficientnet.out_channels","efficientnet.expand_ratio","efficientnet.block_stride","efficientnet.kernel_size","efficientnet.code.11","efficientnet.blocks-append-block","efficientnet.in_channels-out_channels","efficientnet.forward.x-self-blocks-x"],
           jax: ["efficientnet.__call__.n-n-n-n-n.4","efficientnet.__call__.for-expand_ratio-out_channels-repeats-stride-kernel_size-in-settings","efficientnet.__call__.for-repeat_index-in-range-repeats","efficientnet.__call__.block_stride-stride-if-repeat_index-n-else-n","efficientnet.__call__.block_name-f-blocks-block_index","efficientnet.__call__.x-mbconv","efficientnet.__call__.out_channels","efficientnet.__call__.expand_ratio","efficientnet.__call__.block_stride","efficientnet.__call__.kernel_size","efficientnet.__call__.name-block_name","efficientnet.__call__.x-train-train","efficientnet.__call__.block_index-block_index-n"],
         },
         focusRef: {
@@ -8307,7 +8307,7 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
         summary: "3 blocks",
         badges: ["80->112", "14x14", "k=5"],
         sourceRefs: {
-          pytorch: ["efficientnet.n-n-n-n-n.2","efficientnet.n-n-n-n-n.7","efficientnet.for-expand_ratio-out_channels-repeats-stride-kernel_size-in-settings","efficientnet.block-mbconv","efficientnet.in_channels","efficientnet.out_channels","efficientnet.expand_ratio","efficientnet.block_stride","efficientnet.kernel_size","efficientnet.code.11","efficientnet.blocks-append-block","efficientnet.in_channels-out_channels","efficientnet.forward.x-self-head-x"],
+          pytorch: ["efficientnet.n-n-n-n-n.2","efficientnet.n-n-n-n-n.7","efficientnet.for-expand_ratio-out_channels-repeats-stride-kernel_size-in-settings","efficientnet.block-mbconv","efficientnet.in_channels","efficientnet.out_channels","efficientnet.expand_ratio","efficientnet.block_stride","efficientnet.kernel_size","efficientnet.code.11","efficientnet.blocks-append-block","efficientnet.in_channels-out_channels","efficientnet.forward.x-self-blocks-x"],
           jax: ["efficientnet.__call__.n-n-n-n-n.5","efficientnet.__call__.for-expand_ratio-out_channels-repeats-stride-kernel_size-in-settings","efficientnet.__call__.for-repeat_index-in-range-repeats","efficientnet.__call__.block_stride-stride-if-repeat_index-n-else-n","efficientnet.__call__.block_name-f-blocks-block_index","efficientnet.__call__.x-mbconv","efficientnet.__call__.out_channels","efficientnet.__call__.expand_ratio","efficientnet.__call__.block_stride","efficientnet.__call__.kernel_size","efficientnet.__call__.name-block_name","efficientnet.__call__.x-train-train","efficientnet.__call__.block_index-block_index-n"],
         },
         focusRef: {
@@ -8324,7 +8324,7 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
         summary: "4 blocks",
         badges: ["112->192", "7x7", "k=5"],
         sourceRefs: {
-          pytorch: ["efficientnet.n-n-n-n-n.2","efficientnet.code.4","efficientnet.for-expand_ratio-out_channels-repeats-stride-kernel_size-in-settings","efficientnet.block-mbconv","efficientnet.in_channels","efficientnet.out_channels","efficientnet.expand_ratio","efficientnet.block_stride","efficientnet.kernel_size","efficientnet.code.11","efficientnet.blocks-append-block","efficientnet.in_channels-out_channels","efficientnet.forward.x-self-head-x"],
+          pytorch: ["efficientnet.n-n-n-n-n.2","efficientnet.code.4","efficientnet.for-expand_ratio-out_channels-repeats-stride-kernel_size-in-settings","efficientnet.block-mbconv","efficientnet.in_channels","efficientnet.out_channels","efficientnet.expand_ratio","efficientnet.block_stride","efficientnet.kernel_size","efficientnet.code.11","efficientnet.blocks-append-block","efficientnet.in_channels-out_channels","efficientnet.forward.x-self-blocks-x"],
           jax: ["efficientnet.__call__.n-n-n-n-n.6","efficientnet.__call__.for-expand_ratio-out_channels-repeats-stride-kernel_size-in-settings","efficientnet.__call__.for-repeat_index-in-range-repeats","efficientnet.__call__.block_stride-stride-if-repeat_index-n-else-n","efficientnet.__call__.block_name-f-blocks-block_index","efficientnet.__call__.x-mbconv","efficientnet.__call__.out_channels","efficientnet.__call__.expand_ratio","efficientnet.__call__.block_stride","efficientnet.__call__.kernel_size","efficientnet.__call__.name-block_name","efficientnet.__call__.x-train-train","efficientnet.__call__.block_index-block_index-n"],
         },
         focusRef: {
@@ -8341,7 +8341,7 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
         summary: "1 block",
         badges: ["192->320", "7x7"],
         sourceRefs: {
-          pytorch: ["efficientnet.n-n-n-n-n.2","efficientnet.for-expand_ratio-out_channels-repeats-stride-kernel_size-in-settings","efficientnet.block-mbconv","efficientnet.in_channels","efficientnet.out_channels","efficientnet.expand_ratio","efficientnet.block_stride","efficientnet.kernel_size","efficientnet.code.11","efficientnet.blocks-append-block","efficientnet.in_channels-out_channels","efficientnet.forward.x-self-head-x"],
+          pytorch: ["efficientnet.n-n-n-n-n.2","efficientnet.for-expand_ratio-out_channels-repeats-stride-kernel_size-in-settings","efficientnet.block-mbconv","efficientnet.in_channels","efficientnet.out_channels","efficientnet.expand_ratio","efficientnet.block_stride","efficientnet.kernel_size","efficientnet.code.11","efficientnet.blocks-append-block","efficientnet.in_channels-out_channels","efficientnet.forward.x-self-blocks-x"],
           jax: ["efficientnet.__call__.n-n-n-n-n.7","efficientnet.__call__.for-expand_ratio-out_channels-repeats-stride-kernel_size-in-settings","efficientnet.__call__.for-repeat_index-in-range-repeats","efficientnet.__call__.block_stride-stride-if-repeat_index-n-else-n","efficientnet.__call__.block_name-f-blocks-block_index","efficientnet.__call__.x-mbconv","efficientnet.__call__.out_channels","efficientnet.__call__.expand_ratio","efficientnet.__call__.block_stride","efficientnet.__call__.kernel_size","efficientnet.__call__.name-block_name","efficientnet.__call__.x-train-train","efficientnet.__call__.block_index-block_index-n"],
         },
         focusRef: {
@@ -8357,11 +8357,11 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
         kind: "group",
         summary: "1280 classifier",
         sourceRefs: {
-          pytorch: ["efficientnet.in_channels.2","efficientnet.n.3","efficientnet.self-classifier-nn-linear-n-num_classes","efficientnet.def-forward-self-x","efficientnet.forward.x-torch-flatten-x-n"],
+          pytorch: ["efficientnet.head","efficientnet.in_channels.2","efficientnet.n.3","efficientnet.forward.x-self-head-x","efficientnet.head.pool","efficientnet.forward.x-torch-flatten-x-n","efficientnet.self-classifier-nn-linear-n-num_classes","efficientnet.forward.logits-self-classifier-x"],
           jax: [],
         },
         focusRef: {
-          pytorch: "efficientnet.in_channels.2",
+          pytorch: "efficientnet.head",
           jax: "efficientnet.__call__.x-nn-conv.2",
         },
         includeChildRefs: true,
@@ -8373,11 +8373,11 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
             kind: "conv",
             badges: ["320->1280"],
             sourceRefs: {
-              pytorch: ["efficientnet.kernel_size-n.2","efficientnet.bias-false.2","efficientnet.code.14","efficientnet.nn-batchnormnd-n.2","efficientnet.nn-silu-inplace-true.2","efficientnet.code.15","efficientnet.forward.logits-self-classifier-x"],
+              pytorch: ["efficientnet.head-conv","efficientnet.in_channels.2","efficientnet.n.3","efficientnet.kernel_size-n.2","efficientnet.bias-false.2","efficientnet.code.14","efficientnet.nn-batchnormnd-n.2","efficientnet.nn-silu-inplace-true.2","efficientnet.code.15","efficientnet.forward.x-self-head-x"],
               jax: ["efficientnet.__call__.x-nn-conv.2","efficientnet.__call__.n.2","efficientnet.__call__.n-n.2","efficientnet.__call__.use_bias-false.2","efficientnet.__call__.name-head_conv","efficientnet.__call__.x.2","efficientnet.__call__.x-nn-batchnorm-use_running_average-not-train-name-head_bn-x","efficientnet.__call__.x-nn-silu-x.2"],
             },
             focusRef: {
-              pytorch: "efficientnet.kernel_size-n.2",
+              pytorch: "efficientnet.head-conv",
               jax: "efficientnet.__call__.x-nn-conv.2",
             },
             includeChildRefs: false,

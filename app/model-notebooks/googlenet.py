@@ -34,13 +34,13 @@ class InceptionBlock(nn.Module):
             # @arch inceptionblock.nn-relu-inplace-true.2:start
             nn.ReLU(inplace=True),
             # @arch inceptionblock.nn-relu-inplace-true.2:end
+            # @arch inceptionblock.branch3-conv:start
             nn.Conv2d(branch3_reduce, branch3_channels, kernel_size=3, padding=1),
+            # @arch inceptionblock.branch3-conv:end
             # @arch inceptionblock.nn-relu-inplace-true.3:start
             nn.ReLU(inplace=True),
             # @arch inceptionblock.nn-relu-inplace-true.3:end
-        # @arch inceptionblock.code.5:start
         )
-        # @arch inceptionblock.code.5:end
         self.branch5 = nn.Sequential(
             # @arch inceptionblock.nn-convnd-in_channels-branchn_reduce-kernel_size-n.2:start
             nn.Conv2d(in_channels, branch5_reduce, kernel_size=1),
@@ -48,13 +48,13 @@ class InceptionBlock(nn.Module):
             # @arch inceptionblock.nn-relu-inplace-true.4:start
             nn.ReLU(inplace=True),
             # @arch inceptionblock.nn-relu-inplace-true.4:end
+            # @arch inceptionblock.branch5-conv:start
             nn.Conv2d(branch5_reduce, branch5_channels, kernel_size=5, padding=2),
+            # @arch inceptionblock.branch5-conv:end
             # @arch inceptionblock.nn-relu-inplace-true.5:start
             nn.ReLU(inplace=True),
             # @arch inceptionblock.nn-relu-inplace-true.5:end
-        # @arch inceptionblock.code.6:start
         )
-        # @arch inceptionblock.code.6:end
         self.branch_pool = nn.Sequential(
             # @arch inceptionblock.nn-maxpoolnd-kernel_size-n-stride-n-padding-n:start
             nn.MaxPool2d(kernel_size=3, stride=1, padding=1),
@@ -123,7 +123,9 @@ class GoogLeNet(nn.Module):
         # @arch googlenet.self-stem-nn-sequential:start
         self.stem = nn.Sequential(
         # @arch googlenet.self-stem-nn-sequential:end
+            # @arch googlenet.nn-convnd-n-n-kernel_size-n-stride-n-padding-n:start
             nn.Conv2d(3, 64, kernel_size=7, stride=2, padding=3),
+            # @arch googlenet.nn-convnd-n-n-kernel_size-n-stride-n-padding-n:end
             # @arch googlenet.nn-relu-inplace-true:start
             nn.ReLU(inplace=True),
             # @arch googlenet.nn-relu-inplace-true:end

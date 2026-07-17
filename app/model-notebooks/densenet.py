@@ -286,8 +286,12 @@ class DenseNet(nn.Module):
         super().__init__()
 
         # Register the ImageNet stem.
+        # @arch densenet.stem:start
         self.stem = nn.Sequential(
+        # @arch densenet.stem:end
+            # @arch densenet.stem-conv:start
             nn.Conv2d(
+            # @arch densenet.stem-conv:end
                 3,
                 # @arch densenet.num_init_features:start
                 num_init_features,

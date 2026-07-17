@@ -354,20 +354,26 @@ class Transformer(nn.Module):
         super().__init__()
 
         # Register token embeddings, shared position encoder, stacks, and generator.
+        # @arch transformer.self-src-embed:start
         self.src_embed = nn.Embedding(vocab_size, d_model)
+        # @arch transformer.self-src-embed:end
         # @arch transformer.self-tgt_embed-nn-embedding-vocab_size-d_model:start
         self.tgt_embed = nn.Embedding(vocab_size, d_model)
         # @arch transformer.self-tgt_embed-nn-embedding-vocab_size-d_model:end
+        # @arch transformer.self-pos:start
         self.pos = PositionalEncoding(d_model)
+        # @arch transformer.self-pos:end
+        # @arch transformer.self-encoder:start
         self.encoder = nn.ModuleList([EncoderLayer(d_model, nhead) for _ in range(num_layers)])
+        # @arch transformer.self-encoder:end
+        # @arch transformer.self-decoder:start
         self.decoder = nn.ModuleList([DecoderLayer(d_model, nhead) for _ in range(num_layers)])
+        # @arch transformer.self-decoder:end
         # @arch transformer.self-generator-nn-linear-d_model-vocab_size:start
         self.generator = nn.Linear(d_model, vocab_size)
         # @arch transformer.self-generator-nn-linear-d_model-vocab_size:end
 
-    # @arch transformer.def-forward-self-src_ids-tgt_ids-tgt_mask:start
     def forward(self, src_ids, tgt_ids, tgt_mask):
-    # @arch transformer.def-forward-self-src_ids-tgt_ids-tgt_mask:end
         # Embed and encode the source tokens: (batch, source_steps) -> memory.
         # @arch transformer.forward.src_embeddings-self-src_embed-src_ids:start
         src_embeddings = self.src_embed(src_ids)  # (batch, source_steps) -> (batch, source_steps, d_model)
@@ -375,8 +381,10 @@ class Transformer(nn.Module):
         # @arch transformer.forward.memory-self-pos-src_embeddings:start
         memory = self.pos(src_embeddings)  # (batch, source_steps, d_model)
         # @arch transformer.forward.memory-self-pos-src_embeddings:end
+        # @arch transformer.forward.encoder-stack:start
         for layer in self.encoder:
             memory = layer(memory)  # (batch, source_steps, d_model)
+        # @arch transformer.forward.encoder-stack:end
 
         # Embed target tokens and decode against source memory.
         # @arch transformer.forward.tgt_embeddings-self-tgt_embed-tgt_ids:start
@@ -387,8 +395,8 @@ class Transformer(nn.Module):
         # @arch transformer.forward.x-self-pos-tgt_embeddings:end
         # @arch transformer.forward.for-layer-in-self-decoder:start
         for layer in self.decoder:
-        # @arch transformer.forward.for-layer-in-self-decoder:end
             x = layer(x, memory, tgt_mask)  # (batch, target_steps, d_model)
+        # @arch transformer.forward.for-layer-in-self-decoder:end
 
         # Project decoder states to vocabulary logits.
         # @arch transformer.forward.logits-self-generator-x:start

@@ -62,6 +62,10 @@ function loadCatalog() {
 }
 
 const catalog = loadCatalog();
+const catalogModels = [
+  ...catalog.models,
+  ...catalog.models.flatMap((model) => model.variants ?? []),
+].filter((model, index, models) => models.findIndex((candidate) => candidate.id === model.id) === index);
 
 function findNode(nodes, id) {
   for (const node of nodes) {
@@ -73,7 +77,7 @@ function findNode(nodes, id) {
 }
 
 function resolvedText(modelId, nodeId, language) {
-  const model = catalog.models.find((candidate) => candidate.id === modelId);
+  const model = catalogModels.find((candidate) => candidate.id === modelId);
   assert.ok(model, `missing model ${modelId}`);
   const node = findNode(model.nodes, nodeId);
   assert.ok(node, `missing node ${modelId}:${nodeId}`);
@@ -84,7 +88,7 @@ function resolvedText(modelId, nodeId, language) {
 }
 
 test("every catalog node resolves concrete source in both languages", () => {
-  for (const model of catalog.models) {
+  for (const model of catalogModels) {
     const visit = (node) => {
       for (const language of ["pytorch", "jax"]) {
         const selection = catalog.resolveArchitectureHighlight(model, node, language);
@@ -97,7 +101,65 @@ test("every catalog node resolves concrete source in both languages", () => {
   }
 });
 
+test("every catalog operation resolves semantically matching source", () => {
+  const expectedTextByKind = {
+    activation: /relu|gelu|sigmoid|tanh|softmax|silu|clamp|activation|\bact\b/i,
+    attention: /attention|attn|query|key|value|qkv|score|weight|mask|softmax|head|distance|argmin|lookup|quantized|squeeze|excite|gate|sigmoid|scale/i,
+    concat: /cat|concat/i,
+    conv: /conv/i,
+    dropout: /dropout/i,
+    embedding: /embed|token|position|patch|latent|\bcode\b|quant/i,
+    head: /head|classifier|logits|linear|dense|\bfc\b|output|\bout_|predicted|pool|proj|loss|criterion|optimizer|prob|sample/i,
+    linear: /linear|linspace|dense|classifier|logit|weight|matmul|\bfc\b|proj|variance|sqrt_alpha|noisy_images/i,
+    mlp: /mlp|feed.forward|linear|dense|\bfc\b|gelu|relu/i,
+    norm: /norm|normalize|mean|variance|\bvar\b|sqrt|\bstd\b/i,
+    pool: /pool|mean/i,
+    recurrent: /lstm|gru|rnn|gate|hidden|cell|state|sequence/i,
+    reshape: /flatten|reshape|view|permute|transpose|rearrange|squeeze|unsqueeze|shape|reparameterize|sample|epsilon|latent|reverse|index_select|arange|mean|cumprod/i,
+    residual: /residual|shortcut|identity|\badd\b|\+|block/i,
+  };
+
+  for (const model of catalogModels) {
+    const visit = (node) => {
+      const expectedText = expectedTextByKind[node.kind];
+      if (expectedText) {
+        for (const language of ["pytorch", "jax"]) {
+          assert.match(
+            resolvedText(model.id, node.id, language),
+            expectedText,
+            `${model.id}:${node.id}:${language} must resolve ${node.kind} source`,
+          );
+        }
+      }
+      catalog.architectureChildren(node).forEach(visit);
+    };
+    model.nodes.forEach(visit);
+  }
+});
+
 test("regression mappings resolve the intended architecture operations", () => {
+  const alexNetFeatureOperations = [
+    ["features.conv1", /nn\.Conv2d\(3, 96,/],
+    ["features.relu1", /nn\.ReLU\(inplace=True\)/],
+    ["features.lrn1", /nn\.LocalResponseNorm\(size=5,/],
+    ["features.pool1", /nn\.MaxPool2d\(kernel_size=3, stride=2\)/],
+    ["features.conv2", /nn\.Conv2d\(96, 256,/],
+    ["features.relu2", /nn\.ReLU\(inplace=True\)/],
+    ["features.lrn2", /nn\.LocalResponseNorm\(size=5,/],
+    ["features.pool2", /nn\.MaxPool2d\(kernel_size=3, stride=2\)/],
+    ["features.conv3", /nn\.Conv2d\(256, 384,/],
+    ["features.relu3", /nn\.ReLU\(inplace=True\)/],
+    ["features.conv4", /nn\.Conv2d\(384, 384,/],
+    ["features.relu4", /nn\.ReLU\(inplace=True\)/],
+    ["features.conv5", /nn\.Conv2d\(384, 256,/],
+    ["features.relu5", /nn\.ReLU\(inplace=True\)/],
+    ["features.pool5", /nn\.MaxPool2d\(kernel_size=3, stride=2\)/],
+  ];
+
+  for (const [nodeId, expectedOperation] of alexNetFeatureOperations) {
+    assert.match(resolvedText("alexnet", nodeId, "pytorch"), expectedOperation);
+  }
+
   assert.match(resolvedText("transformer", "encoder.0.norm2", "pytorch"), /ffn_residual = x \+ ffn/);
   assert.match(resolvedText("transformer", "encoder.0.norm2", "pytorch"), /self\.norm2\(ffn_residual\)/);
   assert.match(resolvedText("vit", "encoder.block.0.resid2", "pytorch"), /x = x \+ mlp_output/);
