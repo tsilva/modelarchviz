@@ -22,7 +22,7 @@ Edit `app/model-notebooks/*.py` as the source of truth. Do not hand-edit `app/ge
 
 When adding, renaming, or removing a model in `app/model-arch-viz-app.tsx`, update `app/model-routes.ts` in the same change so `/models/[modelId]` routes and `app/sitemap.ts` stay aligned.
 
-Each model catalog entry must include the canonical model id, label, published date, route title and description, source basename, and paper metadata. Do not add model-specific URLs directly to `app/sitemap.ts`; keep sitemap coverage derived from `modelCatalog`.
+Each model catalog entry must include the canonical model id, label, published date, route title and description, and paper metadata. Add `sourceBaseName` only when the canonical source basename differs from the model id. Do not add model-specific URLs directly to `app/sitemap.ts`; keep sitemap coverage derived from `modelCatalog`.
 
 ## Architecture Code Highlights
 
@@ -30,7 +30,7 @@ When editing architecture node `codeLines` in `app/model-arch-viz-app.tsx`, keep
 
 For input nodes such as sequence/image/token inputs, highlight concrete tensor ingress or consumption lines, such as example tensor construction, model invocation, embedding lookup, or timestep/patch/token slicing. Do not include broad container scaffolding such as `forward` declarations, batch-size extraction, loop setup, or state initialization unless that scaffolding is the selected architecture concept.
 
-Use language-specific line mappings such as `jaxCodeLines` when PyTorch and JAX preview sources do not align.
+Every architecture node must define both `codeLines` and `jaxCodeLines`; never reuse one language's positions for the other. Keep both mappings non-empty and within the generated preview source bounds so catalog validation succeeds during the build.
 
 ## Skill Retrospective
 

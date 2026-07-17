@@ -187,7 +187,6 @@ function formatContext(context: ChatContext) {
 
   return `Current ModelArchViz state:
 - Model: ${safeString(model.label)} (${safeString(model.id)})
-- Breadcrumb: ${safeString(model.breadcrumb)}
 - Stats: ${safeString(model.stats)}
 - Paper: ${safeString(paper.title)} (${safeString(paper.year)}) by ${safeString(paper.authors)}
 - Venue: ${safeString(paper.venue)}
@@ -311,6 +310,5 @@ export async function POST(request: Request) {
   return NextResponse.json({
     message: parsed.message,
     codeSelection,
-    model: data?.model ?? model,
   });
 }

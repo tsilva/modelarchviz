@@ -1,32 +1,42 @@
 #!/usr/bin/env node
 
 import { spawn } from "node:child_process";
+import { pathToFileURL } from "node:url";
 
-function resolveAutoPortArgs(args) {
+export function resolveDevArgs(args) {
   const nextArgs = [...args];
+  let hasExplicitPort = false;
 
   for (let index = 0; index < nextArgs.length; index += 1) {
     const arg = nextArgs[index];
 
-    if ((arg === "--port" || arg === "-p") && nextArgs[index + 1] === "auto") {
-      nextArgs[index + 1] = "0";
-      return nextArgs;
+    if (arg === "--port" || arg === "-p") {
+      hasExplicitPort = true;
+
+      if (nextArgs[index + 1] === "auto") {
+        nextArgs[index + 1] = "0";
+      }
+
+      continue;
     }
 
-    if (arg === "--port=auto" || arg === "-p=auto") {
-      const [flag] = arg.split("=");
-      nextArgs[index] = `${flag}=0`;
-      return nextArgs;
+    if (arg.startsWith("--port=") || arg.startsWith("-p=")) {
+      hasExplicitPort = true;
+
+      if (arg.endsWith("=auto")) {
+        const [flag] = arg.split("=");
+        nextArgs[index] = `${flag}=0`;
+      }
     }
   }
 
-  return nextArgs;
+  return hasExplicitPort ? nextArgs : [...nextArgs, "--port", "0"];
 }
 
 async function main() {
   const rawArgs = process.argv.slice(2);
   const nextArgs = rawArgs[0] === "--" ? rawArgs.slice(1) : rawArgs;
-  const args = resolveAutoPortArgs(["dev", ...nextArgs]);
+  const args = resolveDevArgs(["dev", ...nextArgs]);
   const child = spawn("next", args, {
     env: process.env,
     stdio: "inherit",
@@ -54,7 +64,9 @@ async function main() {
   });
 }
 
-main().catch((error) => {
-  console.error(error);
-  process.exit(1);
-});
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  main().catch((error) => {
+    console.error(error);
+    process.exit(1);
+  });
+}

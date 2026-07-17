@@ -27,7 +27,6 @@ export type ChatContext = {
   model?: {
     id?: string;
     label?: string;
-    breadcrumb?: string;
     stats?: string;
   };
   paper?: {
@@ -65,7 +64,6 @@ export type ChatResponse = {
   message?: string;
   error?: string;
   codeSelection?: unknown;
-  model?: string;
 };
 
 export function normalizeLineNumbers(selection: CodeSelection, lineCount: number) {
