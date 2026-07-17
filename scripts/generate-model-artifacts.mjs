@@ -2,11 +2,16 @@ import { copyFile, mkdir, readdir, readFile, rm, writeFile } from "node:fs/promi
 import { createRequire } from "node:module";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import {
+  cleanedPythonAndHighlightManifest,
+  stripNotebookAnchorMarkers,
+} from "./model-highlight-anchors.mjs";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const require = createRequire(import.meta.url);
 const sourceDir = path.join(repoRoot, "app", "model-notebooks");
 const templateDir = path.join(repoRoot, "app", "model-templates");
+const architecturePath = path.join(repoRoot, "app", "model-arch-viz-app.tsx");
 const generatedManifestPath = path.join(repoRoot, "app", "generated", "model-sources.ts");
 const notebookDir = path.join(repoRoot, "public", "notebooks");
 const pdfWorkerSourcePath = require.resolve("pdfjs-dist/build/pdf.worker.min.mjs");
@@ -144,12 +149,6 @@ function notebookFromCells(fileName, cells, sourceLabel = `app/model-notebooks/$
   };
 }
 
-function cleanedPythonFromCells(cells) {
-  const codeCells = cells.filter((cell) => cell.cell_type === "code" && !cell.tags?.includes("notebook-only"));
-  const blocks = codeCells.map((cell) => cell.lines.join("\n"));
-  return `${blocks.join("\n\n").trimEnd()}\n`;
-}
-
 function templateValue(context, expression) {
   return expression.split(".").reduce((value, key) => value?.[key], context);
 }
@@ -179,14 +178,15 @@ async function safeReaddir(directory) {
 }
 
 async function writeArtifacts({ fileName, source, sourceLabel }) {
-  const cells = parseNotebookSource(source);
-  const cleanedPython = cleanedPythonFromCells(cells);
-  const notebook = notebookFromCells(fileName, cells, sourceLabel);
+  const sourceCells = parseNotebookSource(source);
+  const { cleanedPython, highlights } = cleanedPythonAndHighlightManifest(sourceCells, fileName);
+  const notebookCells = stripNotebookAnchorMarkers(sourceCells, fileName);
+  const notebook = notebookFromCells(fileName, notebookCells, sourceLabel);
   const notebookName = fileName.replace(/\.py$/, ".ipynb");
 
   await writeFile(path.join(notebookDir, notebookName), `${JSON.stringify(notebook, null, 2)}\n`, "utf8");
 
-  return { cleanedPython, fileName, notebookName };
+  return { cleanedPython, fileName, highlights, notebookName };
 }
 
 async function pruneUnexpectedArtifacts(directory, extension, expectedNames) {
@@ -199,7 +199,7 @@ async function pruneUnexpectedArtifacts(directory, extension, expectedNames) {
   );
 }
 
-function modelSourceManifest(sources, variantDefinitions) {
+function modelSourceManifest(sources, highlightManifests, variantDefinitions) {
   const entries = [...sources.entries()]
     .sort(([left], [right]) => left.localeCompare(right))
     .map(
@@ -211,20 +211,31 @@ function modelSourceManifest(sources, variantDefinitions) {
     throw new Error("Missing ResNet variant definitions");
   }
 
-  return `export const modelSources: Readonly<Record<string, string>> = {\n${entries.join("\n")}\n};\n\nexport const resnetVariantDefinitions = ${JSON.stringify(resnetVariants, null, 2)} as const;\n`;
+  const highlightEntries = [...highlightManifests.entries()]
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([fileName, highlights]) => `  ${JSON.stringify(fileName)}: ${JSON.stringify(highlights)},`);
+
+  return `export type ModelHighlightAnchor = { readonly lines: readonly number[]; readonly focusLine: number };\n\nexport const modelSources: Readonly<Record<string, string>> = {\n${entries.join("\n")}\n};\n\nexport const modelHighlightManifest: Readonly<Record<string, Readonly<Record<string, ModelHighlightAnchor>>>> = {\n${highlightEntries.join("\n")}\n};\n\nexport const resnetVariantDefinitions = ${JSON.stringify(resnetVariants, null, 2)} as const;\n`;
 }
 
 async function main() {
+  const architectureSource = await readFile(architecturePath, "utf8");
+  if (/\b(?:codeLines|jaxCodeLines)\s*:/.test(architectureSource)) {
+    throw new Error("Legacy numeric architecture mappings are not allowed; use semantic sourceRefs");
+  }
+
   await mkdir(path.dirname(generatedManifestPath), { recursive: true });
   await mkdir(notebookDir, { recursive: true });
 
   const generatedSources = new Map();
+  const generatedHighlights = new Map();
   const generatedNotebookNames = new Set();
   const variantDefinitions = new Map();
 
   async function generateAndTrack(options) {
     const artifact = await writeArtifacts(options);
     generatedSources.set(artifact.fileName, artifact.cleanedPython);
+    generatedHighlights.set(artifact.fileName, artifact.highlights);
     generatedNotebookNames.add(artifact.notebookName);
   }
 
@@ -288,7 +299,7 @@ async function main() {
   }
 
   await pruneUnexpectedArtifacts(notebookDir, ".ipynb", generatedNotebookNames);
-  await writeFile(generatedManifestPath, modelSourceManifest(generatedSources, variantDefinitions), "utf8");
+  await writeFile(generatedManifestPath, modelSourceManifest(generatedSources, generatedHighlights, variantDefinitions), "utf8");
   await copyFile(pdfWorkerSourcePath, pdfWorkerPath);
 
   console.log(`Generated model artifacts from ${sourceFiles.length} notebook sources and ${variantFiles.length} variant families.`);

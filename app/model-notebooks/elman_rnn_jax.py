@@ -12,31 +12,67 @@ class ElmanRNN(nn.Module):
     @nn.compact
     def __call__(self, x):
         # Build the initial recurrent state: (batch, hidden_size).
+        # @arch elmanrnn.__call__.batch_size-x-shape-n:start
         batch_size = x.shape[0]  # (batch, steps, input_size) -> scalar
+        # @arch elmanrnn.__call__.batch_size-x-shape-n:end
+        # @arch elmanrnn.__call__.hidden_shape-batch_size-self-hidden_size:start
         hidden_shape = (batch_size, self.hidden_size)  # -> (batch, hidden_size)
+        # @arch elmanrnn.__call__.hidden_shape-batch_size-self-hidden_size:end
+        # @arch elmanrnn.__call__.h-jnp-zeros-hidden_shape:start
         h = jnp.zeros(hidden_shape)  # -> (batch, hidden_size)
+        # @arch elmanrnn.__call__.h-jnp-zeros-hidden_shape:end
 
         # Create shared projections for the recurrent loop.
         states = []
+        # @arch elmanrnn.__call__.input_to_hidden-nn-dense-self-hidden_size-name-input_to_hidden:start
         input_to_hidden = nn.Dense(self.hidden_size, name='input_to_hidden')
+        # @arch elmanrnn.__call__.input_to_hidden-nn-dense-self-hidden_size-name-input_to_hidden:end
+        # @arch elmanrnn.__call__.hidden_to_hidden-nn-dense-self-hidden_size-use_bias-false-name-hidden_to:start
         hidden_to_hidden = nn.Dense(self.hidden_size, use_bias=False, name='hidden_to_hidden')
+        # @arch elmanrnn.__call__.hidden_to_hidden-nn-dense-self-hidden_size-use_bias-false-name-hidden_to:end
+        # @arch elmanrnn.__call__.hidden_to_output-nn-dense-self-output_size-name-hidden_to_output:start
         hidden_to_output = nn.Dense(self.output_size, name='hidden_to_output')
+        # @arch elmanrnn.__call__.hidden_to_output-nn-dense-self-output_size-name-hidden_to_output:end
 
         # Run the shared recurrent cell over time: (batch, steps, input_size) -> list of (batch, hidden_size).
+        # @arch elmanrnn.__call__.step_count-x-shape-n:start
         step_count = x.shape[1]  # (batch, steps, input_size) -> scalar
+        # @arch elmanrnn.__call__.step_count-x-shape-n:end
+        # @arch elmanrnn.__call__.for-t-in-range-step_count:start
         for t in range(step_count):
+        # @arch elmanrnn.__call__.for-t-in-range-step_count:end
+            # @arch elmanrnn.__call__.current_input-x-t:start
             current_input = x[:, t]  # (batch, steps, input_size) -> (batch, input_size)
+            # @arch elmanrnn.__call__.current_input-x-t:end
+            # @arch elmanrnn.__call__.input_hidden-input_to_hidden-current_input:start
             input_hidden = input_to_hidden(current_input)  # (batch, input_size) -> (batch, hidden_size)
+            # @arch elmanrnn.__call__.input_hidden-input_to_hidden-current_input:end
+            # @arch elmanrnn.__call__.recurrent_hidden-hidden_to_hidden-h:start
             recurrent_hidden = hidden_to_hidden(h)  # (batch, hidden_size)
+            # @arch elmanrnn.__call__.recurrent_hidden-hidden_to_hidden-h:end
+            # @arch elmanrnn.__call__.hidden_sum-input_hidden-recurrent_hidden:start
             hidden_sum = input_hidden + recurrent_hidden  # (batch, hidden_size)
+            # @arch elmanrnn.__call__.hidden_sum-input_hidden-recurrent_hidden:end
+            # @arch elmanrnn.__call__.h-jnp-tanh-hidden_sum:start
             h = jnp.tanh(hidden_sum)  # (batch, hidden_size)
+            # @arch elmanrnn.__call__.h-jnp-tanh-hidden_sum:end
+            # @arch elmanrnn.__call__.states-append-h:start
             states.append(h)
+            # @arch elmanrnn.__call__.states-append-h:end
 
         # Project the final state and pack the full state trace.
+        # @arch elmanrnn.__call__.logits-hidden_to_output-h:start
         logits = hidden_to_output(h)  # (batch, hidden_size) -> (batch, output_size)
+        # @arch elmanrnn.__call__.logits-hidden_to_output-h:end
+        # @arch elmanrnn.__call__.state_trace-jnp-stack-states-axis-n:start
         state_trace = jnp.stack(states, axis=1)  # list of (batch, hidden_size) -> (batch, steps, hidden_size)
+        # @arch elmanrnn.__call__.state_trace-jnp-stack-states-axis-n:end
+        # @arch elmanrnn.__call__.outputs-logits-state_trace:start
         outputs = (logits, state_trace)
+        # @arch elmanrnn.__call__.outputs-logits-state_trace:end
+        # @arch elmanrnn.__call__.return-outputs:start
         return outputs
+        # @arch elmanrnn.__call__.return-outputs:end
 
 
 # %% [notebook-only]

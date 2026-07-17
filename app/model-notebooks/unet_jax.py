@@ -5,16 +5,26 @@ from flax import linen as nn
 
 
 # %%
+# @arch class-doubleconv-nn-module:start
 class DoubleConv(nn.Module):
+# @arch class-doubleconv-nn-module:end
     out_channels: int
 
     @nn.compact
     def __call__(self, x):
         # Preserve spatial size while changing channel width.
+        # @arch doubleconv.__call__.x-nn-conv-self-out_channels-n-n-padding-same-x:start
         x = nn.Conv(self.out_channels, (3, 3), padding='SAME')(x)  # (batch, height, width, channels) -> (batch, height, width, out_channels)
+        # @arch doubleconv.__call__.x-nn-conv-self-out_channels-n-n-padding-same-x:end
+        # @arch doubleconv.__call__.x-nn-relu-x:start
         x = nn.relu(x)  # (batch, height, width, out_channels)
+        # @arch doubleconv.__call__.x-nn-relu-x:end
+        # @arch doubleconv.__call__.x-nn-conv-self-out_channels-n-n-padding-same-x.2:start
         x = nn.Conv(self.out_channels, (3, 3), padding='SAME')(x)  # (batch, height, width, out_channels)
+        # @arch doubleconv.__call__.x-nn-conv-self-out_channels-n-n-padding-same-x.2:end
+        # @arch doubleconv.__call__.x-nn-relu-x.2:start
         x = nn.relu(x)  # (batch, height, width, out_channels)
+        # @arch doubleconv.__call__.x-nn-relu-x.2:end
         return x
 
 
@@ -28,48 +38,102 @@ print("block_output shape:", example_block_output.shape)
 
 
 # %%
+# @arch def-resize_like-x-skip:start
 def resize_like(x, skip):
+# @arch def-resize_like-x-skip:end
     # Resize decoder features to the skip tensor spatial size.
+    # @arch resize_like.resize_shape-x-shape-n-skip-shape-n-skip-shape-n-x-shape-n:start
     resize_shape = (x.shape[0], skip.shape[1], skip.shape[2], x.shape[-1])  # (batch, height, width, channels)
+    # @arch resize_like.resize_shape-x-shape-n-skip-shape-n-skip-shape-n-x-shape-n:end
+    # @arch resize_like.resized-jax-image-resize-x-resize_shape-method-nearest:start
     resized = jax.image.resize(x, resize_shape, method='nearest')  # (batch, in_h, in_w, channels) -> (batch, skip_h, skip_w, channels)
+    # @arch resize_like.resized-jax-image-resize-x-resize_shape-method-nearest:end
+    # @arch resize_like.return-resized:start
     return resized
+    # @arch resize_like.return-resized:end
 
 
 # %%
+# @arch class-unet-nn-module:start
 class UNet(nn.Module):
+# @arch class-unet-nn-module:end
     num_classes: int = 2
 
     @nn.compact
     def __call__(self, x):
         # Encode features while reducing spatial size at each stage.
+        # @arch unet.__call__.dn-doubleconv-n-x:start
         d1 = DoubleConv(64)(x)  # (batch, height, width, 1) -> (batch, height, width, 64)
+        # @arch unet.__call__.dn-doubleconv-n-x:end
+        # @arch unet.__call__.pn-nn-max_pool-dn-n-n-n-n:start
         p1 = nn.max_pool(d1, (2, 2), (2, 2))  # (batch, height, width, 64) -> (batch, height/2, width/2, 64)
+        # @arch unet.__call__.pn-nn-max_pool-dn-n-n-n-n:end
+        # @arch unet.__call__.dn-doubleconv-n-pn:start
         d2 = DoubleConv(128)(p1)  # (batch, height/2, width/2, 64) -> (batch, height/2, width/2, 128)
+        # @arch unet.__call__.dn-doubleconv-n-pn:end
+        # @arch unet.__call__.pn-nn-max_pool-dn-n-n-n-n.2:start
         p2 = nn.max_pool(d2, (2, 2), (2, 2))  # (batch, height/2, width/2, 128) -> (batch, height/4, width/4, 128)
+        # @arch unet.__call__.pn-nn-max_pool-dn-n-n-n-n.2:end
+        # @arch unet.__call__.dn-doubleconv-n-pn.2:start
         d3 = DoubleConv(256)(p2)  # (batch, height/4, width/4, 128) -> (batch, height/4, width/4, 256)
+        # @arch unet.__call__.dn-doubleconv-n-pn.2:end
+        # @arch unet.__call__.pn-nn-max_pool-dn-n-n-n-n.3:start
         p3 = nn.max_pool(d3, (2, 2), (2, 2))  # (batch, height/4, width/4, 256) -> (batch, height/8, width/8, 256)
+        # @arch unet.__call__.pn-nn-max_pool-dn-n-n-n-n.3:end
+        # @arch unet.__call__.dn-doubleconv-n-pn.3:start
         d4 = DoubleConv(512)(p3)  # (batch, height/8, width/8, 256) -> (batch, height/8, width/8, 512)
+        # @arch unet.__call__.dn-doubleconv-n-pn.3:end
+        # @arch unet.__call__.pn-nn-max_pool-dn-n-n-n-n.4:start
         p4 = nn.max_pool(d4, (2, 2), (2, 2))  # (batch, height/8, width/8, 512) -> (batch, height/16, width/16, 512)
+        # @arch unet.__call__.pn-nn-max_pool-dn-n-n-n-n.4:end
 
         # Process the bottleneck at the smallest spatial resolution.
+        # @arch unet.__call__.b-doubleconv-n-pn:start
         b = DoubleConv(1024)(p4)  # (batch, height/16, width/16, 512) -> (batch, height/16, width/16, 1024)
+        # @arch unet.__call__.b-doubleconv-n-pn:end
 
         # Decode and concatenate skip features back to full resolution.
+        # @arch unet.__call__.x-resize_like-b-dn:start
         x = resize_like(b, d4)  # (batch, height/16, width/16, 1024) -> (batch, height/8, width/8, 1024)
+        # @arch unet.__call__.x-resize_like-b-dn:end
+        # @arch unet.__call__.x-jnp-concatenate-x-dn-axis-n:start
         x = jnp.concatenate([x, d4], axis=-1)  # (batch, height/8, width/8, 1024) -> (batch, height/8, width/8, 1536)
+        # @arch unet.__call__.x-jnp-concatenate-x-dn-axis-n:end
+        # @arch unet.__call__.x-doubleconv-n-x:start
         x = DoubleConv(512)(x)  # (batch, height/8, width/8, 1536) -> (batch, height/8, width/8, 512)
+        # @arch unet.__call__.x-doubleconv-n-x:end
+        # @arch unet.__call__.x-resize_like-x-dn:start
         x = resize_like(x, d3)  # (batch, height/8, width/8, 512) -> (batch, height/4, width/4, 512)
+        # @arch unet.__call__.x-resize_like-x-dn:end
+        # @arch unet.__call__.x-jnp-concatenate-x-dn-axis-n.2:start
         x = jnp.concatenate([x, d3], axis=-1)  # (batch, height/4, width/4, 512) -> (batch, height/4, width/4, 768)
+        # @arch unet.__call__.x-jnp-concatenate-x-dn-axis-n.2:end
+        # @arch unet.__call__.x-doubleconv-n-x.2:start
         x = DoubleConv(256)(x)  # (batch, height/4, width/4, 768) -> (batch, height/4, width/4, 256)
+        # @arch unet.__call__.x-doubleconv-n-x.2:end
+        # @arch unet.__call__.x-resize_like-x-dn.2:start
         x = resize_like(x, d2)  # (batch, height/4, width/4, 256) -> (batch, height/2, width/2, 256)
+        # @arch unet.__call__.x-resize_like-x-dn.2:end
+        # @arch unet.__call__.x-jnp-concatenate-x-dn-axis-n.3:start
         x = jnp.concatenate([x, d2], axis=-1)  # (batch, height/2, width/2, 256) -> (batch, height/2, width/2, 384)
+        # @arch unet.__call__.x-jnp-concatenate-x-dn-axis-n.3:end
+        # @arch unet.__call__.x-doubleconv-n-x.3:start
         x = DoubleConv(128)(x)  # (batch, height/2, width/2, 384) -> (batch, height/2, width/2, 128)
+        # @arch unet.__call__.x-doubleconv-n-x.3:end
+        # @arch unet.__call__.x-resize_like-x-dn.3:start
         x = resize_like(x, d1)  # (batch, height/2, width/2, 128) -> (batch, height, width, 128)
+        # @arch unet.__call__.x-resize_like-x-dn.3:end
+        # @arch unet.__call__.x-jnp-concatenate-x-dn-axis-n.4:start
         x = jnp.concatenate([x, d1], axis=-1)  # (batch, height, width, 128) -> (batch, height, width, 192)
+        # @arch unet.__call__.x-jnp-concatenate-x-dn-axis-n.4:end
+        # @arch unet.__call__.x-doubleconv-n-x.4:start
         x = DoubleConv(64)(x)  # (batch, height, width, 192) -> (batch, height, width, 64)
+        # @arch unet.__call__.x-doubleconv-n-x.4:end
 
         # Project decoder features to segmentation logits.
+        # @arch unet.__call__.logits-nn-conv-self-num_classes-n-n-name-out_conv-x:start
         logits = nn.Conv(self.num_classes, (1, 1), name='out_conv')(x)  # (batch, height, width, 64) -> (batch, height, width, num_classes)
+        # @arch unet.__call__.logits-nn-conv-self-num_classes-n-n-name-out_conv-x:end
         return logits
 
 

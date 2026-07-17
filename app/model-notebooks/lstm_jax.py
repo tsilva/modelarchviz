@@ -5,48 +5,104 @@ from flax import linen as nn
 
 
 # %%
+# @arch class-lstmcell-nn-module:start
 class LSTMCell(nn.Module):
+# @arch class-lstmcell-nn-module:end
+    # @arch lstmcell.hidden_size-int-n:start
     hidden_size: int = 64
+    # @arch lstmcell.hidden_size-int-n:end
 
+    # @arch lstmcell.nn-compact:start
     @nn.compact
+    # @arch lstmcell.nn-compact:end
+    # @arch lstmcell.def-__call__-self-x-state:start
     def __call__(self, x, state):
+    # @arch lstmcell.def-__call__-self-x-state:end
         # Unpack recurrent state: tuple -> two (batch, hidden_size) tensors.
+        # @arch lstmcell.__call__.h-c-state:start
         h, c = state  # ((batch, hidden_size), (batch, hidden_size))
+        # @arch lstmcell.__call__.h-c-state:end
 
         # Compute input gate: (batch, input_size) + (batch, hidden_size) -> (batch, hidden_size).
+        # @arch lstmcell.__call__.x_i-nn-dense-self-hidden_size-name-x_i-x:start
         x_i = nn.Dense(self.hidden_size, name='x_i')(x)  # (batch, input_size) -> (batch, hidden_size)
+        # @arch lstmcell.__call__.x_i-nn-dense-self-hidden_size-name-x_i-x:end
+        # @arch lstmcell.__call__.h_i-nn-dense-self-hidden_size-use_bias-false-name-h_i-h:start
         h_i = nn.Dense(self.hidden_size, use_bias=False, name='h_i')(h)  # (batch, hidden_size)
+        # @arch lstmcell.__call__.h_i-nn-dense-self-hidden_size-use_bias-false-name-h_i-h:end
+        # @arch lstmcell.__call__.i_pre-x_i-h_i:start
         i_pre = x_i + h_i  # (batch, hidden_size)
+        # @arch lstmcell.__call__.i_pre-x_i-h_i:end
+        # @arch lstmcell.__call__.i-nn-sigmoid-i_pre:start
         i = nn.sigmoid(i_pre)  # (batch, hidden_size)
+        # @arch lstmcell.__call__.i-nn-sigmoid-i_pre:end
 
         # Compute forget gate: (batch, input_size) + (batch, hidden_size) -> (batch, hidden_size).
+        # @arch lstmcell.__call__.x_f-nn-dense-self-hidden_size-name-x_f-x:start
         x_f = nn.Dense(self.hidden_size, name='x_f')(x)  # (batch, input_size) -> (batch, hidden_size)
+        # @arch lstmcell.__call__.x_f-nn-dense-self-hidden_size-name-x_f-x:end
+        # @arch lstmcell.__call__.h_f-nn-dense-self-hidden_size-use_bias-false-name-h_f-h:start
         h_f = nn.Dense(self.hidden_size, use_bias=False, name='h_f')(h)  # (batch, hidden_size)
+        # @arch lstmcell.__call__.h_f-nn-dense-self-hidden_size-use_bias-false-name-h_f-h:end
+        # @arch lstmcell.__call__.f_pre-x_f-h_f:start
         f_pre = x_f + h_f  # (batch, hidden_size)
+        # @arch lstmcell.__call__.f_pre-x_f-h_f:end
+        # @arch lstmcell.__call__.f-nn-sigmoid-f_pre:start
         f = nn.sigmoid(f_pre)  # (batch, hidden_size)
+        # @arch lstmcell.__call__.f-nn-sigmoid-f_pre:end
 
         # Compute candidate memory: (batch, input_size) + (batch, hidden_size) -> (batch, hidden_size).
+        # @arch lstmcell.__call__.x_g-nn-dense-self-hidden_size-name-x_g-x:start
         x_g = nn.Dense(self.hidden_size, name='x_g')(x)  # (batch, input_size) -> (batch, hidden_size)
+        # @arch lstmcell.__call__.x_g-nn-dense-self-hidden_size-name-x_g-x:end
+        # @arch lstmcell.__call__.h_g-nn-dense-self-hidden_size-use_bias-false-name-h_g-h:start
         h_g = nn.Dense(self.hidden_size, use_bias=False, name='h_g')(h)  # (batch, hidden_size)
+        # @arch lstmcell.__call__.h_g-nn-dense-self-hidden_size-use_bias-false-name-h_g-h:end
+        # @arch lstmcell.__call__.g_pre-x_g-h_g:start
         g_pre = x_g + h_g  # (batch, hidden_size)
+        # @arch lstmcell.__call__.g_pre-x_g-h_g:end
+        # @arch lstmcell.__call__.g-jnp-tanh-g_pre:start
         g = jnp.tanh(g_pre)  # (batch, hidden_size)
+        # @arch lstmcell.__call__.g-jnp-tanh-g_pre:end
 
         # Compute output gate: (batch, input_size) + (batch, hidden_size) -> (batch, hidden_size).
+        # @arch lstmcell.__call__.x_o-nn-dense-self-hidden_size-name-x_o-x:start
         x_o = nn.Dense(self.hidden_size, name='x_o')(x)  # (batch, input_size) -> (batch, hidden_size)
+        # @arch lstmcell.__call__.x_o-nn-dense-self-hidden_size-name-x_o-x:end
+        # @arch lstmcell.__call__.h_o-nn-dense-self-hidden_size-use_bias-false-name-h_o-h:start
         h_o = nn.Dense(self.hidden_size, use_bias=False, name='h_o')(h)  # (batch, hidden_size)
+        # @arch lstmcell.__call__.h_o-nn-dense-self-hidden_size-use_bias-false-name-h_o-h:end
+        # @arch lstmcell.__call__.o_pre-x_o-h_o:start
         o_pre = x_o + h_o  # (batch, hidden_size)
+        # @arch lstmcell.__call__.o_pre-x_o-h_o:end
+        # @arch lstmcell.__call__.o-nn-sigmoid-o_pre:start
         o = nn.sigmoid(o_pre)  # (batch, hidden_size)
+        # @arch lstmcell.__call__.o-nn-sigmoid-o_pre:end
 
         # Blend previous memory with candidate memory: (batch, hidden_size).
+        # @arch lstmcell.__call__.forget_c-f-c:start
         forget_c = f * c  # (batch, hidden_size)
+        # @arch lstmcell.__call__.forget_c-f-c:end
+        # @arch lstmcell.__call__.write_c-i-g:start
         write_c = i * g  # (batch, hidden_size)
+        # @arch lstmcell.__call__.write_c-i-g:end
+        # @arch lstmcell.__call__.c_next-forget_c-write_c:start
         c_next = forget_c + write_c  # (batch, hidden_size)
+        # @arch lstmcell.__call__.c_next-forget_c-write_c:end
 
         # Read hidden state from updated memory: (batch, hidden_size).
+        # @arch lstmcell.__call__.c_readout-jnp-tanh-c_next:start
         c_readout = jnp.tanh(c_next)  # (batch, hidden_size)
+        # @arch lstmcell.__call__.c_readout-jnp-tanh-c_next:end
+        # @arch lstmcell.__call__.h_next-o-c_readout:start
         h_next = o * c_readout  # (batch, hidden_size)
+        # @arch lstmcell.__call__.h_next-o-c_readout:end
+        # @arch lstmcell.__call__.next_state-h_next-c_next:start
         next_state = (h_next, c_next)
+        # @arch lstmcell.__call__.next_state-h_next-c_next:end
+        # @arch lstmcell.__call__.return-next_state:start
         return next_state
+        # @arch lstmcell.__call__.return-next_state:end
 
 
 # %% [notebook-only]
@@ -72,28 +128,64 @@ class LSTMSequence(nn.Module):
     @nn.compact
     def __call__(self, x):
         # Build initial recurrent state: (batch, hidden_size).
+        # @arch lstmsequence.__call__.batch_size-x-shape-n:start
         batch_size = x.shape[0]  # (batch, steps, input_size) -> scalar
+        # @arch lstmsequence.__call__.batch_size-x-shape-n:end
+        # @arch lstmsequence.__call__.hidden_shape-batch_size-self-hidden_size:start
         hidden_shape = (batch_size, self.hidden_size)  # -> (batch, hidden_size)
+        # @arch lstmsequence.__call__.hidden_shape-batch_size-self-hidden_size:end
+        # @arch lstmsequence.__call__.h-jnp-zeros-hidden_shape:start
         h = jnp.zeros(hidden_shape)  # -> (batch, hidden_size)
+        # @arch lstmsequence.__call__.h-jnp-zeros-hidden_shape:end
+        # @arch lstmsequence.__call__.c-jnp-zeros-hidden_shape:start
         c = jnp.zeros(hidden_shape)  # -> (batch, hidden_size)
+        # @arch lstmsequence.__call__.c-jnp-zeros-hidden_shape:end
 
         # Run the shared LSTM cell over time: (batch, steps, input_size) -> list of (batch, hidden_size).
+        # @arch lstmsequence.__call__.states:start
         states = []
+        # @arch lstmsequence.__call__.states:end
+        # @arch lstmsequence.__call__.cell-lstmcell-self-hidden_size:start
         cell = LSTMCell(self.hidden_size)
+        # @arch lstmsequence.__call__.cell-lstmcell-self-hidden_size:end
+        # @arch lstmsequence.__call__.step_count-x-shape-n:start
         step_count = x.shape[1]  # (batch, steps, input_size) -> scalar
+        # @arch lstmsequence.__call__.step_count-x-shape-n:end
+        # @arch lstmsequence.__call__.for-t-in-range-step_count:start
         for t in range(step_count):
+        # @arch lstmsequence.__call__.for-t-in-range-step_count:end
+            # @arch lstmsequence.__call__.current_input-x-t:start
             current_input = x[:, t]  # (batch, steps, input_size) -> (batch, input_size)
+            # @arch lstmsequence.__call__.current_input-x-t:end
+            # @arch lstmsequence.__call__.previous_state-h-c:start
             previous_state = (h, c)
+            # @arch lstmsequence.__call__.previous_state-h-c:end
+            # @arch lstmsequence.__call__.next_state-cell-current_input-previous_state:start
             next_state = cell(current_input, previous_state)
+            # @arch lstmsequence.__call__.next_state-cell-current_input-previous_state:end
+            # @arch lstmsequence.__call__.h-next_state-n:start
             h = next_state[0]  # (batch, hidden_size)
+            # @arch lstmsequence.__call__.h-next_state-n:end
+            # @arch lstmsequence.__call__.c-next_state-n:start
             c = next_state[1]  # (batch, hidden_size)
+            # @arch lstmsequence.__call__.c-next_state-n:end
+            # @arch lstmsequence.__call__.states-append-h:start
             states.append(h)
+            # @arch lstmsequence.__call__.states-append-h:end
 
         # Project the final hidden state and pack the full state trace.
+        # @arch lstmsequence.__call__.logits-nn-dense-self-output_size-name-readout-h:start
         logits = nn.Dense(self.output_size, name='readout')(h)  # (batch, hidden_size) -> (batch, output_size)
+        # @arch lstmsequence.__call__.logits-nn-dense-self-output_size-name-readout-h:end
+        # @arch lstmsequence.__call__.state_trace-jnp-stack-states-axis-n:start
         state_trace = jnp.stack(states, axis=1)  # list of (batch, hidden_size) -> (batch, steps, hidden_size)
+        # @arch lstmsequence.__call__.state_trace-jnp-stack-states-axis-n:end
+        # @arch lstmsequence.__call__.outputs-logits-state_trace:start
         outputs = (logits, state_trace)
+        # @arch lstmsequence.__call__.outputs-logits-state_trace:end
+        # @arch lstmsequence.__call__.return-outputs:start
         return outputs
+        # @arch lstmsequence.__call__.return-outputs:end
 
 
 # %% [notebook-only]

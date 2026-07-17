@@ -5,7 +5,9 @@ from flax import linen as nn
 
 
 # %%
+# @arch class-basicblock-nn-module:start
 class BasicBlock(nn.Module):
+# @arch class-basicblock-nn-module:end
     out_channels: int
     stride: int = 1
     use_projection: bool = False
@@ -17,18 +19,38 @@ class BasicBlock(nn.Module):
         identity = x  # (batch, height, width, in_channels)
 
         # Apply the two-convolution residual branch.
+        # @arch basicblock.__call__.y-nn-conv-self-out_channels-n-n-strides-self-stride-self-stride-padding-:start
         y = nn.Conv(self.out_channels, (3, 3), strides=(self.stride, self.stride), padding="SAME", use_bias=False, name="conv1")(x)  # (batch, height, width, in_channels) -> (batch, out_height, out_width, out_channels)
+        # @arch basicblock.__call__.y-nn-conv-self-out_channels-n-n-strides-self-stride-self-stride-padding-:end
+        # @arch basicblock.__call__.y-nn-batchnorm-use_running_average-not-train-name-bnn-y:start
         y = nn.BatchNorm(use_running_average=not train, name="bn1")(y)  # (batch, out_height, out_width, out_channels)
+        # @arch basicblock.__call__.y-nn-batchnorm-use_running_average-not-train-name-bnn-y:end
+        # @arch basicblock.__call__.y-nn-relu-y:start
         y = nn.relu(y)  # (batch, out_height, out_width, out_channels)
+        # @arch basicblock.__call__.y-nn-relu-y:end
+        # @arch basicblock.__call__.y-nn-conv-self-out_channels-n-n-padding-same-use_bias-false-name-convn-y:start
         y = nn.Conv(self.out_channels, (3, 3), padding="SAME", use_bias=False, name="conv2")(y)  # (batch, out_height, out_width, out_channels)
+        # @arch basicblock.__call__.y-nn-conv-self-out_channels-n-n-padding-same-use_bias-false-name-convn-y:end
+        # @arch basicblock.__call__.y-nn-batchnorm-use_running_average-not-train-name-bnn-y.2:start
         y = nn.BatchNorm(use_running_average=not train, name="bn2")(y)  # (batch, out_height, out_width, out_channels)
+        # @arch basicblock.__call__.y-nn-batchnorm-use_running_average-not-train-name-bnn-y.2:end
+        # @arch basicblock.__call__.if-self-use_projection:start
         if self.use_projection:
+        # @arch basicblock.__call__.if-self-use_projection:end
+            # @arch basicblock.__call__.identity-nn-conv-self-out_channels-n-n-strides-self-stride-self-stride-u:start
             identity = nn.Conv(self.out_channels, (1, 1), strides=(self.stride, self.stride), use_bias=False, name="downsample_conv")(x)  # (batch, height, width, in_channels) -> (batch, out_height, out_width, out_channels)
+            # @arch basicblock.__call__.identity-nn-conv-self-out_channels-n-n-strides-self-stride-self-stride-u:end
+            # @arch basicblock.__call__.identity-nn-batchnorm-use_running_average-not-train-name-downsample_bn-i:start
             identity = nn.BatchNorm(use_running_average=not train, name="downsample_bn")(identity)  # (batch, out_height, out_width, out_channels)
+            # @arch basicblock.__call__.identity-nn-batchnorm-use_running_average-not-train-name-downsample_bn-i:end
 
         # Add residual and apply final activation.
+        # @arch basicblock.__call__.y-y-identity:start
         y = y + identity  # (batch, out_height, out_width, out_channels)
+        # @arch basicblock.__call__.y-y-identity:end
+        # @arch basicblock.__call__.y-nn-relu-y.2:start
         y = nn.relu(y)  # (batch, out_height, out_width, out_channels)
+        # @arch basicblock.__call__.y-nn-relu-y.2:end
         return y
 
 
@@ -44,7 +66,9 @@ example_projected_output = example_projected_block.apply(example_projected_param
 print("plain block shape:", example_plain_output.shape, "projected block shape:", example_projected_output.shape)
 
 # %%
+# @arch class-bottleneck-nn-module:start
 class Bottleneck(nn.Module):
+# @arch class-bottleneck-nn-module:end
     out_channels: int
     stride: int = 1
     use_projection: bool = False
@@ -57,21 +81,47 @@ class Bottleneck(nn.Module):
         expanded_channels = self.out_channels * self.expansion
 
         # Reduce, process, and expand channels in the residual branch.
+        # @arch bottleneck.__call__.y-nn-conv-self-out_channels-n-n-use_bias-false-name-convn-x:start
         y = nn.Conv(self.out_channels, (1, 1), use_bias=False, name="conv1")(x)  # (batch, height, width, in_channels) -> (batch, height, width, out_channels)
+        # @arch bottleneck.__call__.y-nn-conv-self-out_channels-n-n-use_bias-false-name-convn-x:end
+        # @arch bottleneck.__call__.y-nn-batchnorm-use_running_average-not-train-name-bnn-y:start
         y = nn.BatchNorm(use_running_average=not train, name="bn1")(y)  # (batch, height, width, out_channels)
+        # @arch bottleneck.__call__.y-nn-batchnorm-use_running_average-not-train-name-bnn-y:end
+        # @arch bottleneck.__call__.y-nn-relu-y:start
         y = nn.relu(y)  # (batch, height, width, out_channels)
+        # @arch bottleneck.__call__.y-nn-relu-y:end
+        # @arch bottleneck.__call__.y-nn-conv-self-out_channels-n-n-strides-self-stride-self-stride-padding-:start
         y = nn.Conv(self.out_channels, (3, 3), strides=(self.stride, self.stride), padding="SAME", use_bias=False, name="conv2")(y)  # (batch, height, width, out_channels) -> (batch, out_height, out_width, out_channels)
+        # @arch bottleneck.__call__.y-nn-conv-self-out_channels-n-n-strides-self-stride-self-stride-padding-:end
+        # @arch bottleneck.__call__.y-nn-batchnorm-use_running_average-not-train-name-bnn-y.2:start
         y = nn.BatchNorm(use_running_average=not train, name="bn2")(y)  # (batch, out_height, out_width, out_channels)
+        # @arch bottleneck.__call__.y-nn-batchnorm-use_running_average-not-train-name-bnn-y.2:end
+        # @arch bottleneck.__call__.y-nn-relu-y.2:start
         y = nn.relu(y)  # (batch, out_height, out_width, out_channels)
+        # @arch bottleneck.__call__.y-nn-relu-y.2:end
+        # @arch bottleneck.__call__.y-nn-conv-expanded_channels-n-n-use_bias-false-name-convn-y:start
         y = nn.Conv(expanded_channels, (1, 1), use_bias=False, name="conv3")(y)  # (batch, out_height, out_width, out_channels) -> (batch, out_height, out_width, expanded_channels)
+        # @arch bottleneck.__call__.y-nn-conv-expanded_channels-n-n-use_bias-false-name-convn-y:end
+        # @arch bottleneck.__call__.y-nn-batchnorm-use_running_average-not-train-name-bnn-y.3:start
         y = nn.BatchNorm(use_running_average=not train, name="bn3")(y)  # (batch, out_height, out_width, expanded_channels)
+        # @arch bottleneck.__call__.y-nn-batchnorm-use_running_average-not-train-name-bnn-y.3:end
+        # @arch bottleneck.__call__.if-self-use_projection:start
         if self.use_projection:
+        # @arch bottleneck.__call__.if-self-use_projection:end
+            # @arch bottleneck.__call__.identity-nn-conv-expanded_channels-n-n-strides-self-stride-self-stride-u:start
             identity = nn.Conv(expanded_channels, (1, 1), strides=(self.stride, self.stride), use_bias=False, name="downsample_conv")(x)  # (batch, height, width, in_channels) -> (batch, out_height, out_width, expanded_channels)
+            # @arch bottleneck.__call__.identity-nn-conv-expanded_channels-n-n-strides-self-stride-self-stride-u:end
+            # @arch bottleneck.__call__.identity-nn-batchnorm-use_running_average-not-train-name-downsample_bn-i:start
             identity = nn.BatchNorm(use_running_average=not train, name="downsample_bn")(identity)  # (batch, out_height, out_width, expanded_channels)
+            # @arch bottleneck.__call__.identity-nn-batchnorm-use_running_average-not-train-name-downsample_bn-i:end
 
         # Add residual and apply final activation.
+        # @arch bottleneck.__call__.y-y-identity:start
         y = y + identity  # (batch, out_height, out_width, expanded_channels)
+        # @arch bottleneck.__call__.y-y-identity:end
+        # @arch bottleneck.__call__.y-nn-relu-y.3:start
         y = nn.relu(y)  # (batch, out_height, out_width, expanded_channels)
+        # @arch bottleneck.__call__.y-nn-relu-y.3:end
         return y
 
 
@@ -93,30 +143,60 @@ class {{ className }}(nn.Module):
     @nn.compact
     def __call__(self, x, train=False):
         # Convert image input into stem features.
+        # @arch resnetn.__call__.x-nn-conv-n-n-n-strides-n-n-padding-same-use_bias-false-name-stem_conv-x:start
         x = nn.Conv(64, (7, 7), strides=(2, 2), padding="SAME", use_bias=False, name="stem_conv")(x)  # (batch, 224, 224, 3) -> (batch, 112, 112, 64)
+        # @arch resnetn.__call__.x-nn-conv-n-n-n-strides-n-n-padding-same-use_bias-false-name-stem_conv-x:end
+        # @arch resnetn.__call__.x-nn-batchnorm-use_running_average-not-train-name-stem_bn-x:start
         x = nn.BatchNorm(use_running_average=not train, name="stem_bn")(x)  # (batch, 112, 112, 64)
+        # @arch resnetn.__call__.x-nn-batchnorm-use_running_average-not-train-name-stem_bn-x:end
+        # @arch resnetn.__call__.x-nn-relu-x:start
         x = nn.relu(x)  # (batch, 112, 112, 64)
+        # @arch resnetn.__call__.x-nn-relu-x:end
+        # @arch resnetn.__call__.x-nn-max_pool-x-window_shape-n-n-strides-n-n-padding-same:start
         x = nn.max_pool(x, window_shape=(3, 3), strides=(2, 2), padding="SAME")  # (batch, 112, 112, 64) -> (batch, 56, 56, 64)
+        # @arch resnetn.__call__.x-nn-max_pool-x-window_shape-n-n-strides-n-n-padding-same:end
 
         # Run residual stages while reducing spatial size.
         block = {{ blockClass }}
+        # @arch resnetn.__call__.x-self-_stage-x-block-n-blocks-n-stride-n-train-train:start
         x = self._stage(x, block, 64, blocks={{ stage1Blocks }}, stride=1, train=train)  # (batch, 56, 56, 64)
+        # @arch resnetn.__call__.x-self-_stage-x-block-n-blocks-n-stride-n-train-train:end
+        # @arch resnetn.__call__.x-self-_stage-x-block-n-blocks-n-stride-n-train-train.2:start
         x = self._stage(x, block, 128, blocks={{ stage2Blocks }}, stride=2, train=train)  # (batch, 56, 56, channels) -> (batch, 28, 28, channels)
+        # @arch resnetn.__call__.x-self-_stage-x-block-n-blocks-n-stride-n-train-train.2:end
+        # @arch resnetn.__call__.x-self-_stage-x-block-n-blocks-n-stride-n-train-train.3:start
         x = self._stage(x, block, 256, blocks={{ stage3Blocks }}, stride=2, train=train)  # (batch, 28, 28, channels) -> (batch, 14, 14, channels)
+        # @arch resnetn.__call__.x-self-_stage-x-block-n-blocks-n-stride-n-train-train.3:end
+        # @arch resnetn.__call__.x-self-_stage-x-block-n-blocks-n-stride-n-train-train.4:start
         x = self._stage(x, block, 512, blocks={{ stage4Blocks }}, stride=2, train=train)  # (batch, 14, 14, channels) -> (batch, 7, 7, channels)
+        # @arch resnetn.__call__.x-self-_stage-x-block-n-blocks-n-stride-n-train-train.4:end
 
         # Pool final features and classify.
+        # @arch resnetn.__call__.x-jnp-mean-x-axis-n-n:start
         x = jnp.mean(x, axis=(1, 2))  # (batch, 7, 7, channels) -> (batch, channels)
+        # @arch resnetn.__call__.x-jnp-mean-x-axis-n-n:end
+        # @arch resnetn.__call__.logits-nn-dense-self-num_classes-name-fc-x:start
         logits = nn.Dense(self.num_classes, name="fc")(x)  # (batch, channels) -> (batch, num_classes)
+        # @arch resnetn.__call__.logits-nn-dense-self-num_classes-name-fc-x:end
         return logits
 
+    # @arch resnetn.def-_stage-self-x-block-channels-blocks-stride-train:start
     def _stage(self, x, block, channels, blocks, stride, train):
+    # @arch resnetn.def-_stage-self-x-block-channels-blocks-stride-train:end
         # Stack residual blocks for one ResNet stage.
         expanded_channels = channels * block.expansion
+        # @arch resnetn._stage.use_projection-stride-n-or-x-shape-n-expanded_channels:start
         use_projection = stride != 1 or x.shape[-1] != expanded_channels
+        # @arch resnetn._stage.use_projection-stride-n-or-x-shape-n-expanded_channels:end
+        # @arch resnetn._stage.x-block-channels-stride-use_projection-use_projection-x-train-train:start
         x = block(channels, stride, use_projection=use_projection)(x, train=train)  # (batch, height, width, in_channels) -> (batch, out_height, out_width, channels)
+        # @arch resnetn._stage.x-block-channels-stride-use_projection-use_projection-x-train-train:end
+        # @arch resnetn._stage.for-_-in-range-n-blocks:start
         for _ in range(1, blocks):
+        # @arch resnetn._stage.for-_-in-range-n-blocks:end
+            # @arch resnetn._stage.x-block-channels-x-train-train:start
             x = block(channels)(x, train=train)  # (batch, out_height, out_width, channels)
+            # @arch resnetn._stage.x-block-channels-x-train-train:end
         return x
 
 

@@ -4,6 +4,8 @@
   "private": true,
   "scripts": {
     "generate:model-artifacts": "node scripts/generate-model-artifacts.mjs",
+    "test:anchors": "node --test scripts/model-highlight-anchors.test.mjs",
+    "test:highlights": "pnpm generate:model-artifacts && node --test scripts/model-highlight-anchors.test.mjs scripts/model-highlight-catalog.test.mjs",
     "dev": "pnpm generate:model-artifacts && node scripts/dev-server.mjs",
     "build": "pnpm generate:model-artifacts && next build",
     "start": "next start",

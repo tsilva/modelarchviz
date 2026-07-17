@@ -14,41 +14,93 @@ class AlexNet(nn.Module):
 
         # Register the convolutional feature extractor.
         self.features = nn.Sequential(
+            # @arch alexnet.nn-convnd-n-n-kernel_size-n-stride-n:start
             nn.Conv2d(3, 96, kernel_size=11, stride=4),
+            # @arch alexnet.nn-convnd-n-n-kernel_size-n-stride-n:end
+            # @arch alexnet.nn-relu-inplace-true:start
             nn.ReLU(inplace=True),
+            # @arch alexnet.nn-relu-inplace-true:end
+            # @arch alexnet.nn-localresponsenorm-size-n-alpha-ne-n-beta-n-k-n:start
             nn.LocalResponseNorm(size=5, alpha=1e-4, beta=0.75, k=2),
+            # @arch alexnet.nn-localresponsenorm-size-n-alpha-ne-n-beta-n-k-n:end
+            # @arch alexnet.nn-maxpoolnd-kernel_size-n-stride-n:start
             nn.MaxPool2d(kernel_size=3, stride=2),
+            # @arch alexnet.nn-maxpoolnd-kernel_size-n-stride-n:end
+            # @arch alexnet.nn-convnd-n-n-kernel_size-n-padding-n:start
             nn.Conv2d(96, 256, kernel_size=5, padding=2),
+            # @arch alexnet.nn-convnd-n-n-kernel_size-n-padding-n:end
+            # @arch alexnet.nn-relu-inplace-true.2:start
             nn.ReLU(inplace=True),
+            # @arch alexnet.nn-relu-inplace-true.2:end
+            # @arch alexnet.nn-localresponsenorm-size-n-alpha-ne-n-beta-n-k-n.2:start
             nn.LocalResponseNorm(size=5, alpha=1e-4, beta=0.75, k=2),
+            # @arch alexnet.nn-localresponsenorm-size-n-alpha-ne-n-beta-n-k-n.2:end
+            # @arch alexnet.nn-maxpoolnd-kernel_size-n-stride-n.2:start
             nn.MaxPool2d(kernel_size=3, stride=2),
+            # @arch alexnet.nn-maxpoolnd-kernel_size-n-stride-n.2:end
+            # @arch alexnet.nn-convnd-n-n-kernel_size-n-padding-n.2:start
             nn.Conv2d(256, 384, kernel_size=3, padding=1),
+            # @arch alexnet.nn-convnd-n-n-kernel_size-n-padding-n.2:end
+            # @arch alexnet.nn-relu-inplace-true.3:start
             nn.ReLU(inplace=True),
+            # @arch alexnet.nn-relu-inplace-true.3:end
+            # @arch alexnet.nn-convnd-n-n-kernel_size-n-padding-n.3:start
             nn.Conv2d(384, 384, kernel_size=3, padding=1),
+            # @arch alexnet.nn-convnd-n-n-kernel_size-n-padding-n.3:end
+            # @arch alexnet.nn-relu-inplace-true.4:start
             nn.ReLU(inplace=True),
+            # @arch alexnet.nn-relu-inplace-true.4:end
+            # @arch alexnet.nn-convnd-n-n-kernel_size-n-padding-n.4:start
             nn.Conv2d(384, 256, kernel_size=3, padding=1),
+            # @arch alexnet.nn-convnd-n-n-kernel_size-n-padding-n.4:end
+            # @arch alexnet.nn-relu-inplace-true.5:start
             nn.ReLU(inplace=True),
+            # @arch alexnet.nn-relu-inplace-true.5:end
+            # @arch alexnet.nn-maxpoolnd-kernel_size-n-stride-n.3:start
             nn.MaxPool2d(kernel_size=3, stride=2),
+            # @arch alexnet.nn-maxpoolnd-kernel_size-n-stride-n.3:end
+        # @arch alexnet.code.4:start
         )
+        # @arch alexnet.code.4:end
 
         # Register the dense classifier for flattened feature maps.
         flattened_features = 256 * 6 * 6
+        # @arch alexnet.self-classifier-nn-sequential:start
         self.classifier = nn.Sequential(
+        # @arch alexnet.self-classifier-nn-sequential:end
+            # @arch alexnet.nn-dropout-n:start
             nn.Dropout(0.5),
+            # @arch alexnet.nn-dropout-n:end
+            # @arch alexnet.nn-linear-flattened_features-n:start
             nn.Linear(flattened_features, 4096),
+            # @arch alexnet.nn-linear-flattened_features-n:end
+            # @arch alexnet.nn-relu-inplace-true.6:start
             nn.ReLU(inplace=True),
+            # @arch alexnet.nn-relu-inplace-true.6:end
+            # @arch alexnet.nn-dropout-n.2:start
             nn.Dropout(0.5),
+            # @arch alexnet.nn-dropout-n.2:end
+            # @arch alexnet.nn-linear-n-n:start
             nn.Linear(4096, 4096),
+            # @arch alexnet.nn-linear-n-n:end
+            # @arch alexnet.nn-relu-inplace-true.7:start
             nn.ReLU(inplace=True),
+            # @arch alexnet.nn-relu-inplace-true.7:end
+            # @arch alexnet.nn-linear-n-num_classes:start
             nn.Linear(4096, num_classes),
+            # @arch alexnet.nn-linear-n-num_classes:end
         )
 
     def forward(self, x):
         # Extract convolutional features: (batch, 3, 227, 227) -> (batch, 256, 6, 6).
+        # @arch alexnet.forward.x-self-features-x:start
         x = self.features(x)  # (batch, 3, 227, 227) -> (batch, 256, 6, 6)
+        # @arch alexnet.forward.x-self-features-x:end
 
         # Flatten feature maps for dense classification: (batch, 256, 6, 6) -> (batch, 9216).
+        # @arch alexnet.forward.x-torch-flatten-x-start_dim-n:start
         x = torch.flatten(x, start_dim=1)  # (batch, 256, 6, 6) -> (batch, 9216)
+        # @arch alexnet.forward.x-torch-flatten-x-start_dim-n:end
 
         # Classify flattened features: (batch, 9216) -> (batch, num_classes).
         logits = self.classifier(x)  # (batch, 9216) -> (batch, num_classes)

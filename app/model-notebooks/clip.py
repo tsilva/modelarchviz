@@ -107,7 +107,9 @@ example_outputs = example_block(example_tokens)  # (2, 4, 32) -> (2, 4, 32)
 print("block output shape:", example_outputs.shape)
 
 # %%
+# @arch class-visionencoder-nn-module:start
 class VisionEncoder(nn.Module):
+# @arch class-visionencoder-nn-module:end
     def __init__(
         self,
         image_size=224,  # Square image size.
@@ -120,33 +122,67 @@ class VisionEncoder(nn.Module):
         super().__init__()
 
         # Register patch projection, learned tokens, transformer, and projection head.
+        # @arch visionencoder.self-patch_embed-nn-convnd-n-width-kernel_size-patch_size-stride-patch_s:start
         self.patch_embed = nn.Conv2d(3, width, kernel_size=patch_size, stride=patch_size, bias=False)
+        # @arch visionencoder.self-patch_embed-nn-convnd-n-width-kernel_size-patch_size-stride-patch_s:end
         patch_grid = image_size // patch_size
         patch_count = patch_grid ** 2
+        # @arch visionencoder.self-cls_token-nn-parameter-torch-zeros-n-n-width:start
         self.cls_token = nn.Parameter(torch.zeros(1, 1, width))
+        # @arch visionencoder.self-cls_token-nn-parameter-torch-zeros-n-n-width:end
+        # @arch visionencoder.self-pos_embed-nn-parameter-torch-zeros-n-patch_count-n-width:start
         self.pos_embed = nn.Parameter(torch.zeros(1, patch_count + 1, width))
+        # @arch visionencoder.self-pos_embed-nn-parameter-torch-zeros-n-patch_count-n-width:end
+        # @arch visionencoder.self-blocks-nn-modulelist-transformerblock-width-heads-for-_-in-range-la:start
         self.blocks = nn.ModuleList([TransformerBlock(width, heads) for _ in range(layers)])
+        # @arch visionencoder.self-blocks-nn-modulelist-transformerblock-width-heads-for-_-in-range-la:end
         self.ln_post = nn.LayerNorm(width)
+        # @arch visionencoder.self-proj-nn-linear-width-embed_dim-bias-false:start
         self.proj = nn.Linear(width, embed_dim, bias=False)
+        # @arch visionencoder.self-proj-nn-linear-width-embed_dim-bias-false:end
 
+    # @arch visionencoder.def-forward-self-images:start
     def forward(self, images):
+    # @arch visionencoder.def-forward-self-images:end
         # Convert images into patch tokens and prepend the CLS token.
+        # @arch visionencoder.forward.x-self-patch_embed-images:start
         x = self.patch_embed(images)  # (batch, 3, height, width) -> (batch, vision_width, grid, grid)
+        # @arch visionencoder.forward.x-self-patch_embed-images:end
+        # @arch visionencoder.forward.x-x-flatten-n:start
         x = x.flatten(2)  # (batch, vision_width, grid, grid) -> (batch, vision_width, patches)
+        # @arch visionencoder.forward.x-x-flatten-n:end
+        # @arch visionencoder.forward.x-x-transpose-n-n:start
         x = x.transpose(1, 2)  # (batch, vision_width, patches) -> (batch, patches, vision_width)
+        # @arch visionencoder.forward.x-x-transpose-n-n:end
         batch_size = x.size(0)  # (batch, patches, vision_width) -> scalar
+        # @arch visionencoder.forward.cls-self-cls_token-expand-batch_size-n-n:start
         cls = self.cls_token.expand(batch_size, -1, -1)  # (1, 1, vision_width) -> (batch, 1, vision_width)
+        # @arch visionencoder.forward.cls-self-cls_token-expand-batch_size-n-n:end
+        # @arch visionencoder.forward.x-torch-cat-cls-x-dim-n:start
         x = torch.cat([cls, x], dim=1)  # (batch, 1, vision_width), (batch, patches, vision_width) -> (batch, tokens, vision_width)
+        # @arch visionencoder.forward.x-torch-cat-cls-x-dim-n:end
 
         # Add positions and run the visual transformer.
+        # @arch visionencoder.forward.x-x-self-pos_embed:start
         x = x + self.pos_embed  # (batch, tokens, vision_width)
+        # @arch visionencoder.forward.x-x-self-pos_embed:end
+        # @arch visionencoder.forward.for-block-in-self-blocks:start
         for block in self.blocks:
+        # @arch visionencoder.forward.for-block-in-self-blocks:end
+            # @arch visionencoder.forward.x-block-x:start
             x = block(x)  # (batch, tokens, vision_width)
+            # @arch visionencoder.forward.x-block-x:end
 
         # Project the CLS token into the shared embedding space.
+        # @arch visionencoder.forward.x-self-ln_post-x:start
         x = self.ln_post(x)  # (batch, tokens, vision_width)
+        # @arch visionencoder.forward.x-self-ln_post-x:end
+        # @arch visionencoder.forward.cls_output-x-n:start
         cls_output = x[:, 0]  # (batch, tokens, vision_width) -> (batch, vision_width)
+        # @arch visionencoder.forward.cls_output-x-n:end
+        # @arch visionencoder.forward.image_features-self-proj-cls_output:start
         image_features = self.proj(cls_output)  # (batch, vision_width) -> (batch, embed_dim)
+        # @arch visionencoder.forward.image_features-self-proj-cls_output:end
         return image_features  # (batch, embed_dim)
 
 
@@ -158,7 +194,9 @@ example_features = example_encoder(example_images)  # (2, 3, 32, 32) -> (2, 32)
 print("image features shape:", example_features.shape)
 
 # %%
+# @arch class-textencoder-nn-module:start
 class TextEncoder(nn.Module):
+# @arch class-textencoder-nn-module:end
     def __init__(
         self,
         vocab_size=49408,  # CLIP byte-pair vocabulary size.
@@ -171,32 +209,68 @@ class TextEncoder(nn.Module):
         super().__init__()
 
         # Register token/position embeddings, causal transformer, and projection head.
+        # @arch textencoder.self-token_embedding-nn-embedding-vocab_size-width:start
         self.token_embedding = nn.Embedding(vocab_size, width)
+        # @arch textencoder.self-token_embedding-nn-embedding-vocab_size-width:end
+        # @arch textencoder.self-pos_embed-nn-parameter-torch-zeros-n-context_length-width:start
         self.pos_embed = nn.Parameter(torch.zeros(1, context_length, width))
+        # @arch textencoder.self-pos_embed-nn-parameter-torch-zeros-n-context_length-width:end
+        # @arch textencoder.self-blocks-nn-modulelist-transformerblock-width-heads-for-_-in-range-la:start
         self.blocks = nn.ModuleList([TransformerBlock(width, heads) for _ in range(layers)])
+        # @arch textencoder.self-blocks-nn-modulelist-transformerblock-width-heads-for-_-in-range-la:end
         self.ln_final = nn.LayerNorm(width)
+        # @arch textencoder.self-text_projection-nn-linear-width-embed_dim-bias-false:start
         self.text_projection = nn.Linear(width, embed_dim, bias=False)
+        # @arch textencoder.self-text_projection-nn-linear-width-embed_dim-bias-false:end
+        # @arch textencoder.mask-torch-tril-torch-ones-context_length-context_length:start
         mask = torch.tril(torch.ones(context_length, context_length))
+        # @arch textencoder.mask-torch-tril-torch-ones-context_length-context_length:end
+        # @arch textencoder.self-register_buffer-causal_mask-mask-view-n-n-context_length-context_le:start
         self.register_buffer("causal_mask", mask.view(1, 1, context_length, context_length), persistent=False)
+        # @arch textencoder.self-register_buffer-causal_mask-mask-view-n-n-context_length-context_le:end
 
+    # @arch textencoder.def-forward-self-input_ids:start
     def forward(self, input_ids):
+    # @arch textencoder.def-forward-self-input_ids:end
         # Embed text tokens and add learned positions.
         token_count = input_ids.size(1)  # (batch, tokens) -> scalar
+        # @arch textencoder.forward.token_embeddings-self-token_embedding-input_ids:start
         token_embeddings = self.token_embedding(input_ids)  # (batch, tokens) -> (batch, tokens, text_width)
+        # @arch textencoder.forward.token_embeddings-self-token_embedding-input_ids:end
+        # @arch textencoder.forward.position_embeddings-self-pos_embed-token_count:start
         position_embeddings = self.pos_embed[:, :token_count, :]  # (1, context, text_width) -> (1, tokens, text_width)
+        # @arch textencoder.forward.position_embeddings-self-pos_embed-token_count:end
+        # @arch textencoder.forward.x-token_embeddings-position_embeddings:start
         x = token_embeddings + position_embeddings  # (batch, tokens, text_width)
+        # @arch textencoder.forward.x-token_embeddings-position_embeddings:end
 
         # Run the text transformer with a causal mask.
+        # @arch textencoder.forward.mask-self-causal_mask-token_count-token_count:start
         mask = self.causal_mask[:, :, :token_count, :token_count]  # (1, 1, context, context) -> (1, 1, tokens, tokens)
+        # @arch textencoder.forward.mask-self-causal_mask-token_count-token_count:end
+        # @arch textencoder.forward.for-block-in-self-blocks:start
         for block in self.blocks:
+        # @arch textencoder.forward.for-block-in-self-blocks:end
+            # @arch textencoder.forward.x-block-x-mask:start
             x = block(x, mask)  # (batch, tokens, text_width)
+            # @arch textencoder.forward.x-block-x-mask:end
 
         # Pool at the end-of-text token and project to the shared embedding space.
+        # @arch textencoder.forward.x-self-ln_final-x:start
         x = self.ln_final(x)  # (batch, tokens, text_width)
+        # @arch textencoder.forward.x-self-ln_final-x:end
+        # @arch textencoder.forward.eot_indices-input_ids-argmax-dim-n:start
         eot_indices = input_ids.argmax(dim=-1)  # (batch, tokens) -> (batch)
+        # @arch textencoder.forward.eot_indices-input_ids-argmax-dim-n:end
+        # @arch textencoder.forward.batch_indices-torch-arange-input_ids-size-n-device-input_ids-device:start
         batch_indices = torch.arange(input_ids.size(0), device=input_ids.device)  # -> (batch)
+        # @arch textencoder.forward.batch_indices-torch-arange-input_ids-size-n-device-input_ids-device:end
+        # @arch textencoder.forward.pooled-x-batch_indices-eot_indices:start
         pooled = x[batch_indices, eot_indices]  # (batch, tokens, text_width) -> (batch, text_width)
+        # @arch textencoder.forward.pooled-x-batch_indices-eot_indices:end
+        # @arch textencoder.forward.text_features-self-text_projection-pooled:start
         text_features = self.text_projection(pooled)  # (batch, text_width) -> (batch, embed_dim)
+        # @arch textencoder.forward.text_features-self-text_projection-pooled:end
         return text_features  # (batch, embed_dim)
 
 
@@ -226,22 +300,46 @@ class CLIP(nn.Module):
         super().__init__()
 
         # Register the two encoders and the learned contrastive temperature.
+        # @arch clip.self-visual-visionencoder-image_size-patch_size-vision_width-vision_laye:start
         self.visual = VisionEncoder(image_size, patch_size, vision_width, vision_layers, vision_heads, embed_dim)
+        # @arch clip.self-visual-visionencoder-image_size-patch_size-vision_width-vision_laye:end
+        # @arch clip.self-text-textencoder-vocab_size-context_length-text_width-text_layers-t:start
         self.text = TextEncoder(vocab_size, context_length, text_width, text_layers, text_heads, embed_dim)
+        # @arch clip.self-text-textencoder-vocab_size-context_length-text_width-text_layers-t:end
+        # @arch clip.self-logit_scale-nn-parameter-torch-ones-torch-log-torch-tensor-n-n:start
         self.logit_scale = nn.Parameter(torch.ones([]) * torch.log(torch.tensor(1 / 0.07)))
+        # @arch clip.self-logit_scale-nn-parameter-torch-ones-torch-log-torch-tensor-n-n:end
 
+    # @arch clip.def-forward-self-images-input_ids:start
     def forward(self, images, input_ids):
+    # @arch clip.def-forward-self-images-input_ids:end
         # Encode each modality into the same embedding width.
+        # @arch clip.forward.image_features-self-visual-images:start
         image_features = self.visual(images)  # (batch, 3, height, width) -> (batch, embed_dim)
+        # @arch clip.forward.image_features-self-visual-images:end
+        # @arch clip.forward.text_features-self-text-input_ids:start
         text_features = self.text(input_ids)  # (batch, tokens) -> (batch, embed_dim)
+        # @arch clip.forward.text_features-self-text-input_ids:end
 
         # Normalize embeddings and score every image against every text.
+        # @arch clip.forward.image_features-f-normalize-image_features-dim-n:start
         image_features = F.normalize(image_features, dim=-1)  # (batch, embed_dim)
+        # @arch clip.forward.image_features-f-normalize-image_features-dim-n:end
+        # @arch clip.forward.text_features-f-normalize-text_features-dim-n:start
         text_features = F.normalize(text_features, dim=-1)  # (batch, embed_dim)
+        # @arch clip.forward.text_features-f-normalize-text_features-dim-n:end
+        # @arch clip.forward.logit_scale-self-logit_scale-exp:start
         logit_scale = self.logit_scale.exp()  # scalar
+        # @arch clip.forward.logit_scale-self-logit_scale-exp:end
+        # @arch clip.forward.text_features_t-text_features-t:start
         text_features_t = text_features.t()  # (batch, embed_dim) -> (embed_dim, batch)
+        # @arch clip.forward.text_features_t-text_features-t:end
+        # @arch clip.forward.logits_per_image-logit_scale-image_features-text_features_t:start
         logits_per_image = logit_scale * image_features @ text_features_t  # (batch, embed_dim), (embed_dim, batch) -> (batch, batch)
+        # @arch clip.forward.logits_per_image-logit_scale-image_features-text_features_t:end
+        # @arch clip.forward.logits_per_text-logits_per_image-t:start
         logits_per_text = logits_per_image.t()  # (batch, batch)
+        # @arch clip.forward.logits_per_text-logits_per_image-t:end
         return logits_per_image, logits_per_text  # two (batch, batch)
 
 

@@ -5,35 +5,75 @@ from flax import linen as nn
 
 
 # %%
+# @arch class-grucell-nn-module:start
 class GRUCell(nn.Module):
+# @arch class-grucell-nn-module:end
+    # @arch grucell.hidden_size-int-n:start
     hidden_size: int = 64
+    # @arch grucell.hidden_size-int-n:end
 
+    # @arch grucell.nn-compact:start
     @nn.compact
+    # @arch grucell.nn-compact:end
     def __call__(self, x, h):
         # Compute update gate: (batch, input_size) + (batch, hidden_size) -> (batch, hidden_size).
+        # @arch grucell.__call__.x_z-nn-dense-self-hidden_size-name-x_z-x:start
         x_z = nn.Dense(self.hidden_size, name='x_z')(x)  # (batch, input_size) -> (batch, hidden_size)
+        # @arch grucell.__call__.x_z-nn-dense-self-hidden_size-name-x_z-x:end
+        # @arch grucell.__call__.h_z-nn-dense-self-hidden_size-use_bias-false-name-h_z-h:start
         h_z = nn.Dense(self.hidden_size, use_bias=False, name='h_z')(h)  # (batch, hidden_size)
+        # @arch grucell.__call__.h_z-nn-dense-self-hidden_size-use_bias-false-name-h_z-h:end
+        # @arch grucell.__call__.z_pre-x_z-h_z:start
         z_pre = x_z + h_z  # (batch, hidden_size)
+        # @arch grucell.__call__.z_pre-x_z-h_z:end
+        # @arch grucell.__call__.z-nn-sigmoid-z_pre:start
         z = nn.sigmoid(z_pre)  # (batch, hidden_size)
+        # @arch grucell.__call__.z-nn-sigmoid-z_pre:end
 
         # Compute reset gate: (batch, input_size) + (batch, hidden_size) -> (batch, hidden_size).
+        # @arch grucell.__call__.x_r-nn-dense-self-hidden_size-name-x_r-x:start
         x_r = nn.Dense(self.hidden_size, name='x_r')(x)  # (batch, input_size) -> (batch, hidden_size)
+        # @arch grucell.__call__.x_r-nn-dense-self-hidden_size-name-x_r-x:end
+        # @arch grucell.__call__.h_r-nn-dense-self-hidden_size-use_bias-false-name-h_r-h:start
         h_r = nn.Dense(self.hidden_size, use_bias=False, name='h_r')(h)  # (batch, hidden_size)
+        # @arch grucell.__call__.h_r-nn-dense-self-hidden_size-use_bias-false-name-h_r-h:end
+        # @arch grucell.__call__.r_pre-x_r-h_r:start
         r_pre = x_r + h_r  # (batch, hidden_size)
+        # @arch grucell.__call__.r_pre-x_r-h_r:end
+        # @arch grucell.__call__.r-nn-sigmoid-r_pre:start
         r = nn.sigmoid(r_pre)  # (batch, hidden_size)
+        # @arch grucell.__call__.r-nn-sigmoid-r_pre:end
 
         # Compute candidate state from reset hidden state: (batch, hidden_size).
+        # @arch grucell.__call__.reset_h-r-h:start
         reset_h = r * h  # (batch, hidden_size)
+        # @arch grucell.__call__.reset_h-r-h:end
+        # @arch grucell.__call__.x_n-nn-dense-self-hidden_size-name-x_n-x:start
         x_n = nn.Dense(self.hidden_size, name='x_n')(x)  # (batch, input_size) -> (batch, hidden_size)
+        # @arch grucell.__call__.x_n-nn-dense-self-hidden_size-name-x_n-x:end
+        # @arch grucell.__call__.h_n-nn-dense-self-hidden_size-use_bias-false-name-h_n-reset_h:start
         h_n = nn.Dense(self.hidden_size, use_bias=False, name='h_n')(reset_h)  # (batch, hidden_size)
+        # @arch grucell.__call__.h_n-nn-dense-self-hidden_size-use_bias-false-name-h_n-reset_h:end
+        # @arch grucell.__call__.n_pre-x_n-h_n:start
         n_pre = x_n + h_n  # (batch, hidden_size)
+        # @arch grucell.__call__.n_pre-x_n-h_n:end
+        # @arch grucell.__call__.n-jnp-tanh-n_pre:start
         n = jnp.tanh(n_pre)  # (batch, hidden_size)
+        # @arch grucell.__call__.n-jnp-tanh-n_pre:end
 
         # Blend previous and candidate states: (batch, hidden_size).
+        # @arch grucell.__call__.keep_h-z-h:start
         keep_h = z * h  # (batch, hidden_size)
+        # @arch grucell.__call__.keep_h-z-h:end
+        # @arch grucell.__call__.candidate_h-n-z-n:start
         candidate_h = (1.0 - z) * n  # (batch, hidden_size)
+        # @arch grucell.__call__.candidate_h-n-z-n:end
+        # @arch grucell.__call__.h_next-candidate_h-keep_h:start
         h_next = candidate_h + keep_h  # (batch, hidden_size)
+        # @arch grucell.__call__.h_next-candidate_h-keep_h:end
+        # @arch grucell.__call__.return-h_next:start
         return h_next
+        # @arch grucell.__call__.return-h_next:end
 
 
 # %% [notebook-only]
@@ -49,29 +89,59 @@ print("example_next_state shape:", example_next_state.shape)
 # %%
 class GRUSequence(nn.Module):
     hidden_size: int = 64
+    # @arch grusequence.output_size-int-n:start
     output_size: int = 10
+    # @arch grusequence.output_size-int-n:end
 
     @nn.compact
     def __call__(self, x):
         # Build the initial recurrent state: (batch, hidden_size).
+        # @arch grusequence.__call__.batch_size-x-shape-n:start
         batch_size = x.shape[0]  # (batch, steps, input_size) -> scalar
+        # @arch grusequence.__call__.batch_size-x-shape-n:end
+        # @arch grusequence.__call__.hidden_shape-batch_size-self-hidden_size:start
         hidden_shape = (batch_size, self.hidden_size)  # -> (batch, hidden_size)
+        # @arch grusequence.__call__.hidden_shape-batch_size-self-hidden_size:end
+        # @arch grusequence.__call__.h-jnp-zeros-hidden_shape:start
         h = jnp.zeros(hidden_shape)  # -> (batch, hidden_size)
+        # @arch grusequence.__call__.h-jnp-zeros-hidden_shape:end
 
         # Run the shared GRU cell over time: (batch, steps, input_size) -> list of (batch, hidden_size).
+        # @arch grusequence.__call__.states:start
         states = []
+        # @arch grusequence.__call__.states:end
+        # @arch grusequence.__call__.cell-grucell-self-hidden_size:start
         cell = GRUCell(self.hidden_size)
+        # @arch grusequence.__call__.cell-grucell-self-hidden_size:end
+        # @arch grusequence.__call__.step_count-x-shape-n:start
         step_count = x.shape[1]  # (batch, steps, input_size) -> scalar
+        # @arch grusequence.__call__.step_count-x-shape-n:end
+        # @arch grusequence.__call__.for-t-in-range-step_count:start
         for t in range(step_count):
+        # @arch grusequence.__call__.for-t-in-range-step_count:end
+            # @arch grusequence.__call__.current_input-x-t:start
             current_input = x[:, t]  # (batch, steps, input_size) -> (batch, input_size)
+            # @arch grusequence.__call__.current_input-x-t:end
+            # @arch grusequence.__call__.h-cell-current_input-h:start
             h = cell(current_input, h)  # (batch, input_size), (batch, hidden_size) -> (batch, hidden_size)
+            # @arch grusequence.__call__.h-cell-current_input-h:end
+            # @arch grusequence.__call__.states-append-h:start
             states.append(h)
+            # @arch grusequence.__call__.states-append-h:end
 
         # Project the final hidden state and pack the full state trace.
+        # @arch grusequence.__call__.logits-nn-dense-self-output_size-name-readout-h:start
         logits = nn.Dense(self.output_size, name='readout')(h)  # (batch, hidden_size) -> (batch, output_size)
+        # @arch grusequence.__call__.logits-nn-dense-self-output_size-name-readout-h:end
+        # @arch grusequence.__call__.state_trace-jnp-stack-states-axis-n:start
         state_trace = jnp.stack(states, axis=1)  # list of (batch, hidden_size) -> (batch, steps, hidden_size)
+        # @arch grusequence.__call__.state_trace-jnp-stack-states-axis-n:end
+        # @arch grusequence.__call__.outputs-logits-state_trace:start
         outputs = (logits, state_trace)
+        # @arch grusequence.__call__.outputs-logits-state_trace:end
+        # @arch grusequence.__call__.return-outputs:start
         return outputs
+        # @arch grusequence.__call__.return-outputs:end
 
 
 # %% [notebook-only]
