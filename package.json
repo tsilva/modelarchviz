@@ -5,14 +5,16 @@
   "scripts": {
     "generate:model-artifacts": "node scripts/generate-model-artifacts.mjs",
     "test:anchors": "node --test scripts/model-highlight-anchors.test.mjs",
+    "test:dependencies": "node --test scripts/dependency-security.test.mjs",
     "test:highlights": "pnpm generate:model-artifacts && node --test scripts/model-highlight-anchors.test.mjs scripts/model-highlight-catalog.test.mjs",
+    "test": "pnpm test:dependencies && pnpm test:highlights",
     "dev": "pnpm generate:model-artifacts && node scripts/dev-server.mjs",
     "build": "pnpm generate:model-artifacts && next build",
     "start": "next start",
     "typecheck": "pnpm generate:model-artifacts && tsc --noEmit"
   },
   "dependencies": {
-    "@sentry/nextjs": "^10",
+    "@sentry/nextjs": "^10.69.0",
     "@vercel/analytics": "1.6.1",
     "next": "16.3.0",
     "pdfjs-dist": "4.10.38",
