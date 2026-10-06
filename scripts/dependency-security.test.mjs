@@ -16,9 +16,9 @@ function lockedVersions(packageName) {
 
 test("formerly vulnerable packages stay on patched versions", () => {
   assert.deepEqual(lockedVersions("@opentelemetry/core"), ["2.10.0"]);
-  assert.deepEqual(lockedVersions("brace-expansion"), ["5.0.9"]);
-  assert.deepEqual(lockedVersions("fast-uri"), ["3.1.5"]);
-  assert.deepEqual(lockedVersions("nanoid"), ["3.3.18"]);
+  assert.deepEqual(lockedVersions("brace-expansion"), ["5.0.12"]);
+  assert.deepEqual(lockedVersions("fast-uri"), ["3.1.8"]);
+  assert.deepEqual(lockedVersions("nanoid"), ["3.3.19"]);
 });
 
 test("the complete dependency graph has no known vulnerabilities", () => {
