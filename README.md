@@ -13,8 +13,9 @@ Use it to switch between embedded model specs, expand architecture blocks, selec
 ```bash
 git clone https://github.com/tsilva/modelarchviz.git
 cd modelarchviz
-pnpm install
-pnpm dev
+pnpm install --frozen-lockfile
+infisical login
+pnpm dev --port auto
 ```
 
 Open the local URL printed by the development server.
@@ -23,7 +24,7 @@ Open the local URL printed by the development server.
 
 ```bash
 pnpm generate:model-artifacts  # generate the UI source map, Colab notebooks, and PDF worker
-pnpm dev                       # generate artifacts and start Next.js on an available local port
+pnpm dev --port auto           # fetch Infisical dev secrets, generate artifacts and start Next.js on an available local port
 pnpm build                     # generate artifacts and build the production app
 pnpm start                     # serve the production build after pnpm build
 pnpm typecheck                 # generate artifacts and run TypeScript checks
@@ -49,11 +50,13 @@ The chat pane uses the server-side OpenRouter API route. Set `OPENROUTER_API_KEY
 
 ## Local credentials
 
-Private local values declared in `.keyenv.toml` live in macOS Keychain. Run
-`keyenv doctor` to verify them and launch credential-dependent commands with
-`keyenv run -- <command>`. Python, Node, and their child processes receive the
-values through their normal environment APIs. Keep only public or non-secret
-configuration in dotenv files.
+Private local values declared in `.keyenv.toml` are now managed in the linked Infisical `modelarchviz` project, Development environment, root folder. `.infisical.json` contains only public project connection settings. Authenticate with `infisical login`, then run `pnpm secrets:check` and `pnpm dev --port auto`.
+
+The launcher fetches only `OPENROUTER_API_KEY` and `SENTRY_AUTH_TOKEN` in memory and removes manager tokens from the app process. Missing credentials cannot fall back to old dotenv values; failed fetches stop before app startup. Public configuration can remain in dotenv files.
+
+Use `pnpm build:secrets` or `pnpm start:secrets` for local commands that need credentials. Vercel keeps its ordinary `pnpm build` command and receives production variables through the isolated `modelarchviz-production` Infisical project and its Vercel Production sync. Sync changes need a new deployment before they affect the live app.
+
+`pnpm secrets:migrate` is a one-time, manifest-bound Keychain import with conflict checks and exact readback verification. Keychain originals remain until migration and credential rotation are verified. Separate Infisical projects isolate access; independent provider keys are needed for independent dev/prod budgets and revocation.
 
 ## License
 

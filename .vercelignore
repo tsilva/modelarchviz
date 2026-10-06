@@ -1,0 +1,4 @@
+
+# Credentials are injected by Infisical; never upload local dotenv files.
+.env*
+!.env.example

@@ -75,3 +75,7 @@ This version has breaking changes — APIs, conventions, and file structure may 
 This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
 
 <!-- END:nextjs-agent-rules -->
+
+## Secrets
+
+`pnpm dev --port auto` fetches only the linked Infisical development project through the saved human CLI login. Private credentials must stay out of dotenv files, command arguments, logs, and browser bundles. Use `pnpm secrets:check` for presence-only verification. Production uses the isolated `modelarchviz-production` project and its Vercel Production sync. Preserve Keychain originals until migration and provider rotation are verified.
