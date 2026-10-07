@@ -21,7 +21,7 @@
     "test:secrets": "python3 -m unittest discover -s scripts/infisical -p test_secrets.py"
   },
   "dependencies": {
-    "@sentry/nextjs": "^10.69.0",
+    "@sentry/nextjs": "^10.75.3",
     "@vercel/analytics": "1.6.1",
     "next": "16.3.6",
     "pdfjs-dist": "4.10.38",

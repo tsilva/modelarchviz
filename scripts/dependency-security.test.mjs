@@ -15,10 +15,23 @@ function lockedVersions(packageName) {
 }
 
 test("formerly vulnerable packages stay on patched versions", () => {
-  assert.deepEqual(lockedVersions("@opentelemetry/core"), ["2.10.0"]);
-  assert.deepEqual(lockedVersions("brace-expansion"), ["5.0.12"]);
-  assert.deepEqual(lockedVersions("fast-uri"), ["3.1.8"]);
-  assert.deepEqual(lockedVersions("nanoid"), ["3.3.19"]);
+  for (const [name, floor] of Object.entries({
+    "@opentelemetry/core": "2.10.0",
+    "brace-expansion": "5.0.12",
+    "fast-uri": "3.1.8",
+    "nanoid": "3.3.19",
+    "sharp": "0.35.5",
+  })) {
+    const versions = lockedVersions(name);
+    assert.ok(versions.length, `missing dependency ${name}`);
+    for (const version of versions) {
+      const actual = version.split(".").map(Number);
+      const minimum = floor.split(".").map(Number);
+      assert.ok(actual.every(Number.isFinite), `unexpected version ${version}`);
+      const difference = actual.findIndex((part, index) => part !== minimum[index]);
+      assert.ok(difference === -1 || actual[difference] > minimum[difference], `${name}@${version} is below ${floor}`);
+    }
+  }
 });
 
 test("the complete dependency graph has no known vulnerabilities", () => {
