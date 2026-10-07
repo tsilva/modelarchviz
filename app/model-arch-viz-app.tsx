@@ -769,7 +769,7 @@ const resnetVariants: ModelVariantSpec[] = resnetVariantDefinitions.map((variant
 
 const completedPdfPrefetches = new Set<string>();
 const pendingPdfPrefetches = new Map<string, Promise<void>>();
-const paperPdfAssetVersion = "20260604";
+const paperPdfAssetVersion = "20261007";
 
 function paperPdfUrl(modelId: string) {
   return `/papers/${modelId}.pdf?v=${paperPdfAssetVersion}`;
@@ -10011,12 +10011,10 @@ function PdfViewer({
   const activeSearchMatch = activeSearchIndex >= 0 ? searchMatches[activeSearchIndex] : undefined;
 
   useEffect(() => {
-    if (!activeSearchMatch || activeSearchMatch.pageNumber === pageNumber) {
-      return;
+    if (activeSearchMatch) {
+      setPageNumber(activeSearchMatch.pageNumber);
     }
-
-    setPageNumber(activeSearchMatch.pageNumber);
-  }, [activeSearchMatch, pageNumber]);
+  }, [activeSearchMatch]);
 
   useEffect(() => {
     const textLayer = textLayerRef.current;
