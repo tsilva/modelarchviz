@@ -16,6 +16,8 @@ const generatedManifestPath = path.join(repoRoot, "app", "generated", "model-sou
 const notebookDir = path.join(repoRoot, "public", "notebooks");
 const pdfWorkerSourcePath = require.resolve("pdfjs-dist/build/pdf.worker.min.mjs");
 const pdfWorkerPath = path.join(repoRoot, "public", "pdf.worker.min.mjs");
+const jaxRequirements = await readFile(path.join(repoRoot, "requirements-notebooks-jax.txt"), "utf8");
+const jaxConstraints = await readFile(path.join(repoRoot, "constraints.txt"), "utf8");
 
 function parseNotebookSource(source) {
   const normalizedSource = source.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
@@ -99,25 +101,56 @@ function sourceLines(lines) {
   });
 }
 
+function jaxEnvironmentCell() {
+  // Install before importing JAX/Flax: Colab's bundled versions can be incompatible.
+  const source = [
+    "import subprocess",
+    "import sys",
+    "import tempfile",
+    "from pathlib import Path",
+    "",
+    "# Use the tested CPU environment instead of Colab's bundled JAX/Flax pair.",
+    `notebook_requirements = ${JSON.stringify(jaxRequirements)}`,
+    `notebook_constraints = ${JSON.stringify(jaxConstraints)}`,
+    "with tempfile.TemporaryDirectory() as setup_directory:",
+    "    setup_path = Path(setup_directory)",
+    "    requirements_path = setup_path / 'requirements.txt'",
+    "    requirements_path.write_text(notebook_requirements)",
+    "    (setup_path / 'constraints.txt').write_text(notebook_constraints)",
+    "    subprocess.check_call([sys.executable, '-m', 'pip', 'install', '--quiet', '-r', str(requirements_path)])",
+    "print('JAX and Flax environment ready. Run the remaining cells in order.')",
+  ];
+  return {
+    cell_type: "code",
+    execution_count: null,
+    metadata: { tags: ["notebook-only", "environment-setup"] },
+    outputs: [],
+    source: sourceLines(source),
+  };
+}
+
 function notebookFromCells(fileName, cells, sourceLabel = `app/model-notebooks/${fileName}`) {
   return {
-    cells: cells.map((cell) => {
-      if (cell.cell_type === "markdown") {
-        return {
-          cell_type: "markdown",
-          metadata: cellMetadata(cell),
-          source: sourceLines(markdownSource(cell.lines)),
-        };
-      }
+    cells: [
+      ...(fileName.endsWith("_jax.py") ? [jaxEnvironmentCell()] : []),
+      ...cells.map((cell) => {
+        if (cell.cell_type === "markdown") {
+          return {
+            cell_type: "markdown",
+            metadata: cellMetadata(cell),
+            source: sourceLines(markdownSource(cell.lines)),
+          };
+        }
 
-      return {
-        cell_type: "code",
-        execution_count: null,
-        metadata: cellMetadata(cell),
-        outputs: [],
-        source: sourceLines(cell.lines),
-      };
-    }),
+        return {
+          cell_type: "code",
+          execution_count: null,
+          metadata: cellMetadata(cell),
+          outputs: [],
+          source: sourceLines(cell.lines),
+        };
+      }),
+    ],
     metadata: {
       jupytext: {
         formats: "ipynb,py:percent",
