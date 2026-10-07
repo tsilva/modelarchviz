@@ -1,8 +1,10 @@
-<div align="center">
+<p align="center">
   <img src="./logo.png" alt="ModelArchViz" width="420" />
-
-  **🧭 Explore model architectures beside the code that defines them 🧭**
-</div>
+  <br />
+  <!-- repo-tagline:start -->
+  <strong>🧭 Explore model architectures beside the code that defines them 🧭</strong>
+  <!-- repo-tagline:end -->
+</p>
 
 ModelArchViz is a Next.js app for inspecting neural network architecture examples alongside PyTorch/JAX code and source-paper context.
 
