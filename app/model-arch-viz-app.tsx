@@ -2170,7 +2170,99 @@ function makeVitBlock(index: number, defaultExpanded = false): ArchNode {
   };
 }
 
+function pairedArchitectureNode(
+  id: string,
+  label: string,
+  type: string,
+  kind: NodeKind,
+  sourceRef: string,
+  badges: string[] = [],
+): ArchNode {
+  return {
+    id, label, type, kind, badges,
+    sourceRefs: { pytorch: [sourceRef], jax: [sourceRef] },
+    focusRef: { pytorch: sourceRef, jax: sourceRef },
+    includeChildRefs: false,
+  };
+}
+
+function makeMambaBlockNode(index: number): ArchNode {
+  const prefix = `blocks.${index}`;
+  const operation = (suffix: string, label: string, type: string, kind: NodeKind, badges: string[] = []) =>
+    pairedArchitectureNode(`${prefix}.${suffix}`, label, type, kind, `mamba.block.${suffix}`, badges);
+  return {
+    id: prefix,
+    label: `Mamba block ${index + 1}`,
+    type: "SelectiveSSMBlock",
+    kind: "group",
+    badges: ["32->32"],
+    sourceRefs: { pytorch: [], jax: [] },
+    includeChildRefs: true,
+    children: [
+      operation("norm", "Pre-normalization", "RMSNorm", "norm"),
+      operation("project", "Signal and gate projection", "LinearSplit", "linear", ["32->128", "2 branches"]),
+      operation("conv", "Causal depthwise convolution", "Conv1d + SiLU", "conv", ["kernel 4", "64 channels"]),
+      operation("select", "Input-dependent B, C and Δ", "SelectiveProjection", "linear", ["2 + 16 + 16"]),
+      operation("delta", "Positive time step Δ", "LowRankProjection + Softplus", "activation", ["2->64"]),
+      operation("discretize", "Discretize A and B", "DiagonalStateTransition", "recurrent", ["64 x 16 states"]),
+      operation("scan", "Selective state recurrence", "ReferenceScan", "recurrent", ["retain + write + read"]),
+      operation("skip", "Direct signal path D", "LearnedSkip", "residual"),
+      operation("gate", "SiLU output gate", "GatedStateOutput", "activation"),
+      operation("output", "Output projection", "Linear", "linear", ["64->32"]),
+      operation("residual", "Residual addition", "Add", "residual"),
+    ],
+  };
+}
+
+function makeGatLayerNode(id: string, label: string, concatenate: boolean): ArchNode {
+  const operation = (suffix: string, label: string, type: string, kind: NodeKind, badges: string[] = []) =>
+    pairedArchitectureNode(`${id}.${suffix}`, label, type, kind, `gat.layer.${suffix}`, badges);
+  return {
+    id, label,
+    type: "GraphAttentionLayer",
+    kind: "group",
+    badges: concatenate ? ["8 heads", "1433->64"] : ["1 head", "64->7"],
+    sourceRefs: { pytorch: [], jax: [] },
+    includeChildRefs: true,
+    children: [
+      operation("dropout", "Feature dropout", "Dropout", "dropout", ["p=0.6"]),
+      operation("project", "Per-head feature projection", "Linear", "linear"),
+      operation("score", "Additive pair scores", "LeakyReLUAttention", "attention", ["slope 0.2"]),
+      operation("mask", "Neighbors and self-loops", "AdjacencyMask", "attention"),
+      operation("softmax", "Neighbor attention weights", "Softmax", "attention"),
+      operation("attention_dropout", "Attention dropout", "Dropout", "dropout", ["p=0.6"]),
+      operation("aggregate", "Weighted neighbor aggregation", "MessagePassing", "attention"),
+      concatenate
+        ? operation("concat", "Concatenate hidden heads", "HeadMerge", "reshape", ["8 x 8->64"])
+        : operation("average", "Average output heads", "HeadMean", "pool", ["1 x 7->7"]),
+      operation("bias", "Output bias", "Add", "residual"),
+    ],
+  };
+}
+
 const modelDefinitions: Record<ModelId, ModelDefinition> = {
+  mamba: {
+    stats: "Compact LM · 2 blocks · 32 hidden · 16 state · reference scan",
+    nodes: [
+      pairedArchitectureNode("tokens", "Token ids", "SequenceInput", "input", "mamba.embedding", ["B x L"]),
+      pairedArchitectureNode("embedding", "Token embedding", "Embedding", "embedding", "mamba.embedding", ["32 tokens", "32 features"]),
+      makeMambaBlockNode(0),
+      makeMambaBlockNode(1),
+      pairedArchitectureNode("final_norm", "Final normalization", "RMSNorm", "norm", "mamba.final_norm"),
+      pairedArchitectureNode("logits", "Tied vocabulary readout", "Linear", "head", "mamba.logits", ["B x L x 32"]),
+    ],
+  },
+  gat: {
+    stats: "Cora configuration · 2 layers · 8 hidden heads · neighbor attention",
+    nodes: [
+      pairedArchitectureNode("node_features", "Node features", "GraphInput", "input", "gat.input", ["N x 1433"]),
+      pairedArchitectureNode("adjacency", "Graph connectivity", "AdjacencyInput", "input", "gat.input", ["N x N"]),
+      makeGatLayerNode("hidden_attention", "Hidden graph attention", true),
+      pairedArchitectureNode("activation", "Hidden activation", "ELU", "activation", "gat.activation", ["N x 64"]),
+      makeGatLayerNode("output_attention", "Output graph attention", false),
+      pairedArchitectureNode("logits", "Node class logits", "ClassScores", "head", "gat.logits", ["N x 7"]),
+    ],
+  },
   mlp: {
     stats: "2 hidden layers · sigmoid activations · backprop",
     nodes: [
