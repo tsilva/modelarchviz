@@ -1,0 +1,18 @@
+{
+  "repository": "tsilva/modelarchviz",
+  "githubRepositoryId": 1253290016,
+  "identityId": "672c01c3-c025-40f9-b89b-5abcc03e8261",
+  "infisicalProjectId": "98dbad8b-2628-4a3d-8323-1e24e6f4fcc7",
+  "secretNames": [
+    "NEXT_PUBLIC_SENTRY_DSN",
+    "OPENROUTER_API_KEY",
+    "SENTRY_AUTH_TOKEN",
+    "SENTRY_DSN",
+    "SENTRY_ORG",
+    "SENTRY_PROJECT"
+  ],
+  "destination": "vercel",
+  "vercelProjectId": "prj_lp2S0Pn0viZIiiGplSG8l9RzJtcx",
+  "vercelProjectName": "modelarchviz",
+  "vercelTeamId": "team_eE2Iv7IMqPOx8ZVN2xNfR2f0"
+}

@@ -1,8 +1,10 @@
-<div align="center">
+<p align="center">
   <img src="./logo.png" alt="ModelArchViz" width="420" />
-
-  **🧭 Explore model architectures beside the code that defines them 🧭**
-</div>
+  <br />
+  <!-- repo-tagline:start -->
+  <strong>🧭 Explore model architectures beside the code that defines them 🧭</strong>
+  <!-- repo-tagline:end -->
+</p>
 
 ModelArchViz is a Next.js app for inspecting neural network architecture examples alongside PyTorch/JAX code and source-paper context.
 
@@ -13,8 +15,8 @@ Use it to switch between embedded model specs, expand architecture blocks, selec
 ```bash
 git clone https://github.com/tsilva/modelarchviz.git
 cd modelarchviz
-pnpm install
-pnpm dev
+pnpm install --frozen-lockfile
+pnpm dev --port auto
 ```
 
 Open the local URL printed by the development server.
@@ -23,7 +25,7 @@ Open the local URL printed by the development server.
 
 ```bash
 pnpm generate:model-artifacts  # generate the UI source map, Colab notebooks, and PDF worker
-pnpm dev                       # generate artifacts and start Next.js on an available local port
+pnpm dev --port auto
 pnpm build                     # generate artifacts and build the production app
 pnpm start                     # serve the production build after pnpm build
 pnpm typecheck                 # generate artifacts and run TypeScript checks
@@ -46,14 +48,6 @@ The chat pane uses the server-side OpenRouter API route. Set `OPENROUTER_API_KEY
 - No database, server-side storage, or user-data persistence is configured. Google Analytics and Sentry provide analytics, error monitoring, tracing, and replay.
 - `NEXT_PUBLIC_SITE_URL` is optional and sets the absolute base URL for social metadata, sitemap, and robots output. It falls back to `https://modelarch.tsilva.eu`.
 - Authoring brand assets live under `assets/brand`, runtime web and SEO assets live under `public/brand/web-seo`, and the root `logo.png` is used for repository and README display.
-
-## Local credentials
-
-Private local values declared in `.keyenv.toml` live in macOS Keychain. Run
-`keyenv doctor` to verify them and launch credential-dependent commands with
-`keyenv run -- <command>`. Python, Node, and their child processes receive the
-values through their normal environment APIs. Keep only public or non-secret
-configuration in dotenv files.
 
 ## License
 

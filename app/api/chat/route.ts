@@ -236,7 +236,7 @@ export async function POST(request: Request) {
   const apiKey = process.env.OPENROUTER_API_KEY;
   if (!apiKey) {
     return NextResponse.json(
-      { error: "OPENROUTER_API_KEY is not configured on the server." },
+      { error: "The assistant is temporarily unavailable. Please try again later." },
       { status: 500 },
     );
   }

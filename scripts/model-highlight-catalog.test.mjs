@@ -103,7 +103,7 @@ test("every catalog node resolves concrete source in both languages", () => {
 
 test("every catalog operation resolves semantically matching source", () => {
   const expectedTextByKind = {
-    activation: /relu|gelu|sigmoid|tanh|softmax|silu|clamp|activation|\bact\b/i,
+    activation: /relu|gelu|\belu\b|sigmoid|tanh|softmax|softplus|silu|clamp|activation|\bact\b/i,
     attention: /attention|attn|query|key|value|qkv|score|weight|mask|softmax|head|distance|argmin|lookup|quantized|squeeze|excite|gate|sigmoid|scale/i,
     concat: /cat|concat/i,
     conv: /conv/i,
@@ -169,4 +169,20 @@ test("regression mappings resolve the intended architecture operations", () => {
   assert.match(resolvedText("googlenet", "classifier.fc", "pytorch"), /self\.fc/);
   assert.match(resolvedText("efficientnet", "head.pool", "pytorch"), /adaptive_avg_pool2d/);
   assert.match(resolvedText("efficientnet", "head.classifier", "pytorch"), /self\.classifier/);
+});
+
+test("Mamba and GAT highlights retain their defining operations in both languages", () => {
+  for (const language of ["pytorch", "jax"]) {
+    assert.match(resolvedText("mamba", "blocks.0.discretize", language), /transition = -(torch|jnp)\.exp/);
+    assert.match(resolvedText("mamba", "blocks.0.scan", language), /state = retained_state \+ written_state/);
+    assert.match(resolvedText("gat", "hidden_attention.mask", language), /neighbor_mask = .* \| self_loops/);
+    assert.match(resolvedText("gat", "hidden_attention.softmax", language), /softmax\(masked_scores, (dim|axis)=1\)/);
+    assert.match(resolvedText("gat", "hidden_attention.concat", language), /reshape\(node_count, self\.heads \* self\.output_dim\)/);
+    assert.match(resolvedText("gat", "output_attention.average", language), /mean\(.*(dim|axis)=1\)/);
+    assert.doesNotMatch(resolvedText("gat", "output_attention.average", language), /reshape/);
+  }
+  assert.match(resolvedText("mamba", "blocks.0.conv", "pytorch"), /convolved\[:, :, :step_count\]/);
+  assert.match(resolvedText("mamba", "blocks.0.conv", "jax"), /padding=\(\(self\.kernel_size - 1, 0\),\)/);
+  assert.match(resolvedText("mamba", "logits", "pytorch"), /F\.linear\(normalized, self\.embedding\.weight\)/);
+  assert.match(resolvedText("mamba", "logits", "jax"), /embedding\.attend\(normalized\)/);
 });

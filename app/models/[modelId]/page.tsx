@@ -4,9 +4,9 @@ import ModelArchVizApp from "../../model-arch-viz-app";
 import { getModelRoute, modelCatalog, modelRoutePath, siteConfig } from "../../model-routes";
 
 type ModelPageProps = {
-  params: {
+  params: Promise<{
     modelId: string;
-  };
+  }>;
 };
 
 export function generateStaticParams() {
@@ -15,8 +15,9 @@ export function generateStaticParams() {
   }));
 }
 
-export function generateMetadata({ params }: ModelPageProps): Metadata {
-  const model = getModelRoute(params.modelId);
+export async function generateMetadata({ params }: ModelPageProps): Promise<Metadata> {
+  const { modelId } = await params;
+  const model = getModelRoute(modelId);
 
   if (!model) {
     return {};
@@ -53,8 +54,9 @@ export function generateMetadata({ params }: ModelPageProps): Metadata {
   };
 }
 
-export default function ModelPage({ params }: ModelPageProps) {
-  const model = getModelRoute(params.modelId);
+export default async function ModelPage({ params }: ModelPageProps) {
+  const { modelId } = await params;
+  const model = getModelRoute(modelId);
 
   if (!model) {
     notFound();

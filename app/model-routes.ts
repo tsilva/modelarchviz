@@ -15,6 +15,32 @@ export type ModelCatalogEntry = {
 
 export const modelCatalog = [
   {
+    id: "gat",
+    label: "GAT",
+    publishedDate: "2017-10-30",
+    title: "Graph Attention Network Architecture",
+    description: "Explore GAT node features, masked neighbor attention, multi-head aggregation, PyTorch and JAX code, runnable notebooks, and the original paper.",
+    paper: {
+      title: "Graph Attention Networks",
+      authors: "Petar Veličković, Guillem Cucurull, Arantxa Casanova, Adriana Romero, Pietro Liò, Yoshua Bengio",
+      venue: "arXiv / ICLR 2018",
+      focus: ["graph neighborhoods", "masked additive attention", "multi-head node classification"],
+    },
+  },
+  {
+    id: "mamba",
+    label: "Mamba",
+    publishedDate: "2023-12-01",
+    title: "Mamba Selective State Space Architecture",
+    description: "Trace a compact Mamba language model with causal convolution, input-dependent state parameters, a reference selective scan, PyTorch and JAX code, notebooks, and source-paper context.",
+    paper: {
+      title: "Mamba: Linear-Time Sequence Modeling with Selective State Spaces",
+      authors: "Albert Gu, Tri Dao",
+      venue: "arXiv / COLM 2024",
+      focus: ["selective state spaces", "input-dependent memory", "causal sequence modeling"],
+    },
+  },
+  {
     id: "mlp",
     label: "MLP",
     publishedDate: "1986-10-09",
