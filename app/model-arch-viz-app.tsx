@@ -10432,7 +10432,7 @@ function VariantSlider({
     model.variants.findIndex((variant) => variant.id === activeVariantId),
   );
   const activeVariant = model.variants[activeIndex];
-  const updateFromSlider = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const updateFromSlider = (event: React.SyntheticEvent<HTMLInputElement>) => {
     const nextIndex = Number(event.currentTarget.value);
     const nextVariant = model.variants?.[nextIndex];
     if (nextVariant) {
