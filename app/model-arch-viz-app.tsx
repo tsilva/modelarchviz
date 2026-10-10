@@ -9906,7 +9906,7 @@ function PdfViewer({
       try {
         const pdfjs = await import("pdfjs-dist");
         pdfjs.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
-        loadingTask = pdfjs.getDocument(model.paper.pdfUrl);
+        loadingTask = pdfjs.getDocument({ url: model.paper.pdfUrl });
         const pdf = await loadingTask.promise;
         if (cancelled) {
           void pdf.destroy();
