@@ -37,6 +37,8 @@ The chat pane uses the server-side OpenRouter API route. Set `OPENROUTER_API_KEY
 
 ## Notes
 
+Secret scanning checks changed commits. After a rewritten push whose previous commit is unavailable or is not an ancestor, it scans the full current branch history. Pull requests still require a valid base revision. Run `python3 .github/scripts/test_secret_scan.py` to verify this handling without credentials.
+
 - Model identity, route, paper, and source metadata live in `app/model-routes.ts`; architecture nodes and code highlights live in `app/model-arch-viz-app.tsx`. The optional chat pane uses `app/api/chat/route.ts`.
 - Canonical model source files live in `app/model-notebooks` as Jupytext-style `py:percent` notebooks.
 - `pnpm generate:model-artifacts` writes cleaned Python sources into `app/generated/model-sources.ts`, Colab notebooks to `public/notebooks`, and the pinned PDF.js worker to `public/pdf.worker.min.mjs`.
