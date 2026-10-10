@@ -38,6 +38,7 @@ The chat pane uses the server-side OpenRouter API route. Set `OPENROUTER_API_KEY
 ## Notes
 
 Sentry 11 uses the `@sentry/nextjs/config` build entry point and enables logs by default. Client and server integrations retain tracing and replay settings and explicitly disable personal, request, queue, and content data collection.
+The paper viewer initializes PDF.js with its document parameter object; generated artifacts keep the served worker synchronized with the installed PDF.js version.
 
 Secret scanning checks changed commits. After a rewritten push whose previous commit is unavailable or is not an ancestor, it scans the full current branch history. Pull requests still require a valid base revision. Run `python3 .github/scripts/test_secret_scan.py` to verify this handling without credentials.
 
