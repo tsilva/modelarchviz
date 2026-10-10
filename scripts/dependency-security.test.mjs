@@ -23,7 +23,8 @@ test("formerly vulnerable packages stay on patched versions", () => {
     "sharp": "0.35.5",
   })) {
     const versions = lockedVersions(name);
-    assert.ok(versions.length, `missing dependency ${name}`);
+    // Sentry 11 removed this transitive; if it returns, its patched floor still applies.
+    if (name !== "@opentelemetry/core") assert.ok(versions.length, `missing dependency ${name}`);
     for (const version of versions) {
       const actual = version.split(".").map(Number);
       const minimum = floor.split(".").map(Number);
