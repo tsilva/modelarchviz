@@ -1,3 +1,4 @@
+import { agentBridgeBaseUrl, agentBridgeModel } from "../../agentbridge";
 import { NextResponse } from "next/server";
 import {
   normalizeLineNumbers,
@@ -233,13 +234,7 @@ ${sourceCode}
 }
 
 export async function POST(request: Request) {
-  const apiKey = process.env.OPENROUTER_API_KEY;
-  if (!apiKey) {
-    return NextResponse.json(
-      { error: "The assistant is temporarily unavailable. Please try again later." },
-      { status: 500 },
-    );
-  }
+  const apiKey = process.env.AGENTBRIDGE_API_KEY ?? "not-needed";
 
   let payload: { messages?: unknown; context?: ChatContext };
   try {
@@ -269,11 +264,11 @@ export async function POST(request: Request) {
     headers["HTTP-Referer"] = referer;
   }
 
-  const openRouterResponse = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+  const openRouterResponse = await fetch(`${agentBridgeBaseUrl()}/chat/completions`, {
     method: "POST",
     headers,
     body: JSON.stringify({
-      model,
+      model: agentBridgeModel(model),
       temperature: 0.2,
       max_tokens: 900,
       messages: [

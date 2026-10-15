@@ -10,10 +10,35 @@ export type ModelCatalogEntry = {
     authors: string;
     venue: string;
     focus: string[];
+    referenceUrl?: string;
+    referenceSections?: readonly { heading: string; body: string }[];
+    checkpointUrl?: string;
   };
 };
 
 export const modelCatalog = [
+  {
+    id: "embeddinggemma2",
+    label: "EmbeddingGemma 2",
+    publishedDate: "2026-10-06",
+    title: "EmbeddingGemma 2 Multimodal Embedding Architecture",
+    description: "Explore EmbeddingGemma 2's bidirectional text backbone, local/global attention, per-layer inputs, expandable vision and audio encoders, Matryoshka embeddings, and faithful PyTorch/JAX architecture implementations.",
+    paper: {
+      title: "EmbeddingGemma 2 model card",
+      authors: "Google DeepMind",
+      venue: "Official model card · Apache 2.0",
+      referenceUrl: "https://ai.google.dev/gemma/docs/embeddinggemma/model_card_2",
+      checkpointUrl: "https://huggingface.co/google/embeddinggemma-2",
+      referenceSections: [
+        { heading: "Overview", body: "EmbeddingGemma 2 maps text, images, video frames, and audio into a shared 768-dimensional embedding space. Its modular encoders contain 740M parameters in total; text-only use requires 270M." },
+        { heading: "Text backbone", body: "The 24-layer, 512-wide encoder uses five local bidirectional attention layers followed by one global layer. Local layers use grouped-query attention; global layers use multi-query attention. Projection-only per-layer inputs gate information from the original embeddings back into every block." },
+        { heading: "Modality branches", body: "A 16-block vision transformer encodes image patches and video frames. A 12-block Conformer-style audio encoder subsamples audio features. Both branches normalize and project soft tokens into the text stream at their placeholder positions." },
+        { heading: "Embedding output", body: "Final normalization and projection produce 768-wide token representations. Masked mean pooling, optional Matryoshka truncation to 512, 256, or 128 dimensions, and L2 normalization produce the embedding." },
+        { heading: "Runnable examples", body: "The examples implement the architecture with random weights. Notebook smoke tests use smaller widths and depths. Tokenization and media preprocessing are external." },
+      ],
+      focus: ["multimodal soft-token fusion", "bidirectional local/global attention", "projection-only per-layer inputs", "Matryoshka embeddings"],
+    },
+  },
   {
     id: "gat",
     label: "GAT",

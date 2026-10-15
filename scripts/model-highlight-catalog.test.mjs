@@ -111,7 +111,7 @@ test("every catalog operation resolves semantically matching source", () => {
     embedding: /embed|token|position|patch|latent|\bcode\b|quant/i,
     head: /head|classifier|logits|linear|dense|\bfc\b|output|\bout_|predicted|pool|proj|loss|criterion|optimizer|prob|sample/i,
     linear: /linear|linspace|dense|classifier|logit|weight|matmul|\bfc\b|proj|variance|sqrt_alpha|noisy_images/i,
-    mlp: /mlp|feed.forward|linear|dense|\bfc\b|gelu|relu/i,
+    mlp: /mlp|feed.forward|linear|dense|\bfc\b|gelu|relu|silu/i,
     norm: /norm|normalize|mean|variance|\bvar\b|sqrt|\bstd\b/i,
     pool: /pool|mean/i,
     recurrent: /lstm|gru|rnn|gate|hidden|cell|state|sequence/i,

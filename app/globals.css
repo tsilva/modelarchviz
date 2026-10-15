@@ -1507,3 +1507,16 @@ select {
     padding-left: 34px;
   }
 }
+
+.model-reference {
+  overflow-y: auto;
+  padding: 24px;
+  color: var(--ink);
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.model-reference h2 { font-size: 20px; line-height: 1.35; }
+.model-reference h3 { margin-top: 24px; font-size: 14px; }
+.model-reference-eyebrow { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; }
+.model-reference a { color: inherit; text-decoration: underline; text-underline-offset: 3px; }

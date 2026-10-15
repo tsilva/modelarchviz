@@ -72,6 +72,9 @@ type ModelSpec = {
     publishedDate: string;
     venue: string;
     pdfUrl: string;
+    referenceUrl?: string;
+    referenceSections?: readonly { heading: string; body: string }[];
+    checkpointUrl?: string;
     focus: string[];
   };
   nodes: ArchNode[];
@@ -2240,7 +2243,87 @@ function makeGatLayerNode(id: string, label: string, concatenate: boolean): Arch
   };
 }
 
+function embeddingGemmaNode(id: string, label: string, type: string, kind: NodeKind, source: string | string[], badges: string[] = []) {
+  const refs = (Array.isArray(source) ? source : [source]).map((ref) => `eg.${ref}`);
+  return {
+    ...pairedArchitectureNode(id, label, type, kind, refs[0], badges),
+    sourceRefs: { pytorch: refs, jax: refs },
+  };
+}
+
+function embeddingGemmaGroup(id: string, label: string, badges: string[], children: ArchNode[], defaultExpanded = false): ArchNode {
+  return {
+    id, label, type: "EncoderGroup", kind: "group", badges, children, defaultExpanded,
+    sourceRefs: {
+      pytorch: id === "text" ? ["eg.text.layers"] : id === "vision.layers" ? ["eg.vision.layers"] : id === "audio.layers" ? ["eg.audio.layers"] : [],
+      jax: id === "text" ? ["eg.text.layers"] : id === "vision.layers" ? ["eg.vision.layers"] : id === "audio.layers" ? ["eg.audio.layers"] : [],
+    }, includeChildRefs: true,
+  };
+}
+
+function makeEmbeddingGemmaBlock(index: number, vision = false): ArchNode {
+  const globalLayer = (index + 1) % 6 === 0;
+  const prefix = `${vision ? "vision" : "text"}.layers.${index}`;
+  const attention = embeddingGemmaGroup(`${prefix}.attention`, "Bidirectional attention", vision ? ["12 heads", "2D RoPE"] : globalLayer ? ["4 Q / 1 KV", "head 512", "global"] : ["4 Q / 2 KV", "head 256", "±512 positions"], [
+    embeddingGemmaNode(`${prefix}.norm`, "RMS normalization", "RMSNorm", "norm", "norm"),
+    embeddingGemmaNode(`${prefix}.qkv`, "Q/K/V projections and RMS normalization", "NormalizedQKV", "attention", "attention.qkv"),
+    embeddingGemmaNode(`${prefix}.rope`, vision ? "Axial rotary positions" : "Rotary positions", "RoPE", "embedding", "attention.rope", [vision ? "θ=100" : globalLayer ? "θ=1,000,000" : "θ=10,000"]),
+    embeddingGemmaNode(`${prefix}.mask`, vision ? "Valid patch mask" : globalLayer ? "Global padding mask" : "Bidirectional local window mask", "AttentionMask", "attention", "attention.mask"),
+    embeddingGemmaNode(`${prefix}.mix`, "Grouped K/V, softmax and value mixing", "Attention", "attention", "attention.mix", ["scale=1"]),
+    embeddingGemmaNode(`${prefix}.attention_residual`, "Attention normalization and residual", "Residual", "residual", "block.attention"),
+  ]);
+  const children = [attention,
+    embeddingGemmaNode(`${prefix}.ffn`, "GELU gated feed-forward and residual", "GatedMLP", "mlp", "block.ffn", [vision ? "768→3072→768" : "512→2048→512"]),
+  ];
+  if (!vision) children.push(embeddingGemmaNode(`${prefix}.ple`, "Gated per-layer input and residual", "PerLayerInput", "residual", "block.ple", ["projection-only PLE"]));
+  return embeddingGemmaGroup(prefix, vision ? `Vision block ${index + 1}` : `Text block ${index + 1} · ${globalLayer ? "global MQA" : "local GQA"}`, [], children);
+}
+
+function makeEmbeddingGemmaAudioBlock(index: number): ArchNode {
+  const prefix = `audio.layers.${index}`;
+  return embeddingGemmaGroup(prefix, `Audio Conformer block ${index + 1}`, ["1024 features"], [
+    embeddingGemmaNode(`${prefix}.ffn1`, "First half-step feed-forward", "SiLUFeedForward", "mlp", "audio.ffn", ["residual ×0.5"]),
+    embeddingGemmaGroup(`${prefix}.attention`, "Chunked relative attention", ["8 heads", "chunk 12", "left context 13"], [
+      embeddingGemmaNode(`${prefix}.qkv`, "Clipped Q/K/V and learned query scaling", "AudioQKV", "attention", "audio.qkv"),
+      embeddingGemmaNode(`${prefix}.relative`, "Sinusoidal relative key projection", "RelativePosition", "embedding", "audio.relative"),
+      embeddingGemmaNode(`${prefix}.blocks`, "Overlapping context and relative shift", "BlockedAttention", "attention", "audio.blocks"),
+      embeddingGemmaNode(`${prefix}.mask`, "Context mask, soft cap and value mixing", "AudioAttention", "attention", "audio.mask", ["cap 50"]),
+      embeddingGemmaNode(`${prefix}.residual`, "Attention normalization and residual", "Residual", "residual", "audio.block_attention"),
+    ]),
+    embeddingGemmaNode(`${prefix}.conv`, "GLU and causal depthwise convolution", "DepthwiseConv1d", "conv", "audio.conv", ["kernel 5"]),
+    embeddingGemmaNode(`${prefix}.ffn2`, "Second half-step feed-forward and output norm", "SiLUFeedForward", "mlp", ["audio.ffn", "audio.block_output"]),
+  ]);
+}
+
 const modelDefinitions: Record<ModelId, ModelDefinition> = {
+  embeddinggemma2: {
+    stats: "740M total · 270M text · 170M vision · 300M audio · 8K context",
+    nodes: [
+      embeddingGemmaNode("tokens", "Text and modality placeholder tokens", "TokenInput", "input", "input", ["B × L", "≤8192 tokens"]),
+      embeddingGemmaNode("embedding", "Scaled token embeddings", "Embedding", "embedding", "text.embedding", ["262144 × 512", "×√512"]),
+      embeddingGemmaGroup("vision", "Vision / video branch", ["optional", "170M", "16 blocks"], [
+        embeddingGemmaNode("vision.patches", "RGB patches and 2D positions", "PatchInput", "input", "vision.input", ["16×16×3"]),
+        embeddingGemmaNode("vision.embedding", "Patch projection and learned x/y embeddings", "PatchEmbedding", "embedding", "vision.patch", ["768 features"]),
+        embeddingGemmaGroup("vision.layers", "Vision transformer", ["16 blocks"], Array.from({ length: 16 }, (_, index) => makeEmbeddingGemmaBlock(index, true))),
+        embeddingGemmaNode("vision.pool", "Spatial patch pooling and scaling", "SpatialMeanPool", "pool", "vision.pool", ["3×3", "×√768"]),
+        embeddingGemmaNode("vision.projection", "Unscaled RMS norm and text projection", "ModalityProjection", "linear", "modality.project", ["768→512"]),
+        embeddingGemmaNode("vision.merge", "Insert vision soft tokens at placeholders", "SoftTokenMerge", "embedding", "merge.vision", ["images or video frames"]),
+      ]),
+      embeddingGemmaGroup("audio", "Audio branch", ["optional", "300M", "12 blocks"], [
+        embeddingGemmaNode("audio.features", "Audio features and validity mask", "AudioInput", "input", "audio.input", ["B × T × 128"]),
+        embeddingGemmaNode("audio.subsample", "Two strided convolutions and projection", "Conv2dSubsampling", "conv", "audio.subsample", ["time ÷4", "1024 features"]),
+        embeddingGemmaGroup("audio.layers", "Audio Conformer", ["12 blocks"], Array.from({ length: 12 }, (_, index) => makeEmbeddingGemmaAudioBlock(index))),
+        embeddingGemmaNode("audio.output", "Audio output projection", "Linear", "linear", "audio.output", ["1024→1536"]),
+        embeddingGemmaNode("audio.projection", "Unscaled RMS norm and text projection", "ModalityProjection", "linear", "modality.project", ["1536→512"]),
+        embeddingGemmaNode("audio.merge", "Insert valid audio tokens at placeholders", "SoftTokenMerge", "embedding", "merge.audio"),
+      ]),
+      embeddingGemmaNode("per_layer_inputs", "Project original embeddings for every layer", "PerLayerProjection", "linear", "text.ple", ["512→24×512", "RMSNorm"]),
+      embeddingGemmaGroup("text", "Bidirectional text backbone", ["24 blocks", "5 local : 1 global"], Array.from({ length: 24 }, (_, index) => makeEmbeddingGemmaBlock(index)), true),
+      embeddingGemmaNode("projection", "Final RMS norm and embedding projection", "EmbeddingProjection", "linear", "text.output", ["512→768"]),
+      embeddingGemmaNode("pool", "Masked mean pooling", "MeanPool", "pool", "pool", ["B × 768"]),
+      embeddingGemmaNode("output", "Matryoshka truncation and L2 normalization", "EmbeddingOutput", "norm", "output", ["768 / 512 / 256 / 128"]),
+    ],
+  },
   mamba: {
     stats: "Compact LM · 2 blocks · 32 hidden · 16 state · reference scan",
     nodes: [
@@ -9856,7 +9939,25 @@ function PaperPane({
 }) {
   return (
     <section className="paper-pane">
-      <PdfViewer model={model} paperSelection={paperSelection} onPaperSelectionChange={onPaperSelectionChange} />
+      {model.paper.referenceUrl ? (
+        <article className="model-reference">
+          <p className="model-reference-eyebrow">Official model card</p>
+          <h2>{model.paper.title}</h2>
+          <p>{model.paper.authors} · {model.paper.publishedDate}</p>
+          {model.paper.referenceSections?.map((section) => (
+            <Fragment key={section.heading}>
+              <h3>{section.heading}</h3>
+              <p>{section.body}</p>
+            </Fragment>
+          ))}
+          <a href={model.paper.referenceUrl} target="_blank" rel="noreferrer">Read the official model card ↗</a>
+          {model.paper.checkpointUrl ? (
+            <p><a href={model.paper.checkpointUrl} target="_blank" rel="noreferrer">Released checkpoint and configuration ↗</a></p>
+          ) : null}
+        </article>
+      ) : (
+        <PdfViewer model={model} paperSelection={paperSelection} onPaperSelectionChange={onPaperSelectionChange} />
+      )}
     </section>
   );
 }
@@ -10524,10 +10625,10 @@ export default function ModelArchVizApp({ initialModelId }: ModelArchVizAppProps
 
   useEffect(() => {
     const controller = new AbortController();
-    prefetchPdf(model.paper.pdfUrl, controller.signal);
+    if (!model.paper.referenceUrl) prefetchPdf(model.paper.pdfUrl, controller.signal);
 
     return () => controller.abort();
-  }, [model.paper.pdfUrl]);
+  }, [model.paper.pdfUrl, model.paper.referenceUrl]);
 
   const updateModel = (nextModelId: string) => {
     setModelId(nextModelId);

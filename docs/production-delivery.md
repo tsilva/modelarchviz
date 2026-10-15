@@ -9,3 +9,5 @@ The workflow does not run on pull requests or forks, export `.env` files, upload
 After changing a production secret, use **Actions → Production delivery → Run workflow → main** to sync and deploy. A secret change alone does not trigger delivery. There is no schedule or automatic retry; rerun a failed workflow manually after fixing the cause. For an old failed commit superseded by a newer main commit, run a fresh workflow on main. Deployment tokens expire after one year and need rotation before expiry.
 
 Native Infisical syncs are disabled after this workflow has successfully replaced them. Updating a deployment credential in GitHub does not replace application keys in Infisical.
+
+Model requests use the production AgentBridge endpoint. The fixed delivery allowlist includes `AGENTBRIDGE_BASE_URL` and `AGENTBRIDGE_API_KEY`; populate the URL with a gateway reachable from the hosted app. This delivery workflow requires nonempty configured values, so use `not-needed` for the token only when that gateway accepts unauthenticated clients. Upstream OpenRouter credentials belong to AgentBridge.

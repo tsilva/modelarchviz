@@ -19,7 +19,6 @@
     "build:secrets": "python3 scripts/infisical/run.py build",
     "start:secrets": "python3 scripts/infisical/run.py start",
     "secrets:check": "python3 scripts/infisical/run.py check",
-    "secrets:migrate": "python3 scripts/infisical/migrate_keyenv.py",
     "test:secrets": "python3 -m unittest discover -s scripts/infisical -p test_secrets.py"
   },
   "dependencies": {
