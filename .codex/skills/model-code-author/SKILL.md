@@ -18,6 +18,7 @@ Preserve behavior; expose tensor dataflow.
 
 ## Rules
 
+- Every explicit `# @arch <key>:start/end` anchor in a notebook source must have a catalog reference through the corresponding language's `sourceRefs` or `focusRef` in `app/model-arch-viz-app.tsx`. Remove unused markers instead of adding unrelated architecture nodes just to satisfy validation; references from variants in the same ResNet family and language also count.
 - Split indexing, nested calls, arithmetic, assignments, shape changes, returns where practical; avoid chained shape ops and nested-call returns.
 - Prefer role names: `batch_size`, `hidden_shape`, `current_input`, `gate_pre`, `state_trace`, `logits`, `outputs`.
 - Prefer low-level mechanisms over high-level modules: e.g. explicit Q/K/V, scale, mask, softmax, value mix, head merge, output projection.
@@ -37,6 +38,7 @@ Preserve behavior; expose tensor dataflow.
 
 ## Validation
 
+- After adding or changing anchors and their catalog references, run `pnpm test:highlights` before broader checks; artifact generation alone does not catch orphaned anchors.
 - Syntax-check when ML deps are available/unneeded: `python3 -m py_compile path/to/file.py`.
 - Run repo checks (typecheck/build) when app bundles/displays files.
 - After regeneration inspect the relevant entry in `app/generated/model-sources.ts`: intended training example is present; no notebook-only comments/tests/examples; no duplicate top-level `model = ...` except intentional implementation; only intentional normal-cell examples/training.
