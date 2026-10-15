@@ -25,6 +25,14 @@ class DeliveryError(Exception):
     """Only explicitly safe messages may reach the runner log."""
 
 
+class ProviderHTTPError(DeliveryError):
+    """Retain only the status code, never the provider response or credentials."""
+
+    def __init__(self, status):
+        self.status = status
+        super().__init__(f"Provider request failed (HTTP {status}); response suppressed.")
+
+
 class NoRedirect(urllib.request.HTTPRedirectHandler):
     def redirect_request(self, req, fp, code, msg, headers, newurl):
         raise DeliveryError("Provider redirect rejected.")
@@ -42,9 +50,7 @@ def request(method, url, token=None, payload=None):
         ) as response:
             return json.load(response)
     except urllib.error.HTTPError as error:
-        raise DeliveryError(
-            f"Provider request failed (HTTP {error.code}); response suppressed."
-        ) from None
+        raise ProviderHTTPError(error.code) from None
     except DeliveryError:
         raise
     except Exception:
@@ -138,9 +144,15 @@ def infisical_secrets(config):
     )
     values = {}
     for name in names:
-        secret = request(
-            "GET", INFISICAL + "/api/v4/secrets/" + name + "?" + query, token
-        )["secret"]
+        try:
+            secret = request(
+                "GET", INFISICAL + "/api/v4/secrets/" + name + "?" + query, token
+            )["secret"]
+        except ProviderHTTPError as error:
+            raise DeliveryError(
+                f"Cannot read required Infisical production key {name} "
+                f"(HTTP {error.status}); check its presence and reader access. No writes."
+            ) from None
         value = secret.get("secretValue")
         if (
             secret.get("secretKey") != name

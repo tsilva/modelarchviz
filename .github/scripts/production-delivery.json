@@ -5,8 +5,7 @@
   "infisicalProjectId": "98dbad8b-2628-4a3d-8323-1e24e6f4fcc7",
   "secretNames": [
     "NEXT_PUBLIC_SENTRY_DSN",
-    "AGENTBRIDGE_BASE_URL",
-    "AGENTBRIDGE_API_KEY",
+    "OPENROUTER_API_KEY",
     "SENTRY_AUTH_TOKEN",
     "SENTRY_DSN",
     "SENTRY_ORG",

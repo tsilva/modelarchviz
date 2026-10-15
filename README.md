@@ -33,7 +33,7 @@ pnpm typecheck                 # generate artifacts and run TypeScript checks
 
 ## Optional chat
 
-The chat pane uses the server-side AgentBridge route. Configure a reachable gateway; authentication is optional. The optional `OPENROUTER_MODEL`, `OPENROUTER_APP_URL`, and `OPENROUTER_APP_NAME` variables override the default model and request attribution.
+The chat pane calls AgentBridge during local development. Production and Vercel preview deployments call OpenRouter directly with their own server-side `OPENROUTER_API_KEY`, defaulting to `deepseek/deepseek-v4.1-flash`. `OPENROUTER_MODEL` overrides the model; `OPENROUTER_APP_URL` and `OPENROUTER_APP_NAME` set request attribution.
 
 ## Notes
 
@@ -60,11 +60,20 @@ Secret scanning checks changed commits. After a rewritten push whose previous co
 No license file is present in this repository yet.
 
 
-## AgentBridge routing
+## Chat environments
 
-Model requests use only AgentBridge. Set `AGENTBRIDGE_BASE_URL` to its API root
-(default `http://127.0.0.1:8082/api/v1`). `AGENTBRIDGE_API_KEY` is an optional
-gateway token. OpenRouter credentials belong to AgentBridge. Existing model
-choices are retained; raw upstream IDs gain `openrouter/` only on outbound
-requests. There is no direct OpenRouter endpoint or fallback. Hosted deployments
-must configure a reachable AgentBridge URL instead of the loopback default.
+Development uses AgentBridge. Set `AGENTBRIDGE_BASE_URL` to its API root
+(default `http://127.0.0.1:8082/api/v1`); `AGENTBRIDGE_API_KEY` is optional.
+Existing development model choices are retained, with raw upstream model IDs
+prefixed by `openrouter/` on outbound AgentBridge requests.
+
+Production builds (`NODE_ENV=production`) and Vercel preview/production targets
+use OpenRouter's HTTPS API directly. Keep a separate production key in the
+`modelarchviz-production` Infisical project; the delivery workflow syncs only the
+production allowlist. Development credentials and local gateway configuration
+are not used by the production backend. A missing production key returns a
+clear unavailable response, with no fallback to AgentBridge.
+
+Production defaults to `deepseek/deepseek-v4.1-flash`, with reasoning disabled
+and a 900-token response limit. Set `OPENROUTER_MODEL` in the target environment
+to use a different OpenRouter model ID such as `provider/model`.

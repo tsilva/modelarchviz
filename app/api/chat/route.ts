@@ -1,4 +1,4 @@
-import { agentBridgeBaseUrl, agentBridgeModel } from "../../agentbridge";
+import { chatBackend } from "../../chat-backend";
 import { NextResponse } from "next/server";
 import {
   normalizeLineNumbers,
@@ -10,7 +10,6 @@ import {
 
 export const runtime = "nodejs";
 
-const defaultModel = "openai/gpt-4o-mini";
 const maxMessages = 16;
 const maxSourceCharacters = 24000;
 
@@ -234,8 +233,6 @@ ${sourceCode}
 }
 
 export async function POST(request: Request) {
-  const apiKey = process.env.AGENTBRIDGE_API_KEY ?? "not-needed";
-
   let payload: { messages?: unknown; context?: ChatContext };
   try {
     payload = await request.json();
@@ -248,14 +245,22 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "At least one chat message is required." }, { status: 400 });
   }
 
-  const model = process.env.OPENROUTER_MODEL ?? defaultModel;
+  let backend: ReturnType<typeof chatBackend>;
+  try {
+    backend = chatBackend();
+  } catch {
+    return NextResponse.json(
+      { error: "The assistant is temporarily unavailable. Please try again later." },
+      { status: 503 },
+    );
+  }
   const context = formatContext(payload.context ?? {});
   const requestMessages = messages.slice(-maxMessages);
   const referer = process.env.OPENROUTER_APP_URL;
   const title = process.env.OPENROUTER_APP_NAME ?? "ModelArchViz";
 
   const headers: Record<string, string> = {
-    Authorization: `Bearer ${apiKey}`,
+    Authorization: `Bearer ${backend.apiKey}`,
     "Content-Type": "application/json",
     "X-Title": title,
   };
@@ -264,40 +269,57 @@ export async function POST(request: Request) {
     headers["HTTP-Referer"] = referer;
   }
 
-  const openRouterResponse = await fetch(`${agentBridgeBaseUrl()}/chat/completions`, {
-    method: "POST",
-    headers,
-    body: JSON.stringify({
-      model: agentBridgeModel(model),
-      temperature: 0.2,
-      max_tokens: 900,
-      messages: [
-        {
-          role: "system",
-          content:
-            'You are the embedded ModelArchViz assistant. Use the provided current app state as ground truth. When the user says "this", assume they mean the user-selected code when present, otherwise the selected paper text when present, otherwise the current selected architecture node and highlighted code lines. Explain architecture, paper text, and code precisely, cite line numbers or paper pages when useful, and keep answers concise. Return only valid JSON shaped as {"message":"user-facing markdown answer","codeSelection":null} or {"message":"user-facing markdown answer","codeSelection":{"language":"current source language","fileName":"current source file","lines":[line numbers to highlight],"ranges":[{"start":number,"end":number}],"reason":"short reason"}}. Include codeSelection when the user asks where paper text, a concept, or architecture behavior appears in code, or when highlighting code would directly answer the question. Use line numbers from the full visible source.',
-        },
-        {
-          role: "system",
-          content: context,
-        },
-        ...requestMessages,
-      ],
-    }),
-  });
-
-  if (!openRouterResponse.ok) {
-    const detail = await openRouterResponse.text();
+  let providerResponse: Response;
+  try {
+    providerResponse = await fetch(`${backend.baseUrl}/chat/completions`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({
+        model: backend.model,
+        temperature: 0.2,
+        max_tokens: 900,
+        ...(backend.direct ? {
+          reasoning: { enabled: false },
+          response_format: { type: "json_object" },
+        } : {}),
+        messages: [
+          {
+            role: "system",
+            content:
+              'You are the embedded ModelArchViz assistant. Use the provided current app state as ground truth. When the user says "this", assume they mean the user-selected code when present, otherwise the selected paper text when present, otherwise the current selected architecture node and highlighted code lines. Explain architecture, paper text, and code precisely, cite line numbers or paper pages when useful, and keep answers concise. Return only valid JSON shaped as {"message":"user-facing markdown answer","codeSelection":null} or {"message":"user-facing markdown answer","codeSelection":{"language":"current source language","fileName":"current source file","lines":[line numbers to highlight],"ranges":[{"start":number,"end":number}],"reason":"short reason"}}. Include codeSelection when the user asks where paper text, a concept, or architecture behavior appears in code, or when highlighting code would directly answer the question. Use line numbers from the full visible source.',
+          },
+          {
+            role: "system",
+            content: context,
+          },
+          ...requestMessages,
+        ],
+      }),
+      signal: AbortSignal.timeout(60_000),
+    });
+  } catch {
     return NextResponse.json(
-      { error: `OpenRouter returned ${openRouterResponse.status}: ${detail.slice(0, 500)}` },
-      { status: openRouterResponse.status },
+      { error: "The assistant could not be reached. Please try again later." },
+      { status: 502 },
     );
   }
 
-  const data = await openRouterResponse.json();
+  if (!providerResponse.ok) {
+    return NextResponse.json(
+      { error: `${backend.name} could not complete the request. Please try again later.` },
+      { status: 502 },
+    );
+  }
+
+  let data;
+  try {
+    data = await providerResponse.json();
+  } catch {
+    return NextResponse.json({ error: "The assistant returned an invalid response." }, { status: 502 });
+  }
   const content = data?.choices?.[0]?.message?.content;
   if (typeof content !== "string" || content.trim().length === 0) {
-    return NextResponse.json({ error: "OpenRouter returned an empty response." }, { status: 502 });
+    return NextResponse.json({ error: "The assistant returned an empty response." }, { status: 502 });
   }
   const parsed = parseAssistantPayload(content.trim());
   const codeSelection = sanitizeCodeSelection(parsed.codeSelection, payload.context ?? {});

@@ -186,6 +186,37 @@ class DeliveryTests(unittest.TestCase):
             self.assertEqual(d.infisical_secrets({"secretNames": []}), {})
             req.assert_not_called()
 
+    def test_missing_source_names_the_key_without_exposing_provider_details(self):
+        env = {
+            "ACTIONS_ID_TOKEN_REQUEST_URL": "https://example.actions.githubusercontent.com/token",
+            "ACTIONS_ID_TOKEN_REQUEST_TOKEN": "fake-oidc-credential",
+        }
+        with (
+            patch.dict(os.environ, env, clear=True),
+            patch.object(d, "mask"),
+            patch.object(d, "request", side_effect=[
+                {"value": "fake-jwt"},
+                {"accessToken": "fake-access-token"},
+                d.ProviderHTTPError(404),
+            ]),
+        ):
+            with self.assertRaisesRegex(d.DeliveryError, "SENTRY_AUTH_TOKEN.*HTTP 404") as error:
+                d.infisical_secrets(self.config)
+        for private_value in ("fake-jwt", "fake-access-token", "fake-oidc-credential"):
+            self.assertNotIn(private_value, str(error.exception))
+
+    def test_http_error_does_not_expose_the_response_body_or_url(self):
+        from io import BytesIO
+        from urllib.error import HTTPError
+
+        error = HTTPError("https://provider.invalid/private", 404, "private reason", {}, BytesIO(b"private response"))
+        with patch.object(d.urllib.request, "build_opener") as opener:
+            opener.return_value.open.side_effect = error
+            with self.assertRaises(d.ProviderHTTPError) as raised:
+                d.request("GET", "https://provider.invalid/private", "private-token")
+        self.assertEqual(raised.exception.status, 404)
+        self.assertNotIn("private", str(raised.exception))
+
     def test_all_targets_are_checked_before_first_write(self):
         envs = [{"key": "SECOND", "target": ["production", "preview"]}]
         with (
