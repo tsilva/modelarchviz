@@ -77,3 +77,5 @@ clear unavailable response, with no fallback to AgentBridge.
 Production defaults to `deepseek/deepseek-v4.1-flash`, with reasoning disabled
 and a 900-token response limit. Set `OPENROUTER_MODEL` in the target environment
 to use a different OpenRouter model ID such as `provider/model`.
+
+Production delivery keeps Vercel secret isolation enabled and distinguishes public configuration from private credentials; see [production delivery](docs/production-delivery.md).

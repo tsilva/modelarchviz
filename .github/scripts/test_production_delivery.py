@@ -194,13 +194,19 @@ class DeliveryTests(unittest.TestCase):
         with (
             patch.dict(os.environ, env, clear=True),
             patch.object(d, "mask"),
-            patch.object(d, "request", side_effect=[
-                {"value": "fake-jwt"},
-                {"accessToken": "fake-access-token"},
-                d.ProviderHTTPError(404),
-            ]),
+            patch.object(
+                d,
+                "request",
+                side_effect=[
+                    {"value": "fake-jwt"},
+                    {"accessToken": "fake-access-token"},
+                    d.ProviderHTTPError(404),
+                ],
+            ),
         ):
-            with self.assertRaisesRegex(d.DeliveryError, "SENTRY_AUTH_TOKEN.*HTTP 404") as error:
+            with self.assertRaisesRegex(
+                d.DeliveryError, "SENTRY_AUTH_TOKEN.*HTTP 404"
+            ) as error:
                 d.infisical_secrets(self.config)
         for private_value in ("fake-jwt", "fake-access-token", "fake-oidc-credential"):
             self.assertNotIn(private_value, str(error.exception))
@@ -209,7 +215,13 @@ class DeliveryTests(unittest.TestCase):
         from io import BytesIO
         from urllib.error import HTTPError
 
-        error = HTTPError("https://provider.invalid/private", 404, "private reason", {}, BytesIO(b"private response"))
+        error = HTTPError(
+            "https://provider.invalid/private",
+            404,
+            "private reason",
+            {},
+            BytesIO(b"private response"),
+        )
         with patch.object(d.urllib.request, "build_opener") as opener:
             opener.return_value.open.side_effect = error
             with self.assertRaises(d.ProviderHTTPError) as raised:
@@ -224,7 +236,10 @@ class DeliveryTests(unittest.TestCase):
             patch.object(d, "vercel_request", return_value={"envs": envs}) as req,
         ):
             with self.assertRaises(d.DeliveryError):
-                d.sync_vercel(self.config, {"FIRST": "fake-a", "SECOND": "fake-b"})
+                d.sync_vercel(
+                    self.config | {"secretNames": ["FIRST", "SECOND"]},
+                    {"FIRST": "fake-a", "SECOND": "fake-b"},
+                )
             self.assertEqual([call.args[1] for call in req.call_args_list], ["GET"])
 
     def test_multiple_keys_use_one_oidc_session(self):
@@ -283,6 +298,124 @@ class DeliveryTests(unittest.TestCase):
             with self.assertRaises(d.DeliveryError):
                 d.main()
             sync.assert_not_called()
+
+    def test_secret_update_addresses_only_production_id(self):
+        key = "SENTRY_AUTH_TOKEN"
+        prod = {
+            "key": key,
+            "id": "prod-id",
+            "target": ["production"],
+            "type": "sensitive",
+            "visibility": "secret",
+        }
+        preview = prod | {"id": "preview-id", "target": ["preview"]}
+        with (
+            patch.object(d, "verify_vercel"),
+            patch.object(
+                d,
+                "vercel_request",
+                side_effect=[
+                    {"envs": [prod, preview]},
+                    prod,
+                    {"envs": [prod, preview]},
+                ],
+            ) as req,
+        ):
+            d.sync_vercel(self.config, {key: "fake-secret"})
+            call = req.call_args_list[1]
+            self.assertEqual(call.args[1], "PATCH")
+            self.assertTrue(call.args[2].endswith("/prod-id"))
+            self.assertNotIn("key", call.args[3])
+            self.assertNotIn("target", call.args[3])
+            self.assertEqual(call.args[3]["visibility"], "secret")
+
+    def test_config_migration_preserves_preview(self):
+        key = "SENTRY_DSN"
+        config = self.config | {"secretNames": [key], "configNames": [key]}
+        old = {
+            "key": key,
+            "id": "old-prod",
+            "target": ["production"],
+            "type": "sensitive",
+        }
+        preview = old | {"id": "preview-id", "target": ["preview"]}
+        new = old | {"id": "new-prod", "type": "encrypted", "visibility": "config"}
+        with (
+            patch.object(d, "verify_vercel"),
+            patch.object(
+                d,
+                "vercel_request",
+                side_effect=[
+                    {"envs": [old, preview]},
+                    {},
+                    {"created": new, "failed": []},
+                    {"envs": [new, preview]},
+                ],
+            ) as req,
+        ):
+            d.sync_vercel(config, {key: "https://public.example"})
+            self.assertEqual(
+                [c.args[1] for c in req.call_args_list],
+                ["GET", "DELETE", "POST", "GET"],
+            )
+            self.assertTrue(req.call_args_list[1].args[2].endswith("/old-prod"))
+            self.assertEqual(req.call_args_list[2].args[3]["target"], ["production"])
+            self.assertEqual(req.call_args_list[2].args[3]["visibility"], "config")
+
+    def test_auth_token_cannot_be_classified_as_config(self):
+        with patch.object(d, "vercel_request") as req:
+            with self.assertRaises(d.DeliveryError):
+                d.sync_vercel(
+                    self.config | {"configNames": ["SENTRY_AUTH_TOKEN"]},
+                    {"SENTRY_AUTH_TOKEN": "private"},
+                )
+            req.assert_not_called()
+
+    def test_combined_target_migration_fails_before_delete(self):
+        key = "SENTRY_DSN"
+        config = self.config | {"secretNames": [key], "configNames": [key]}
+        row = {
+            "key": key,
+            "id": "shared",
+            "target": ["production", "preview"],
+            "type": "sensitive",
+        }
+        with (
+            patch.object(d, "verify_vercel"),
+            patch.object(d, "vercel_request", return_value={"envs": [row]}) as req,
+        ):
+            with self.assertRaises(d.DeliveryError):
+                d.sync_vercel(config, {key: "public"})
+            self.assertEqual([c.args[1] for c in req.call_args_list], ["GET"])
+
+    def test_provider_error_never_exposes_body_or_value(self):
+        with self.assertRaises(d.DeliveryError) as error:
+            d.confirmed_variable(
+                {
+                    "failed": [
+                        {"error": {"message": "private-value", "code": "private-value"}}
+                    ]
+                },
+                "SENTRY_AUTH_TOKEN",
+            )
+        self.assertIn("SENTRY_AUTH_TOKEN", str(error.exception))
+        self.assertNotIn("private-value", str(error.exception))
+
+    def test_create_accepts_object_or_single_element_list(self):
+        row = {"key": "K", "id": "prod-id"}
+        for created in (row, [row]):
+            self.assertEqual(
+                d.confirmed_variable({"created": created, "failed": []}, "K"), row
+            )
+        for created in ([], [row, row], {"key": "wrong"}):
+            with self.assertRaises(d.DeliveryError):
+                d.confirmed_variable({"created": created}, "K")
+
+    def test_missing_source_prevents_writes(self):
+        with patch.object(d, "vercel_request") as req:
+            with self.assertRaises(d.DeliveryError):
+                d.sync_vercel(self.config, {})
+            req.assert_not_called()
 
 
 if __name__ == "__main__":
