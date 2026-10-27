@@ -78,4 +78,4 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 ## Secrets
 
-`pnpm dev --port auto` fetches only the linked Infisical development project through the saved human CLI login. Private credentials must stay out of dotenv files, command arguments, logs, and browser bundles. Use `pnpm secrets:check` for presence-only verification. Production uses the isolated `modelarchviz-production` project and its Vercel Production sync. Preserve Keychain originals until migration and provider rotation are verified.
+`pnpm dev --port auto` fetches only the linked Infisical development project through the saved human CLI login. Private credentials must stay out of dotenv files, command arguments, logs, and browser bundles. Use `pnpm secrets:check` for presence-only verification. Production uses the isolated `modelarchviz-production` project and GitHub Actions delivery to Vercel Production. A standalone Cloudflare relay dispatches the pinned shared delivery workflow; see `docs/production-delivery.md`. Preserve Keychain originals until migration and provider rotation are verified.
