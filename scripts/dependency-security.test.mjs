@@ -21,6 +21,10 @@ test("formerly vulnerable packages stay on patched versions", () => {
     "fast-uri": "3.1.8",
     "nanoid": "3.3.19",
     "sharp": "0.35.5",
+    "glob": "14.0.2",
+    "minimatch": "11.0.1",
+    "path-scurry": "3.0.0",
+    "@isaacs/nonrecursive-glob-match": "1.0.1",
   })) {
     const versions = lockedVersions(name);
     // Sentry 11 removed this transitive; if it returns, its patched floor still applies.
