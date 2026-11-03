@@ -31,6 +31,8 @@ pnpm start                     # serve the production build after pnpm build
 pnpm typecheck                 # generate artifacts and run TypeScript checks
 ```
 
+Local builds skip Sentry source-map uploads. Runtime error reporting still uses the configured DSN.
+
 ## Optional chat
 
 The chat pane calls AgentBridge during local development. Production and Vercel preview deployments call OpenRouter directly with their own server-side `OPENROUTER_API_KEY`, defaulting to `deepseek/deepseek-v4.1-flash-1017`. `OPENROUTER_MODEL` overrides the model; `OPENROUTER_APP_URL` and `OPENROUTER_APP_NAME` set request attribution.

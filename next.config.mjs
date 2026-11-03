@@ -2,7 +2,11 @@ import { withSentryConfig } from "@sentry/nextjs/config";
 /** @type {import('next').NextConfig} */
 const nextConfig = {};
 
+const isHostedBuild = process.env.VERCEL === "1" && Boolean(process.env.VERCEL_DEPLOYMENT_ID);
+
 export default withSentryConfig(nextConfig, {
+  sourcemaps: { disable: !isHostedBuild },
+  useRunAfterProductionCompileHook: isHostedBuild ? undefined : false,
   // For all available options, see:
   // https://www.npmjs.com/package/@sentry/webpack-plugin#options
 
@@ -26,6 +30,7 @@ export default withSentryConfig(nextConfig, {
   tunnelRoute: "/monitoring",
 
   webpack: {
+    disableSentryConfig: !isHostedBuild,
     // Tree-shaking options for reducing bundle size
     treeshake: {
       // Automatically tree-shake Sentry logger statements to reduce bundle size
