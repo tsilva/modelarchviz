@@ -415,5 +415,5 @@ export function modelRoutePath(modelId: string) {
 }
 
 export function siteUrl() {
-  return new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "https://modelarch.tsilva.eu");
+  return new URL(process.env.NEXT_PUBLIC_SITE_URL?.trim() || "https://modelarchviz.tsilva.eu");
 }

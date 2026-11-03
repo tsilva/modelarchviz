@@ -63,7 +63,7 @@ Secret scanning checks changed commits. After a rewritten push whose previous co
 - [EmbeddingGemma 2](docs/embeddinggemma2.md) adds a bidirectional text backbone, expandable vision/audio encoders, and matching PyTorch/JAX notebooks. Defaults match the released architecture; runnable smoke tests use smaller random-weight models.
 - Paper panes render the checked-in PDFs under `public/papers`; releases documented by an official model card, such as EmbeddingGemma 2, show model-card context and source links.
 - No database, server-side storage, or user-data persistence is configured. Google Analytics and Sentry provide analytics, error monitoring, tracing, and replay.
-- `NEXT_PUBLIC_SITE_URL` is optional and sets the absolute base URL for social metadata, sitemap, and robots output. It falls back to `https://modelarch.tsilva.eu`.
+- `NEXT_PUBLIC_SITE_URL` is optional and sets the absolute base URL for social metadata, sitemap, and robots output. It falls back to `https://modelarchviz.tsilva.eu`.
 - Authoring brand assets live under `assets/brand`, runtime web and SEO assets live under `public/brand/web-seo`, and the root `logo.png` is used for repository and README display.
 
 ## Chat environments
