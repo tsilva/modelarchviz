@@ -9182,33 +9182,10 @@ function TreeNode({
     <button
       className={`arch-row ${isSelected ? "selected" : ""} ${isDimmed ? "dimmed" : ""}`}
       data-kind={node.kind}
-      style={{ "--depth": depth } as React.CSSProperties}
       onClick={() => onSelect(node)}
     >
       <span className="row-left">
-        {hasChildren ? (
-          <span
-            className="chevron"
-            role="button"
-            tabIndex={0}
-            aria-label={isExpanded ? "Collapse group" : "Expand group"}
-            onClick={(event) => {
-              event.stopPropagation();
-              toggleExpanded();
-            }}
-            onKeyDown={(event) => {
-              if (event.key === "Enter" || event.key === " ") {
-                event.preventDefault();
-                event.stopPropagation();
-                toggleExpanded();
-              }
-            }}
-          >
-            <ChevronIcon expanded={isExpanded} />
-          </span>
-        ) : (
-          <span className="chevron spacer" />
-        )}
+        <span className="chevron spacer" aria-hidden="true" />
         <span className="node-main">
           <strong>{node.label}</strong>
           <span>{node.type}</span>
@@ -9227,7 +9204,20 @@ function TreeNode({
 
   return (
     <div className="node-wrap">
-      {row}
+      <div className="node-row" style={{ "--depth": depth } as React.CSSProperties}>
+        {hasChildren ? (
+          <button
+            type="button"
+            className="chevron"
+            aria-label={isExpanded ? "Collapse group" : "Expand group"}
+            aria-expanded={isExpanded}
+            onClick={toggleExpanded}
+          >
+            <ChevronIcon expanded={isExpanded} />
+          </button>
+        ) : null}
+        {row}
+      </div>
       {renderedChildren?.length ? (
         <div className={node.id.endsWith(".heads") ? "head-grid" : "children"}>
           {renderedChildren.map((child) => (
@@ -9422,7 +9412,7 @@ function CodeEditor({
   };
 
   return (
-    <section className="code-pane">
+    <section id="code-pane" className="code-pane">
       <div className="pane-toolbar code-toolbar">
         <div className="tab-group file-tab-group">
           <span className="editor-file-name">{currentFile.fileName}</span>
@@ -9649,7 +9639,7 @@ function ChatPanel({
   };
 
   return (
-    <section className="chat-pane">
+    <section id="chat-pane" className="chat-pane">
       <div className="pane-toolbar chat-toolbar">
         <div>
           <h1>Chat</h1>
@@ -9938,7 +9928,7 @@ function PaperPane({
   onPaperSelectionChange: (selection: PaperSelection) => void;
 }) {
   return (
-    <section className="paper-pane">
+    <section id="paper-pane" className="paper-pane">
       {model.paper.referenceUrl ? (
         <article className="model-reference">
           <p className="model-reference-eyebrow">Official model card</p>
@@ -10574,6 +10564,13 @@ function VariantSlider({
   );
 }
 
+function readPaneWidths(workspace: HTMLElement | null) {
+  const widths = Array.from(workspace?.querySelectorAll<HTMLElement>(":scope > section") ?? [],
+    (pane) => pane.getBoundingClientRect().width,
+  );
+  return widths.length > 0 && widths.every((width) => width > 0) ? widths : null;
+}
+
 type ModelArchVizAppProps = {
   initialModelId?: string;
 };
@@ -10599,6 +10596,7 @@ export default function ModelArchVizApp({ initialModelId }: ModelArchVizAppProps
   const [paperSelection, setPaperSelection] = useState<PaperSelection>(null);
   const [customPaneWidths, setCustomPaneWidths] = useState<Record<string, number[]>>({});
   const workspaceRef = useRef<HTMLDivElement>(null);
+  const [paneMeasurement, setPaneMeasurement] = useState<{ layout: string; widths: number[] } | null>(null);
 
   const paneOrder: PaneKey[] = ["architecture", "code", "paper", "chat"];
   const visiblePanes = paneOrder.filter((pane) => visibleColumns[pane]);
@@ -10610,6 +10608,27 @@ export default function ModelArchVizApp({ initialModelId }: ModelArchVizAppProps
         gridTemplateColumns: resizedPaneWidths.map((width) => `${Math.round(width)}px`).join(" 8px "),
       } as React.CSSProperties)
     : undefined;
+  const measuredPaneWidths = paneMeasurement?.layout === paneLayout ? paneMeasurement.widths : null;
+  const splitterValue = (rightIndex: number) => {
+    const widths = resizedPaneWidths ?? measuredPaneWidths;
+    if (!widths) return 50;
+    const left = widths[rightIndex - 1];
+    return Math.round((100 * left) / (left + widths[rightIndex]));
+  };
+
+  useEffect(() => {
+    const workspace = workspaceRef.current;
+    if (!workspace) return;
+    const measure = () => {
+      const widths = readPaneWidths(workspace);
+      if (widths) setPaneMeasurement({ layout: paneLayout, widths });
+    };
+    const observer = new ResizeObserver(measure);
+    for (const pane of workspace.querySelectorAll(":scope > section")) observer.observe(pane);
+    measure();
+    return () => observer.disconnect();
+  }, [paneLayout]);
+
   const expanded = expandedByModel[currentModelKey] ?? new Set<string>();
   const selected = selectedByModel[currentModelKey] ?? null;
 
@@ -10690,30 +10709,8 @@ export default function ModelArchVizApp({ initialModelId }: ModelArchVizAppProps
     });
   };
 
-  const readCurrentPaneWidths = () => {
-    const workspace = workspaceRef.current;
-    if (!workspace) {
-      return null;
-    }
-
-    const widths = visiblePanes.map((pane) => {
-      const element = workspace.querySelector(`:scope > .${pane}-pane`);
-      if (!(element instanceof HTMLElement)) {
-        return 0;
-      }
-
-      return element.getBoundingClientRect().width;
-    });
-
-    if (widths.some((width) => width <= 0)) {
-      return null;
-    }
-
-    return widths;
-  };
-
   const applyPaneResize = (leftPaneIndex: number, delta: number, startingWidths?: number[]) => {
-    const widths = startingWidths ?? resizedPaneWidths ?? readCurrentPaneWidths();
+    const widths = startingWidths ?? resizedPaneWidths ?? readPaneWidths(workspaceRef.current);
     const rightPaneIndex = leftPaneIndex + 1;
     if (!widths || !visiblePanes[leftPaneIndex] || !visiblePanes[rightPaneIndex]) {
       return;
@@ -10738,7 +10735,7 @@ export default function ModelArchVizApp({ initialModelId }: ModelArchVizAppProps
   };
 
   const startPaneResize = (event: React.PointerEvent<HTMLDivElement>, leftPaneIndex: number) => {
-    const startingWidths = readCurrentPaneWidths();
+    const startingWidths = readPaneWidths(workspaceRef.current);
     const workspace = workspaceRef.current;
     if (!startingWidths || !workspace) {
       return;
@@ -10777,7 +10774,7 @@ export default function ModelArchVizApp({ initialModelId }: ModelArchVizAppProps
   const renderPane = (pane: PaneKey) => {
     if (pane === "architecture") {
       return (
-        <section className="architecture-pane">
+        <section id="architecture-pane" className="architecture-pane">
           <div className="pane-toolbar">
             <div>
               <h1>Architecture</h1>
@@ -10914,6 +10911,8 @@ export default function ModelArchVizApp({ initialModelId }: ModelArchVizAppProps
                 role="separator"
                 aria-label={`Resize ${visiblePanes[index - 1]} and ${pane} panes`}
                 aria-orientation="vertical"
+                aria-controls={`${visiblePanes[index - 1]}-pane`}
+                aria-valuenow={splitterValue(index)}
                 tabIndex={0}
                 onKeyDown={(event) => resizePaneFromKeyboard(event, index - 1)}
                 onPointerDown={(event) => startPaneResize(event, index - 1)}
