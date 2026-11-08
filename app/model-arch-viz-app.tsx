@@ -2,6 +2,7 @@
 
 import {
   Fragment,
+  memo,
   useEffect,
   useRef,
   useState,
@@ -770,42 +771,10 @@ const resnetVariants: ModelVariantSpec[] = resnetVariantDefinitions.map((variant
   };
 });
 
-const completedPdfPrefetches = new Set<string>();
-const pendingPdfPrefetches = new Map<string, Promise<void>>();
 const paperPdfAssetVersion = "20261007";
 
 function paperPdfUrl(modelId: string) {
   return `/papers/${modelId}.pdf?v=${paperPdfAssetVersion}`;
-}
-
-function prefetchPdf(pdfUrl: string, signal: AbortSignal) {
-  if (completedPdfPrefetches.has(pdfUrl) || pendingPdfPrefetches.has(pdfUrl)) {
-    return;
-  }
-
-  const prefetch = fetch(pdfUrl, { cache: "force-cache", signal })
-    .then((response) => {
-      if (!response.ok) {
-        throw new Error(`PDF prefetch failed with ${response.status}`);
-      }
-
-      return response.blob();
-    })
-    .then(() => {
-      completedPdfPrefetches.add(pdfUrl);
-    })
-    .catch((error: unknown) => {
-      if (signal.aborted) {
-        return;
-      }
-
-      console.warn("PDF prefetch failed", error);
-    })
-    .finally(() => {
-      pendingPdfPrefetches.delete(pdfUrl);
-    });
-
-  pendingPdfPrefetches.set(pdfUrl, prefetch);
 }
 
 function makeTransformerEncoderBlock(index: number, defaultExpanded = false): ArchNode {
@@ -9248,10 +9217,6 @@ function tokenizeCode(line: string) {
     const text = match[0];
     const index = match.index ?? 0;
 
-    if (index > cursor) {
-      tokens.push({ text: line.slice(cursor, index) });
-    }
-
     let className: string | undefined;
     if (text.startsWith("#")) {
       className = "syntax-comment";
@@ -9271,6 +9236,12 @@ function tokenizeCode(line: string) {
       className = "syntax-operator";
     }
 
+    if (!className) continue;
+
+    if (index > cursor) {
+      tokens.push({ text: line.slice(cursor, index) });
+    }
+
     tokens.push({ text, className });
     cursor = index + text.length;
   }
@@ -9282,17 +9253,15 @@ function tokenizeCode(line: string) {
   return tokens.length > 0 ? tokens : [{ text: " " }];
 }
 
-function SyntaxLine({ line }: { line: string }) {
+const SyntaxLine = memo(function SyntaxLine({ line }: { line: string }) {
   return (
     <>
-      {tokenizeCode(line).map((token, index) => (
-        <span className={token.className} key={`${index}-${token.text}`}>
-          {token.text}
-        </span>
-      ))}
+      {tokenizeCode(line).map((token, index) =>
+        token.className ? <span className={token.className} key={index}>{token.text}</span> : token.text,
+      )}
     </>
   );
-}
+});
 
 function CodeEditor({
   model,
@@ -10641,13 +10610,6 @@ export default function ModelArchVizApp({ initialModelId }: ModelArchVizAppProps
     setPaperSelection(null);
     setQuery("");
   }, [initialModel.id]);
-
-  useEffect(() => {
-    const controller = new AbortController();
-    if (!model.paper.referenceUrl) prefetchPdf(model.paper.pdfUrl, controller.signal);
-
-    return () => controller.abort();
-  }, [model.paper.pdfUrl, model.paper.referenceUrl]);
 
   const updateModel = (nextModelId: string) => {
     setModelId(nextModelId);
