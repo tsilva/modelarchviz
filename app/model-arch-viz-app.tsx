@@ -8664,31 +8664,34 @@ function validateHighlightTree(modelLabel: string, model: HighlightSource, nodes
   nodes.forEach(validateNode);
 }
 
-for (const model of models) {
-  validateHighlightTree(model.id, model, model.nodes);
+// Validate the full catalog during prerendering and tests.
+if (typeof window === "undefined") {
+  for (const model of models) {
+    validateHighlightTree(model.id, model, model.nodes);
 
-  for (const variant of model.variants ?? []) {
-    validateHighlightTree(variant.id, variant, variant.nodes);
+    for (const variant of model.variants ?? []) {
+      validateHighlightTree(variant.id, variant, variant.nodes);
+    }
   }
-}
 
-for (const [fileName, manifest] of Object.entries(modelHighlightManifest)) {
-  const referencedRefs = referencedRefsByFile.get(fileName) ?? new Set<string>();
-  const resnetFamilyRefs = /^resnet\d+(_jax)?\.py$/.test(fileName)
-    ? new Set(
-        [...referencedRefsByFile.entries()]
-          .filter(([candidate]) => {
-            const sameLanguage = fileName.endsWith("_jax.py")
-              ? candidate.endsWith("_jax.py")
-              : !candidate.endsWith("_jax.py");
-            return sameLanguage && /^resnet\d+/.test(candidate);
-          })
-          .flatMap(([, refs]) => [...refs]),
-      )
-    : null;
-  for (const ref of Object.keys(manifest)) {
-    if (!referencedRefs.has(ref) && !resnetFamilyRefs?.has(ref)) {
-      throw new Error(`Orphaned architecture anchor in ${fileName}: ${ref}`);
+  for (const [fileName, manifest] of Object.entries(modelHighlightManifest)) {
+    const referencedRefs = referencedRefsByFile.get(fileName) ?? new Set<string>();
+    const resnetFamilyRefs = /^resnet\d+(_jax)?\.py$/.test(fileName)
+      ? new Set(
+          [...referencedRefsByFile.entries()]
+            .filter(([candidate]) => {
+              const sameLanguage = fileName.endsWith("_jax.py")
+                ? candidate.endsWith("_jax.py")
+                : !candidate.endsWith("_jax.py");
+              return sameLanguage && /^resnet\d+/.test(candidate);
+            })
+            .flatMap(([, refs]) => [...refs]),
+        )
+      : null;
+    for (const ref of Object.keys(manifest)) {
+      if (!referencedRefs.has(ref) && !resnetFamilyRefs?.has(ref)) {
+        throw new Error(`Orphaned architecture anchor in ${fileName}: ${ref}`);
+      }
     }
   }
 }
