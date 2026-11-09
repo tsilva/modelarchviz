@@ -31,11 +31,22 @@ pnpm start                     # serve the production build after pnpm build
 pnpm typecheck                 # generate artifacts and run TypeScript checks
 ```
 
+Local builds skip Sentry source-map uploads. Runtime error reporting still uses the configured DSN.
+
 ## Optional chat
 
-The chat pane calls AgentBridge during local development. Production and Vercel preview deployments call OpenRouter directly with their own server-side `OPENROUTER_API_KEY`, defaulting to `deepseek/deepseek-v4.1-flash`. `OPENROUTER_MODEL` overrides the model; `OPENROUTER_APP_URL` and `OPENROUTER_APP_NAME` set request attribution.
+The chat pane calls AgentBridge during local development. Production and Vercel preview deployments call OpenRouter directly with their own server-side `OPENROUTER_API_KEY`, defaulting to `deepseek/deepseek-v4.1-flash-1017`. `OPENROUTER_MODEL` overrides the model; `OPENROUTER_APP_URL` and `OPENROUTER_APP_NAME` set request attribution.
 
 ## Notes
+
+Build tooling pins `glob` 14.0.2, `minimatch` 11.0.1, `path-scurry` 3.0.0 and the nonrecursive matcher 1.0.1 to address glob cancellation and pattern amplification advisories. The seven-day package hold and existing exception are retained; the new exceptions cover only these exact user-approved versions.
+
+Private project considerations and accepted future work live in root
+`INBOX.md` when present. Use the repository procedure of `$private-skills_inbox-capture` to read and author it as one
+workflow, including clarification and reconciliation with current code and
+docs. `INBOX.md` and `.local/repo-inbox/` migration sources are Git-ignored,
+local to this checkout, and require independent backup. Obsidian sources remain
+read-only; deleting a fully migrated source is a manual user action.
 
 Sentry 11 uses the `@sentry/nextjs/config` build entry point and enables logs by default. Client and server integrations retain tracing and replay settings and explicitly disable personal, request, queue, and content data collection.
 The paper viewer initializes PDF.js with its document parameter object; generated artifacts keep the served worker synchronized with the installed PDF.js version.
@@ -52,13 +63,8 @@ Secret scanning checks changed commits. After a rewritten push whose previous co
 - [EmbeddingGemma 2](docs/embeddinggemma2.md) adds a bidirectional text backbone, expandable vision/audio encoders, and matching PyTorch/JAX notebooks. Defaults match the released architecture; runnable smoke tests use smaller random-weight models.
 - Paper panes render the checked-in PDFs under `public/papers`; releases documented by an official model card, such as EmbeddingGemma 2, show model-card context and source links.
 - No database, server-side storage, or user-data persistence is configured. Google Analytics and Sentry provide analytics, error monitoring, tracing, and replay.
-- `NEXT_PUBLIC_SITE_URL` is optional and sets the absolute base URL for social metadata, sitemap, and robots output. It falls back to `https://modelarch.tsilva.eu`.
+- `NEXT_PUBLIC_SITE_URL` is optional and sets the absolute base URL for social metadata, sitemap, and robots output. It falls back to `https://modelarchviz.tsilva.eu`.
 - Authoring brand assets live under `assets/brand`, runtime web and SEO assets live under `public/brand/web-seo`, and the root `logo.png` is used for repository and README display.
-
-## License
-
-No license file is present in this repository yet.
-
 
 ## Chat environments
 
@@ -74,10 +80,17 @@ production allowlist. Development credentials and local gateway configuration
 are not used by the production backend. A missing production key returns a
 clear unavailable response, with no fallback to AgentBridge.
 
-Production defaults to `deepseek/deepseek-v4.1-flash`, with reasoning disabled
+Production defaults to `deepseek/deepseek-v4.1-flash-1017`, with reasoning disabled
 and a 900-token response limit. Set `OPENROUTER_MODEL` in the target environment
 to use a different OpenRouter model ID such as `provider/model`.
 
 Production secrets are delivered through the pinned shared GitHub Actions workflow. The standalone signed Infisical relay triggers synchronization and deployment; see [production delivery](docs/production-delivery.md) for scope and recovery.
 
 Production delivery keeps Vercel secret isolation enabled and distinguishes public configuration from private credentials; see [production delivery](docs/production-delivery.md).
+
+## License
+
+[MIT License](LICENSE).
+
+New Codex captures without an explicit destination use `$private-skills_inbox-capture` with
+its Obsidian default; explicitly address this repository for direct repo capture.

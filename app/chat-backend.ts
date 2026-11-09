@@ -1,6 +1,6 @@
 import { agentBridgeBaseUrl, agentBridgeModel } from "./agentbridge";
 
-export const productionChatModel = "deepseek/deepseek-v4.1-flash";
+export const productionChatModel = "deepseek/deepseek-v4.1-flash-1017";
 
 export function chatBackend(env: Record<string, string | undefined> = process.env) {
   const production = env.NODE_ENV === "production"

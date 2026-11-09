@@ -1,5 +1,5 @@
 ---
-name: audit-model-architecture
+name: modelarchviz_audit-model-architecture
 description: Audit a ModelArchViz model by opening the local app with the official OpenAI Browser Use plugin, clicking architecture nodes one by one, and verifying that each selected architecture part highlights the correct source code lines in the code pane. Use when checking model architecture specs, code highlight mappings, expanded/lazy architecture groups, generated model-code artifacts, PyTorch/JAX language parity, or regressions in the ModelArchViz UI.
 ---
 

@@ -54,7 +54,7 @@ test("production and previews use their own OpenRouter key, never AgentBridge", 
     const config = backend.chatBackend({ ...target, OPENROUTER_API_KEY: "production-only", AGENTBRIDGE_API_KEY: "development-only", AGENTBRIDGE_BASE_URL: "http://localhost:8082/api/v1" });
     assert.equal(config.baseUrl, "https://openrouter.ai/api/v1");
     assert.equal(config.apiKey, "production-only");
-    assert.equal(config.model, "deepseek/deepseek-v4.1-flash");
+    assert.equal(config.model, "deepseek/deepseek-v4.1-flash-1017");
   }
   assert.throws(() => backend.chatBackend({ NODE_ENV: "production", AGENTBRIDGE_API_KEY: "dev-only" }), /own OpenRouter key/);
 });
@@ -64,12 +64,12 @@ test("development preserves AgentBridge routing and model prefixes", () => {
   assert.equal(config.baseUrl, "http://127.0.0.1:8082/api/v1");
   assert.equal(config.apiKey, "dev-only");
   assert.equal(config.model, "codex/gpt-6.1-sol");
-  assert.equal(backend.chatBackend({ OPENROUTER_MODEL: "deepseek/deepseek-v4.1-flash" }).model, "openrouter/deepseek/deepseek-v4.1-flash");
+  assert.equal(backend.chatBackend({ OPENROUTER_MODEL: "deepseek/deepseek-v4.1-flash-1017" }).model, "openrouter/deepseek/deepseek-v4.1-flash-1017");
 });
 
 test("production model overrides accept provider IDs and reject gateway IDs", () => {
   assert.equal(backend.chatBackend({ NODE_ENV: "production", OPENROUTER_API_KEY: "test", OPENROUTER_MODEL: "openai/gpt-4o-mini" }).model, "openai/gpt-4o-mini");
-  assert.throws(() => backend.chatBackend({ NODE_ENV: "production", OPENROUTER_API_KEY: "test", OPENROUTER_MODEL: "openrouter/deepseek/deepseek-v4.1-flash" }), /OpenRouter model ID/);
+  assert.throws(() => backend.chatBackend({ NODE_ENV: "production", OPENROUTER_API_KEY: "test", OPENROUTER_MODEL: "openrouter/deepseek/deepseek-v4.1-flash-1017" }), /OpenRouter model ID/);
 });
 
 test("missing production credentials return 503 before any outbound request", async (t) => {
@@ -86,7 +86,7 @@ test("production chat uses the approved model and returns the assistant contract
     assert.equal(url, "https://openrouter.ai/api/v1/chat/completions");
     assert.equal(options.headers.Authorization, "Bearer dummy-production-only");
     const body = JSON.parse(options.body);
-    assert.equal(body.model, "deepseek/deepseek-v4.1-flash");
+    assert.equal(body.model, "deepseek/deepseek-v4.1-flash-1017");
     assert.equal(body.reasoning.enabled, false);
     assert.equal(body.max_tokens, 900);
     assert.deepEqual(body.response_format, { type: "json_object" });
