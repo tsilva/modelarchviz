@@ -584,7 +584,24 @@ select {
   color: #72769a;
 }
 
-.chevron:not(.spacer):hover {
+.node-row {
+  position: relative;
+}
+
+.node-row > .chevron {
+  position: absolute;
+  z-index: 1;
+  top: 50%;
+  left: calc(15px + var(--depth) * 28px);
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  transform: translateY(-50%);
+}
+
+.node-row > .chevron:hover {
   background: rgba(23, 32, 42, 0.08);
 }
 
@@ -1198,7 +1215,7 @@ select {
 }
 
 .syntax-number {
-  color: #a86b10;
+  color: #9d6410;
 }
 
 .syntax-string {
@@ -1491,6 +1508,11 @@ select {
   .arch-row {
     align-items: flex-start;
     padding-right: 8px;
+  }
+
+  .node-row > .chevron {
+    top: 8px;
+    transform: none;
   }
 
   .row-left {
