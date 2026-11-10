@@ -21,11 +21,11 @@ function transpile(source, fileName) {
   }).outputText;
 }
 
-function evaluateModule(relativePath) {
+function evaluateModule(relativePath, moduleRequire = require) {
   const fileName = path.join(repoRoot, relativePath);
   const module = { exports: {} };
   new Function("require", "module", "exports", transpile(readFileSync(fileName, "utf8"), fileName))(
-    require,
+    moduleRequire,
     module,
     module.exports,
   );
@@ -35,12 +35,18 @@ function evaluateModule(relativePath) {
 function loadCatalog() {
   const appPath = path.join(repoRoot, "app/model-arch-viz-app.tsx");
   const appSource = readFileSync(appPath, "utf8");
-  const cutoff = appSource.indexOf("const modelsByPublicationDate");
+  const cutoff = appSource.indexOf("function ChevronIcon");
   assert.notEqual(cutoff, -1, "catalog initialization cutoff must exist");
 
   const generated = evaluateModule("app/generated/model-sources.ts");
   const routes = evaluateModule("app/model-routes.ts");
-  const isolatedGlobal = {};
+  const bundles = evaluateModule("app/model-source-bundle.ts", (specifier) => {
+    assert.equal(specifier, "./generated/model-sources");
+    return generated;
+  });
+  const isolatedGlobal = {
+    sourceBundle: { sources: generated.modelSources, highlights: generated.modelHighlightManifest },
+  };
   const module = { exports: {} };
   const requireImpl = (specifier) => {
     if (specifier === "./generated/model-sources") return generated;
@@ -49,7 +55,7 @@ function loadCatalog() {
     if (specifier === "react" || specifier === "next/navigation" || specifier === "react/jsx-runtime") return {};
     throw new Error(`Unexpected catalog import: ${specifier}`);
   };
-  const capture = "\nglobalThis.__catalog = { models, resolveArchitectureHighlight, architectureChildren };\n";
+  const capture = "\nglobalThis.__catalog = { models: validateModelCatalog(globalThis.sourceBundle), createModel, resolveArchitectureHighlight, architectureChildren };\n";
   const compiled = transpile(`${appSource.slice(0, cutoff)}${capture}`, appPath);
   new Function("require", "module", "exports", "process", "globalThis", compiled)(
     requireImpl,
@@ -58,7 +64,7 @@ function loadCatalog() {
     process,
     isolatedGlobal,
   );
-  return isolatedGlobal.__catalog;
+  return { ...isolatedGlobal.__catalog, ...routes, ...bundles };
 }
 
 const catalog = loadCatalog();
@@ -66,6 +72,19 @@ const catalogModels = [
   ...catalog.models,
   ...catalog.models.flatMap((model) => model.variants ?? []),
 ].filter((model, index, models) => models.findIndex((candidate) => candidate.id === model.id) === index);
+
+test("each route bundle reconstructs its model without other models' sources", () => {
+  for (const entry of catalog.modelCatalog) {
+    const bundle = catalog.getModelSourceBundle(entry);
+    const model = catalog.createModel(entry, bundle);
+    assert.deepEqual(model, catalog.models.find(({ id }) => id === entry.id));
+    const files = new Set(
+      [model, ...(model.variants ?? [])].flatMap(({ fileName, jaxFileName }) => [fileName, jaxFileName]),
+    );
+    assert.deepEqual(new Set(Object.keys(bundle.sources)), files);
+    assert.deepEqual(new Set(Object.keys(bundle.highlights)), files);
+  }
+});
 
 function findNode(nodes, id) {
   for (const node of nodes) {

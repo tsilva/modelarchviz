@@ -25,9 +25,11 @@ function evaluateModule(relativePath, requireImpl = require) {
 }
 
 const routes = evaluateModule("../app/model-routes.ts");
+const getModelSourceBundle = ({ id }) => ({ sources: { [id]: "source" }, highlights: {} });
 const page = evaluateModule("../app/models/[modelId]/page.tsx", (specifier) => {
   if (specifier === "../../model-routes") return routes;
   if (specifier === "../../model-arch-viz-app") return ModelArchVizAppStub;
+  if (specifier === "../../model-source-bundle") return { getModelSourceBundle };
   if (specifier === "next/navigation") {
     return { notFound: () => { throw notFoundError; } };
   }
@@ -40,7 +42,8 @@ test("catalog routes render the requested model and metadata from promised param
     const props = { params: Promise.resolve({ modelId: model.id }) };
     const rendered = await page.default(props);
     assert.equal(rendered.type, ModelArchVizAppStub);
-    assert.equal(rendered.props.initialModelId, model.id);
+    assert.equal(rendered.props.modelId, model.id);
+    assert.deepEqual(rendered.props.sourceBundle, getModelSourceBundle(model));
 
     const metadata = await page.generateMetadata(props);
     assert.equal(metadata.title, `${model.title} | ModelArchViz`);

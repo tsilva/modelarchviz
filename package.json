@@ -11,7 +11,7 @@
     "test:notebooks": "node --test scripts/model-notebooks.test.mjs",
     "test": "pnpm test:dependencies && pnpm test:highlights && pnpm test:routes && pnpm test:notebooks",
     "dev": "python3 scripts/infisical/run.py dev",
-    "build": "pnpm generate:model-artifacts && next build",
+    "build": "pnpm generate:model-artifacts && node --test scripts/model-highlight-catalog.test.mjs && next build",
     "start": "next start",
     "typecheck": "pnpm generate:model-artifacts && tsc --noEmit",
     "dev:app": "pnpm generate:model-artifacts && node scripts/dev-server.mjs",

@@ -4,8 +4,11 @@ import {
   Fragment,
   memo,
   useEffect,
+  useMemo,
+  useOptimistic,
   useRef,
   useState,
+  useTransition,
   type Dispatch,
   type KeyboardEvent,
   type ReactNode,
@@ -19,12 +22,11 @@ import {
   type ChatResponse,
 } from "./chat-contract";
 import {
-  modelHighlightManifest,
-  modelSources,
   resnetVariantDefinitions,
   type ModelHighlightAnchor,
 } from "./generated/model-sources";
-import { modelCatalog, modelRoutePath, type ModelId } from "./model-routes";
+import { getModelRoute, modelCatalog, modelCatalogByPublicationDate, modelRoutePath, type ModelId } from "./model-routes";
+import type { ModelSourceBundle } from "./model-source-bundle";
 
 type CodeLanguage = ChatCodeLanguage;
 
@@ -105,18 +107,10 @@ type ModelVariantSpec = {
   jaxHighlights: Readonly<Record<string, ModelHighlightAnchor>>;
 };
 
-type ModelDefinition = Omit<
-  ModelSpec,
-  | "id"
-  | "label"
-  | "paper"
-  | "fileName"
-  | "jaxFileName"
-  | "code"
-  | "jaxCode"
-  | "highlights"
-  | "jaxHighlights"
->;
+type ModelVariantDefinition = Omit<ModelVariantSpec, keyof HighlightSource>;
+type ModelDefinition = Omit<ModelSpec, "id" | "label" | "paper" | "variants" | keyof HighlightSource> & {
+  variants?: ModelVariantDefinition[];
+};
 
 type PaneKey = "architecture" | "paper" | "code" | "chat";
 type AgentCodeSelection = {
@@ -185,13 +179,13 @@ function codeLines(source: string) {
   return trimmed.split("\n");
 }
 
-function modelSourcePair(baseName: string) {
+function modelSourcePair(baseName: string, bundle: ModelSourceBundle): HighlightSource {
   const fileName = `${baseName}.py`;
   const jaxFileName = `${baseName}_jax.py`;
-  const source = modelSources[fileName];
-  const jaxSource = modelSources[jaxFileName];
-  const highlights = modelHighlightManifest[fileName];
-  const jaxHighlights = modelHighlightManifest[jaxFileName];
+  const source = bundle.sources[fileName];
+  const jaxSource = bundle.sources[jaxFileName];
+  const highlights = bundle.highlights[fileName];
+  const jaxHighlights = bundle.highlights[jaxFileName];
 
   if (!source || !jaxSource || !highlights || !jaxHighlights) {
     throw new Error(`Missing generated model source pair for ${baseName}`);
@@ -762,11 +756,10 @@ function makeResNetNodes(variant: ResNetTemplateVariant): ArchNode[] {
   ];
 }
 
-const resnetVariants: ModelVariantSpec[] = resnetVariantDefinitions.map((variant) => {
+const resnetVariants: ModelVariantDefinition[] = resnetVariantDefinitions.map((variant) => {
   return {
     ...variant,
     stats: resnetVariantStats(variant),
-    ...modelSourcePair(variant.id),
     nodes: makeResNetNodes(variant),
   };
 });
@@ -8564,12 +8557,16 @@ const modelDefinitions: Record<ModelId, ModelDefinition> = {
   },
 };
 
-const models: ModelSpec[] = modelCatalog.map((entry) => {
+function createModel(entry: (typeof modelCatalog)[number], bundle: ModelSourceBundle): ModelSpec {
   const definition = modelDefinitions[entry.id];
 
   return {
     ...definition,
-    ...modelSourcePair("sourceBaseName" in entry ? entry.sourceBaseName : entry.id),
+    ...modelSourcePair("sourceBaseName" in entry ? entry.sourceBaseName : entry.id, bundle),
+    variants: definition.variants?.map((variant) => ({
+      ...variant,
+      ...modelSourcePair(variant.id, bundle),
+    })),
     id: entry.id,
     label: entry.label,
     paper: {
@@ -8578,7 +8575,7 @@ const models: ModelSpec[] = modelCatalog.map((entry) => {
       pdfUrl: paperPdfUrl(entry.id),
     },
   };
-});
+}
 
 type HighlightSource = Pick<
   ModelSpec,
@@ -8625,9 +8622,12 @@ function resolveArchitectureHighlight(model: HighlightSource, node: ArchNode, la
   return { lines: resolvedLines, focusLine };
 }
 
-const referencedRefsByFile = new Map<string, Set<string>>();
-
-function validateHighlightTree(modelLabel: string, model: HighlightSource, nodes: ArchNode[]) {
+function validateHighlightTree(
+  modelLabel: string,
+  model: HighlightSource,
+  nodes: ArchNode[],
+  referencedRefsByFile: Map<string, Set<string>>,
+) {
   const seenNodeIds = new Set<string>();
 
   const validateNode = (node: ArchNode) => {
@@ -8664,17 +8664,19 @@ function validateHighlightTree(modelLabel: string, model: HighlightSource, nodes
   nodes.forEach(validateNode);
 }
 
-// Validate the full catalog during prerendering and tests.
-if (typeof window === "undefined") {
+// The build and catalog tests validate every model against the full source bundle.
+export function validateModelCatalog(bundle: ModelSourceBundle) {
+  const models = modelCatalog.map((entry) => createModel(entry, bundle));
+  const referencedRefsByFile = new Map<string, Set<string>>();
   for (const model of models) {
-    validateHighlightTree(model.id, model, model.nodes);
+    validateHighlightTree(model.id, model, model.nodes, referencedRefsByFile);
 
     for (const variant of model.variants ?? []) {
-      validateHighlightTree(variant.id, variant, variant.nodes);
+      validateHighlightTree(variant.id, variant, variant.nodes, referencedRefsByFile);
     }
   }
 
-  for (const [fileName, manifest] of Object.entries(modelHighlightManifest)) {
+  for (const [fileName, manifest] of Object.entries(bundle.highlights)) {
     const referencedRefs = referencedRefsByFile.get(fileName) ?? new Set<string>();
     const resnetFamilyRefs = /^resnet\d+(_jax)?\.py$/.test(fileName)
       ? new Set(
@@ -8694,11 +8696,8 @@ if (typeof window === "undefined") {
       }
     }
   }
+  return models;
 }
-
-const modelsByPublicationDate = [...models].sort((first, second) =>
-  first.paper.publishedDate.localeCompare(second.paper.publishedDate),
-);
 
 function ChevronIcon({ expanded }: { expanded: boolean }) {
   return (
@@ -10544,16 +10543,17 @@ function readPaneWidths(workspace: HTMLElement | null) {
 }
 
 type ModelArchVizAppProps = {
-  initialModelId?: string;
+  modelId: ModelId;
+  sourceBundle: ModelSourceBundle;
 };
 
-export default function ModelArchVizApp({ initialModelId }: ModelArchVizAppProps) {
-  const initialModel = models.find((entry) => entry.id === initialModelId) ?? modelsByPublicationDate[0];
+export default function ModelArchVizApp({ modelId, sourceBundle }: ModelArchVizAppProps) {
   const router = useRouter();
   const pathname = usePathname();
-  const [modelId, setModelId] = useState(initialModel.id);
+  const [modelPending, startModelNavigation] = useTransition();
+  const [selectedModelId, setSelectedModelId] = useOptimistic(modelId);
   const [variantByModel, setVariantByModel] = useState<Record<string, string>>({});
-  const baseModel = models.find((entry) => entry.id === modelId) ?? modelsByPublicationDate[0];
+  const baseModel = useMemo(() => createModel(getModelRoute(modelId)!, sourceBundle), [modelId, sourceBundle]);
   const activeVariantId = variantByModel[baseModel.id];
   const model = resolveModelVariant(baseModel, activeVariantId);
   const currentModelKey = modelStateKey(model);
@@ -10605,27 +10605,21 @@ export default function ModelArchVizApp({ initialModelId }: ModelArchVizAppProps
   const selected = selectedByModel[currentModelKey] ?? null;
 
   useEffect(() => {
-    setModelId(initialModel.id);
     setExpandedByModel({});
     setSelectedByModel({});
     setAgentCodeSelection(null);
     setUserCodeSelection(null);
     setPaperSelection(null);
     setQuery("");
-  }, [initialModel.id]);
+  }, [modelId]);
 
-  const updateModel = (nextModelId: string) => {
-    setModelId(nextModelId);
-    setExpandedByModel({});
-    setSelectedByModel({});
-    setAgentCodeSelection(null);
-    setUserCodeSelection(null);
-    setPaperSelection(null);
-    setQuery("");
-
+  const updateModel = (nextModelId: ModelId) => {
     const nextPath = modelRoutePath(nextModelId);
     if (pathname !== nextPath) {
-      router.push(nextPath);
+      startModelNavigation(() => {
+        setSelectedModelId(nextModelId);
+        router.push(nextPath);
+      });
     }
   };
 
@@ -10817,12 +10811,13 @@ export default function ModelArchVizApp({ initialModelId }: ModelArchVizAppProps
         <select
           className="model-select"
           aria-label="Select model"
-          value={baseModel.id}
-          onChange={(event) => updateModel(event.currentTarget.value)}
+          aria-busy={modelPending}
+          value={selectedModelId}
+          onChange={(event) => updateModel(event.currentTarget.value as ModelId)}
         >
-          {modelsByPublicationDate.map((entry) => (
+          {modelCatalogByPublicationDate.map((entry) => (
             <option value={entry.id} key={entry.id}>
-              {entry.label} ({entry.paper.publishedDate})
+              {entry.label} ({entry.publishedDate})
             </option>
           ))}
         </select>

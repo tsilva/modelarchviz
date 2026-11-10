@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import ModelArchVizApp from "../../model-arch-viz-app";
 import { getModelRoute, modelCatalog, modelRoutePath, siteConfig } from "../../model-routes";
+import { getModelSourceBundle } from "../../model-source-bundle";
 
 type ModelPageProps = {
   params: Promise<{
@@ -62,5 +63,5 @@ export default async function ModelPage({ params }: ModelPageProps) {
     notFound();
   }
 
-  return <ModelArchVizApp initialModelId={model.id} />;
+  return <ModelArchVizApp modelId={model.id} sourceBundle={getModelSourceBundle(model)} />;
 }

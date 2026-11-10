@@ -398,6 +398,10 @@ export const modelCatalog = [
 
 export type ModelId = (typeof modelCatalog)[number]["id"];
 
+export const modelCatalogByPublicationDate = [...modelCatalog].sort((first, second) =>
+  first.publishedDate.localeCompare(second.publishedDate),
+);
+
 export const siteConfig = {
   name: "ModelArchViz",
   description: "Explore neural network architecture blocks alongside PyTorch, JAX, and source-paper context.",
