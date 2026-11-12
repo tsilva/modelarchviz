@@ -3,6 +3,10 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "dev:vault": "python3 -I scripts/infisical/agentbridge_vault.py serve",
+    "agentbridge:app-check": "python3 -I scripts/infisical/agentbridge_vault.py app-check",
+    "agentbridge:check": "python3 -I scripts/infisical/agentbridge_vault.py check",
+    "test:agentbridge": "node --test scripts/agentbridge-vault.check.mjs",
     "generate:model-artifacts": "node scripts/generate-model-artifacts.mjs",
     "test:anchors": "node --test scripts/model-highlight-anchors.test.mjs",
     "test:dependencies": "node --test scripts/dependency-security.test.mjs scripts/dependency-match-security.test.mjs scripts/dependency-next-glob.test.mjs",

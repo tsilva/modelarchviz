@@ -27,7 +27,7 @@ export function chatBackend(env: Record<string, string | undefined> = process.en
     name: "AgentBridge",
     baseUrl: agentBridgeBaseUrl(env),
     apiKey: env.AGENTBRIDGE_API_KEY || "not-needed",
-    model: agentBridgeModel(env.OPENROUTER_MODEL || "openai/gpt-4o-mini"),
+    model: agentBridgeModel(env.OPENROUTER_MODEL || "openai/gpt-6.1-terra"),
     direct: false,
   };
 }

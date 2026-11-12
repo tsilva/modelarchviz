@@ -10653,6 +10653,16 @@ export default function ModelArchVizApp({ modelId, sourceBundle }: ModelArchVizA
     });
   };
 
+  const updateUserCodeSelection = (selection: UserCodeSelection | null) => {
+    setUserCodeSelection(selection);
+    if (selection) {
+      setSelectedByModel((current) => ({
+        ...current,
+        [currentModelKey]: null,
+      }));
+    }
+  };
+
   const toggleColumn = (pane: PaneKey) => {
     setVisibleColumns((current) => {
       const visibleCount = paneOrder.filter((entry) => current[entry]).length;
@@ -10796,7 +10806,7 @@ export default function ModelArchVizApp({ modelId, sourceBundle }: ModelArchVizA
         agentCodeSelection={agentCodeSelection}
         onAgentCodeSelectionChange={updateAgentCodeSelection}
         userCodeSelection={userCodeSelection}
-        onUserCodeSelectionChange={setUserCodeSelection}
+        onUserCodeSelectionChange={updateUserCodeSelection}
       />
     );
   };

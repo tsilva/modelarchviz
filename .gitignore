@@ -19,3 +19,4 @@ __pycache__/
 # Private project captures and their migration sources
 /INBOX.md
 /.local/repo-inbox/
+/.internal/

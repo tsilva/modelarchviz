@@ -37,6 +37,80 @@ Local builds skip Sentry source-map uploads. Runtime error reporting still uses 
 
 The chat pane calls AgentBridge during local development. Production and Vercel preview deployments call OpenRouter directly with their own server-side `OPENROUTER_API_KEY`, defaulting to `deepseek/deepseek-v4.1-flash-1017`. `OPENROUTER_MODEL` overrides the model; `OPENROUTER_APP_URL` and `OPENROUTER_APP_NAME` set request attribution.
 
+<!-- agent-vault-agentbridge:read:start -->
+## Local AgentBridge through Agent Vault
+
+For protected-profile validation and locked-runtime prerequisites, see
+[local Vault maintenance](docs/local-agent-vault.md).
+
+On a configured trusted Mac:
+
+```sh
+pnpm dev:vault --port auto
+pnpm agentbridge:app-check
+pnpm agentbridge:check
+pnpm test:agentbridge
+```
+
+`dev:vault` starts the actual local app with only a public placeholder and a
+scoped Agent Vault session. The existing `/api/chat` route sends its chat requests
+through the proxy to AgentBridge. Its JSON reply and code-highlight context stay
+unchanged, with local default `openai/gpt-6.1-terra`, the existing 900-token cap
+and 60-second request timeout. Production retains its separate model selection.
+
+The app mapping is bundle `local-modelarchviz-agentbridge`, service
+`modelarchviz-agentbridge-chat`, with owner-only metadata at
+`~/.config/infisical/agentbridge-clients/modelarchviz-app.json`. It permits only
+GET models and POST chat on the reviewed loopback gateway. AgentBridge's existing
+upstream route handles provider credentials; no source keys are fetched here.
+
+The opt-in launcher uses Webpack for sandbox compatibility, runs the maintained
+model-artifact generator, and prints the OS-assigned loopback URL. Existing
+servers are preserved. No model notebook is executed. Native instance/CA/runtime
+pins, process-local proxy trust and placeholder checks apply to every Node worker.
+The sandbox blocks dotenv and credential-manager access and direct network
+connections. Fetch rejects alternate origins, management paths and redirects,
+and withholds provider errors without retries or fallback.
+
+App sessions last at most 30 minutes. Stop the owned server normally when done;
+expiry/auth failures never trigger raw injection or direct-provider fallback.
+The normal launch commands, production model, production delivery and Sentry
+configuration remain unchanged. The trusted launcher and full-access host remain
+outside the child sandbox; starting the app does not authorize arbitrary prompts.
+
+`agentbridge:app-check` makes only a model-catalog GET through the app bundle.
+The separate `agentbridge:check` keeps the more restricted bundle `local-modelarchviz-agentbridge-read`,
+service `modelarchviz-agentbridge-models`, for GET `/api/v1/models` on
+`127.0.0.1:8082`. The owner-only local metadata profile is
+`~/.config/infisical/agentbridge-clients/modelarchviz-read.json`.
+
+The profile validates this repository's native Development source identity and
+pins the existing routing helper's digest. No application key or Sentry token
+is fetched. The local gateway accepts public placeholders; AgentBridge's own
+upstream credential route remains responsible for provider authentication.
+The sandboxed Node client imports the reviewed app routing helper, requires
+`agentbridge_public_placeholder`, and enables proxy support explicitly.
+Its fixed request returns only catalog size and whether the configured default
+is advertised. A missing catalog entry is informational; a catalog does not
+prove that an inference request will succeed or that upstream login is valid.
+
+Outbound access is limited to the local proxy. Home reads are limited to the
+reviewed runtime, public CA and required client/config files. Only the pinned
+Node runtime can be executed inside the sandbox; Keychain service lookup is
+blocked. The trusted launcher and other full-access host processes remain
+outside that isolation boundary. The instance and CA are pinned without
+changing system trust, and sessions last at most ten minutes.
+
+The separate model-only profile permits only read-only catalog access. Use
+`dev:vault` for actual local chat. Other image-generation, embedding, file and
+MCP endpoints are not enabled. Missing/changed bindings and failed checks
+stop without raw-key or direct-network fallback. Other app defaults,
+production delivery, Sentry settings/uploads and other service profiles remain
+unchanged. Run `pnpm test:agentbridge` after modifying this client or profile.
+<!-- agent-vault-agentbridge:read:end -->
+
+Trusted provisioning installs the official checksum-reviewed Node v24.22.1 Darwin ARM64 runtime alongside existing runtimes under `~/.config/infisical/runtimes/node-v24.22.1-darwin-arm64`, plus an owner-only metadata profile. The profile records version 1, repository/root, native project/environment/path identity, bundle, fixed loopback URL and proxy, absolute runtime/CLI/public-CA paths, CA fingerprint, routing-helper path/digest and the documented app default model. Review source or profile changes explicitly before replacing these pins; ordinary checks never approve new scope automatically.
+
 ## Notes
 
 Build tooling pins `glob` 14.0.2, `minimatch` 11.0.1, `path-scurry` 3.0.0 and the nonrecursive matcher 1.0.1 to address glob cancellation and pattern amplification advisories. The seven-day package hold and existing exception are retained; the new exceptions cover only these exact user-approved versions.
