@@ -4,7 +4,14 @@ import assert from 'node:assert/strict';
 import { validateSession } from './infisical/agentbridge_client.mjs';
 import { gatewayFetch } from './infisical/agentbridge_transport.mjs';
 
-const proxy = 'http://fixture-session:fixture-password@127.0.0.1:8283';
+function fixtureProxy(host = '127.0.0.1', identity = 'fixture-session') {
+  const url = new URL(`http://${host}:8283`);
+  url.username = identity;
+  url.password = 'synthetic-fixture-password';
+  return url.href;
+}
+
+const proxy = fixtureProxy();
 const session = {
   NODE_ENV: 'development', NODE_USE_ENV_PROXY: '1',
   AGENTBRIDGE_BASE_URL: 'http://127.0.0.1:8082/api/v1',
@@ -29,10 +36,10 @@ test('catalog client rejects bypasses, missing proxy authentication and conflict
   for (const change of [
     { NO_PROXY: '*' }, { no_proxy: '127.0.0.1' }, { HTTP_PROXY: '' },
     { HTTP_PROXY: 'http://127.0.0.1:8283' },
-    { HTTP_PROXY: 'http://fixture:fixture@unreviewed.invalid:8283' },
-    { HTTPS_PROXY: 'http://other:other@127.0.0.1:8283' },
-    { http_proxy: 'http://other:other@127.0.0.1:8283' },
-    { https_proxy: 'http://other:other@127.0.0.1:8283' },
+    { HTTP_PROXY: fixtureProxy('unreviewed.invalid') },
+    { HTTPS_PROXY: fixtureProxy('127.0.0.1', 'other') },
+    { http_proxy: fixtureProxy('127.0.0.1', 'other') },
+    { https_proxy: fixtureProxy('127.0.0.1', 'other') },
   ]) assert.throws(() => validateSession({ ...session, ...change }));
 });
 
