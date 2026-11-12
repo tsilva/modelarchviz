@@ -7,7 +7,7 @@ import { gatewayFetch } from './infisical/agentbridge_transport.mjs';
 function fixtureProxy(host = '127.0.0.1', identity = 'fixture-session') {
   const url = new URL(`http://${host}:8283`);
   url.username = identity;
-  url.password = 'synthetic-fixture-password';
+  url.password = identity;
   return url.href;
 }
 
