@@ -17,7 +17,7 @@
     "dev:app": "pnpm generate:model-artifacts && node scripts/dev-server.mjs"
   },
   "dependencies": {
-    "@sentry/nextjs": "^11.10.0",
+    "@sentry/nextjs": "^11.11.0",
     "@vercel/analytics": "2.0.1",
     "next": "16.4.5",
     "pdfjs-dist": "6.5.438",
