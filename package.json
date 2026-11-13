@@ -3,10 +3,6 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev:vault": "python3 -I scripts/infisical/agentbridge_vault.py serve",
-    "agentbridge:app-check": "python3 -I scripts/infisical/agentbridge_vault.py app-check",
-    "agentbridge:check": "python3 -I scripts/infisical/agentbridge_vault.py check",
-    "test:agentbridge": "node --test scripts/agentbridge-vault.check.mjs",
     "generate:model-artifacts": "node scripts/generate-model-artifacts.mjs",
     "test:anchors": "node --test scripts/model-highlight-anchors.test.mjs",
     "test:dependencies": "node --test scripts/dependency-security.test.mjs scripts/dependency-match-security.test.mjs scripts/dependency-next-glob.test.mjs",
@@ -14,16 +10,11 @@
     "test:routes": "node --test scripts/model-page.test.mjs scripts/chat-backend.test.mjs",
     "test:notebooks": "node --test scripts/model-notebooks.test.mjs",
     "test": "pnpm test:dependencies && pnpm test:highlights && pnpm test:routes && pnpm test:notebooks",
-    "dev": "python3 scripts/infisical/run.py dev",
+    "dev": "pnpm generate:model-artifacts && node scripts/dev-server.mjs",
     "build": "pnpm generate:model-artifacts && node --test scripts/model-highlight-catalog.test.mjs && next build",
     "start": "next start",
     "typecheck": "pnpm generate:model-artifacts && tsc --noEmit",
-    "dev:app": "pnpm generate:model-artifacts && node scripts/dev-server.mjs",
-    "dev:secrets": "python3 scripts/infisical/run.py dev",
-    "build:secrets": "python3 scripts/infisical/run.py build",
-    "start:secrets": "python3 scripts/infisical/run.py start",
-    "secrets:check": "python3 scripts/infisical/run.py check",
-    "test:secrets": "python3 -m unittest discover -s scripts/infisical -p test_secrets.py"
+    "dev:app": "pnpm generate:model-artifacts && node scripts/dev-server.mjs"
   },
   "dependencies": {
     "@sentry/nextjs": "^11.10.0",

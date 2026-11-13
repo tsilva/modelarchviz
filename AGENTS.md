@@ -54,12 +54,10 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 ## Secrets
 
-Use `pnpm dev:vault --port auto` for agent-operated local AgentBridge work as mapped below. The existing `pnpm dev --port auto` command retains the linked Infisical development injection flow; preserving it does not authorize agents to use raw injection. Private credentials must stay out of dotenv files, command arguments, logs, and browser bundles. Production uses the isolated `modelarchviz-production` project and GitHub Actions delivery to Vercel Production. A standalone Cloudflare relay dispatches the pinned shared delivery workflow; see `docs/production-delivery.md`. Preserve Keychain originals until migration and provider rotation are verified.
+Keep server credentials out of browser bundles and committed files. Development
+uses its configured AgentBridge environment; hosted Production uses its own
+isolated credentials. Do not mix production credentials into local development.
 
-New captures without an explicit destination use `$private-skills_inbox-capture` with its
-Obsidian default. A request addressed to this repository selects repository mode.
-
-<!-- agent-vault-agentbridge:read:start -->
 ## Actual local AgentBridge calls
 
 Use `pnpm dev:vault --port auto` for the local app's real `/api/chat` requests.
