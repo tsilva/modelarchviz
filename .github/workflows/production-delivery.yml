@@ -75,7 +75,7 @@ jobs:
     with:
       project_id: prj_lp2S0Pn0viZIiiGplSG8l9RzJtcx
       project_name: modelarchviz
-      production_domains: '["modelarchviz.tsilva.eu","modelarchviz.vercel.app"]'
+      production_domains: '["modelarchviz.tsilva.eu"]'
       public_environment: '["NEXT_PUBLIC_SENTRY_DSN","SENTRY_ORG","SENTRY_PROJECT"]'
       source_maps: true
       promote: ${{ !inputs.stage_prebuilt }}
