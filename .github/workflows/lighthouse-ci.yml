@@ -13,7 +13,7 @@ concurrency:
 
 jobs:
   audit:
-    uses: tsilva/.github/.github/workflows/lighthouse-ci.yml@cc4063539653becaf4493e6ece6c95784e3d6c81
+    uses: tsilva/.github/.github/workflows/lighthouse-ci.yml@8656dc987153a82fa6a8fd035337545cd5ba5763
     with:
       url: "https://modelarchviz.tsilva.eu/"
       sample_timings: true
